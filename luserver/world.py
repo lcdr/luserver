@@ -116,8 +116,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			console_log = packetname not in self.not_console_logged_packets
 		except ValueError:
 			packetname = self.unknown_packetname(data)
-			with open("logs/"+packetname+".bin", "wb") as file:
-				file.write(data)
 			console_log = True
 
 		if console_log:

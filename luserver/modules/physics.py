@@ -11,7 +11,7 @@ MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.
 MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)
 MODEL_DIMENSIONS[8419] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)
 
-DEBUG_INCLUDE_NO_SCRIPT = True
+DEBUG_INCLUDE_NO_SCRIPT = False
 
 log = logging.getLogger(__file__)
 

@@ -59,7 +59,6 @@ component[65] = PropertyVendorComponent,
 component[67] = LaunchpadComponent,
 component[104] = RailActivatorComponent,
 
-
 component_order = list(component.keys())
 
 def restore_template(*args):
@@ -83,8 +82,11 @@ def Template(lot_, conn=None, comps=None, custom_script=None):
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
 				if component_id is None:
-					script = importlib.import_module("luserver.scripts."+custom_script)
-					comp = script.ScriptComponent,
+					if custom_script != "":
+						script = importlib.import_module("luserver.scripts."+custom_script)
+						comp = script.ScriptComponent,
+					else:
+						comp = ScriptComponent,
 				elif component_id in conn.root.script_component:
 					script = importlib.import_module("luserver.scripts."+conn.root.script_component[component_id])
 					comp = script.ScriptComponent,
@@ -213,7 +215,7 @@ def Template(lot_, conn=None, comps=None, custom_script=None):
 					if mission.state == MissionState.Active:
 						for task in mission.tasks:
 							if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self._v_server.game_objects[target_id].lot:
-								mission.increment_task(task, self._v_server, self)
+								mission.increment_task(task, self)
 
 
 		def play_animation(self, address, animation_id:"wstr"=None, expect_anim_to_exist:c_bit=True, play_immediate:c_bit=None, trigger_on_complete_msg:c_bit=False, priority:c_float=2, f_scale:c_float=1):

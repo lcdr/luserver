@@ -119,6 +119,7 @@ class GameMessage(Enum):
 	NotifyMission = 254
 	NotifyMissionTask = 255
 	RebuildNotifyState = 336
+	TerminateInteraction = 357
 	RequestUse = 364
 	VendorOpenWindow = 369
 	EmotePlayed = 371
@@ -168,9 +169,11 @@ class GameMessage(Enum):
 	StartBuildingWithItem = 1057
 	StartArrangingWithItem = 1061
 	FinishArrangingWithItem = 1062
+	DoneArrangingWithItem = 1063
 	SetBuildMode = 1068
 	SetBuildModeConfirmed = 1073
 	MoveItemBetweenInventoryTypes = 1093
+	ModularBuildMoveAndEquip = 1096
 	ModularBuildFinish = 1097
 	EchoSyncSkill = 1144
 	SyncSkill = 1145

@@ -123,7 +123,7 @@ class SkillComponent:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.UseSkill and skill_id in task.parameter:
-							mission.increment_task(task, self._v_server, self)
+							mission.increment_task(task, self)
 
 		target = self
 		self.picked_target_id = optional_target_id

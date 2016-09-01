@@ -19,6 +19,16 @@ class ModularBuildComponent:
 		player = self._v_server.accounts[address].characters.selected()
 		self._v_server.send_game_message(player.start_arranging_with_item, first_time, self.object_id, player.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type, address=address)
 
+	def done_arranging_with_item(self, address, new_source_bag:c_int=None, new_source_id:c_int64=None, new_source_lot:c_int=None, new_source_type:c_int=None, new_target_id:c_int64=None, new_target_lot:c_int=None, new_target_type:c_int=None, new_target_pos:Vector3=None, old_item_bag:c_int=None, old_item_id:c_int64=None, old_item_lot:c_int=None, old_item_type:c_int=None):
+		player = self._v_server.accounts[address].characters.selected()
+		for model in player.temp_models.copy():
+			player.move_item_between_inventory_types(None, inventory_type_a=InventoryType.TempModels, inventory_type_b=InventoryType.Models, object_id=model.object_id, stack_count=0)
+
+	def modular_build_move_and_equip(self, address, template_id:c_int=None):
+		player = self._v_server.accounts[address].characters.selected()
+		new_item = player.move_item_between_inventory_types(None, inventory_type_a=InventoryType.TempModels, inventory_type_b=InventoryType.Models, object_id=0, template_id=template_id)
+		player.equip_inventory(None, item_to_equip=new_item.object_id)
+
 	def modular_build_finish(self, address, module_lots:(c_ubyte, c_int)=None):
 		player = self._v_server.accounts[address].characters.selected()
 		for model in player.temp_models.copy():

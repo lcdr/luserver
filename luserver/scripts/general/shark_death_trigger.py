@@ -17,4 +17,4 @@ class ScriptComponent(script.ScriptComponent):
 					if mission.state == MissionState.Active and mission.id == achievement_id:
 						for task in mission.tasks:
 							if task.type == TaskType.Script and self.lot in task.target:
-								mission.increment_task(task, self._v_server, player)
+								mission.increment_task(task, player)

@@ -1,6 +1,8 @@
 import asyncio
+import random
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from ..math.vector import Vector3
 
 class StatsSubcomponent:
 	def __init__(self, comp_id):
@@ -16,7 +18,7 @@ class StatsSubcomponent:
 			self.life = self.max_life
 			self.armor = self.max_armor
 			self.imagination = self.max_imagination
-
+			self.is_smashable = False
 
 	@property
 	def max_life(self):
@@ -93,12 +95,11 @@ class StatsSubcomponent:
 			out.write(c_float(self.max_imagination))
 			out.write(c_uint(1))
 			out.write(c_int(self.faction))
-			show_smashable_glint = True
-			out.write(c_bit(show_smashable_glint))
+			out.write(c_bit(self.is_smashable))
 			if is_creation:
 				out.write(c_bit(False))
 				out.write(c_bit(False))
-				if show_smashable_glint:
+				if self.is_smashable:
 					out.write(c_bit(False))
 					out.write(c_bit(False))
 
@@ -109,6 +110,11 @@ class StatsSubcomponent:
 	def on_destruction(self):
 		if self.spawner is not None:
 				asyncio.get_event_loop().call_later(8, self.spawner.spawn)
+
+	def drop_loot(self, lot, owner):
+		object_id = self._v_server.new_spawned_id()
+		self._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
+		self._v_server.send_game_message(owner.drop_client_loot, use_position=True, spawn_position=self.position, final_position=Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20), currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object_id, address=owner.address)
 
 	def die(self, address, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
 		pass

@@ -94,8 +94,11 @@ def parse_lvl(conn, world_data, lvl_path):
 					config = ldf.from_ldf(config_data)
 
 					custom_script = None
-					if lot != 176 and config.get("custom_script_server") not in (None, ""):
-						custom_script = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
+					if lot != 176 and "custom_script_server" in config:
+						if config["custom_script_server"] == "":
+							custom_script = ""
+						else:
+							custom_script = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
 
 					spawned_vars = {}
 					if "groupID" in config:
@@ -135,8 +138,11 @@ def parse_lvl(conn, world_data, lvl_path):
 						spawn_vars = {}
 
 						obj.spawntemplate = config["spawntemplate"]
-						if config.get("custom_script_server") not in (None, ""):
-							spawn_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
+						if "custom_script_server" in config:
+							if config["custom_script_server"] == "":
+								spawn_vars["custom_script"] = ""
+							else:
+								spawn_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
 
 						if "attached_path" in config:
 							spawned_vars["attached_path"] = config["attached_path"]

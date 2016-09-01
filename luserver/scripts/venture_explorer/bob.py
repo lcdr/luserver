@@ -11,5 +11,5 @@ class ScriptComponent(script.ScriptComponent):
 			player.imagination = 6
 			for mission in player.missions:
 				if mission.id == 664:
-					mission.complete(self._v_server, player)
+					mission.complete(player)
 					break

@@ -79,7 +79,6 @@ def get_behavior(behavior_id):
 	if behavior_id not in root.behavior:
 		global behavs_accessed
 		behavs_accessed += 1
-		print(behavior_id)
 		if behavior_id not in templates:
 			return None
 		template_id = templates[behavior_id]
@@ -311,7 +310,7 @@ if GENERATE_COMPS:
 				root.script_component[id] = script_name
 
 		elif row[1] == 7 and row[2] not in root.destructible_component:
-			faction, faction_list, level, loot_matrix_index, currency_index, life, armor, imagination = cdclient.execute("select faction, factionList, level, LootMatrixIndex, CurrencyIndex, life, armor, imagination from DestructibleComponent where id == %i" % row[2]).fetchone()
+			faction, faction_list, level, loot_matrix_index, currency_index, life, armor, imagination, is_smashable = cdclient.execute("select faction, factionList, level, LootMatrixIndex, CurrencyIndex, life, armor, imagination, isSmashable from DestructibleComponent where id == %i" % row[2]).fetchone()
 			if faction is None:
 				faction = int(faction_list) # fallback, i have no idea why both columns exist in the first place
 			if level is not None and currency_index is not None:
@@ -332,7 +331,7 @@ if GENERATE_COMPS:
 			if armor is not None:
 				armor = int(armor)
 
-			root.destructible_component[row[2]] = faction, loot, minvalue, maxvalue, life, armor, imagination
+			root.destructible_component[row[2]] = faction, loot, minvalue, maxvalue, life, armor, imagination, is_smashable
 
 		elif row[1] == 16 and row[2] not in root.vendor_component:
 			comp_row = cdclient.execute("select LootMatrixIndex from VendorComponent where id == %i" % row[2]).fetchone()
@@ -344,12 +343,12 @@ if GENERATE_COMPS:
 				root.inventory_component.setdefault(row[2], []).append((comp_row[0], comp_row[1]))
 
 		elif row[1] == 48 and row[2] not in root.rebuild_component:
-			comp_row = cdclient.execute("select complete_time, time_before_smash from RebuildComponent where id == %i" % row[2]).fetchone()
+			comp_row = cdclient.execute("select complete_time, time_before_smash, reset_time, take_imagination from RebuildComponent where id == %i" % row[2]).fetchone()
 			if comp_row is not None:
-				complete_time, smash_time = comp_row
+				complete_time, smash_time, reset_time, take_imagination = comp_row
 				if complete_time is None:
 					complete_time = 0
-				root.rebuild_component[row[2]] = complete_time, smash_time
+				root.rebuild_component[row[2]] = complete_time, smash_time, reset_time, take_imagination
 
 		elif row[1] == 53 and row[2] not in root.package_component:
 			comp_row = cdclient.execute("select LootMatrixIndex from PackageComponent where id == %i" % row[2]).fetchone()

@@ -40,5 +40,5 @@ class PetComponent:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.TamePet and self.lot in task.target:
-							mission.increment_task(task, self._v_server, player)
+							mission.increment_task(task, player)
 

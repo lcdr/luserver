@@ -1,7 +1,6 @@
 import random
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
-from ..math.vector import Vector3
 from .comp108 import Comp108Component
 from .mission import MissionState, TaskType
 from .stats import StatsSubcomponent
@@ -20,6 +19,7 @@ class DestructibleComponent:
 		self.life = self.max_life
 		self.armor = self.max_armor
 		self.imagination = self.max_imagination
+		self.is_smashable = comp[7]
 
 	def serialize(self, out, is_creation):
 		if is_creation:
@@ -44,12 +44,6 @@ class DestructibleComponent:
 			loot.append(lot)
 		return loot
 
-	def drop_loot(self, lot, owner):
-		object_id = self._v_server.new_spawned_id()
-		self._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
-		self._v_server.send_game_message(owner.drop_client_loot, use_position=True, spawn_position=self.position, final_position=Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20), currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object_id, address=owner.address)
-
-
 	def request_die(self, address, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		if self.armor != 0:
 			self.armor = 0
@@ -67,7 +61,7 @@ class DestructibleComponent:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.KillEnemy and self.lot in task.target:
-							mission.increment_task(task, self._v_server, killer)
+							mission.increment_task(task, killer)
 
 			# drops
 
