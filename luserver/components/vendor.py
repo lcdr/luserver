@@ -32,7 +32,7 @@ class VendorComponent:
 		player = self._v_server.accounts[address].characters.selected()
 		for item in player.items:
 			if item is not None and item.object_id == item_obj_id:
-				self._v_server.send_game_message(player.set_currency, currency=player.currency + (item.base_value*count)//10, position=Vector3.zero, source_type=source_type, address=player.address)
+				self._v_server.send_game_message(player.set_currency, currency=player.currency + (item.base_value*count)//10, position=Vector3.zero, address=player.address)
 				player.remove_item_from_inv(InventoryType.Items, object_id=item_obj_id, amount=count)
 				break
 		else:

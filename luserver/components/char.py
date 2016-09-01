@@ -16,6 +16,11 @@ from .mission import MissionProgress, MissionState, TaskType
 
 log = logging.getLogger(__name__)
 
+class TerminateType:
+	Range = 0
+	User = 1
+	FromInteraction = 2
+
 class BuildType:
 	BuildNowhere = 0
 	BuildInWorld = 1
@@ -230,6 +235,12 @@ class CharacterComponent:
 			del self._v_server.dropped_loot[self.object_id]
 		self.vehicle_id = 0
 		self.online = False
+		self.check_for_leaks()
+
+	def check_for_leaks(self):
+		if self.temp_models:
+			print("Temp Models not empty")
+			print(self.temp_models)
 
 	async def transfer_to_world(self, world, respawn_point_name=None):
 		if respawn_point_name is not None:
@@ -261,7 +272,7 @@ class CharacterComponent:
 			if task.type == TaskType.ObtainItem:
 				for item in self.items:
 					if item is not None and item.lot in task.target:
-						mission_progress.increment_task(task, self._v_server, self, increment=item.amount)
+						mission_progress.increment_task(task, self, increment=item.amount)
 						if task.value == task.target_value:
 							break
 
@@ -312,6 +323,9 @@ class CharacterComponent:
 	def notify_mission_task(self, address, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, c_float)=None):
 		pass
 
+	def terminate_interaction(self, address, obj_id_terminator:c_int64=None, type:c_int=None):
+		pass
+
 	def request_use(self, address, is_multi_interact_use:c_bit=None, multi_interact_id:c_uint=None, multi_interact_type:c_int=None, object_id:c_int64=None, secondary:c_bit=False):
 		if not is_multi_interact_use:
 			assert multi_interact_id == 0
@@ -334,7 +348,7 @@ class CharacterComponent:
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
 					if task.type == TaskType.Interact and task.target == obj.lot:
-						mission.increment_task(task, self._v_server, self)
+						mission.increment_task(task, self)
 
 	def get_flag(self, flag_id):
 		return bool(self.flags & (1 << flag_id))
@@ -350,7 +364,7 @@ class CharacterComponent:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.Flag and flag_id in task.target:
-							mission.increment_task(task, self._v_server, self)
+							mission.increment_task(task, self)
 
 
 	def player_loaded(self, address, player_id:c_int64=None):
@@ -454,7 +468,7 @@ class CharacterComponent:
 			self._v_server.mail.send_mail(self.name, "Bug Report: "+selection, body, account.characters.selected())
 
 	def request_smash_player(self, address):
-		self._v_server.send_game_message(self.request_die, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object_id, loot_owner_id=0, address=self.address)
+		self.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object_id, loot_owner_id=0)
 
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, address, inv_item:c_int64=None, items_total:c_int=0):
 		pass

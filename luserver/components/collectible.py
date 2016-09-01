@@ -15,4 +15,4 @@ class CollectibleComponent:
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
 					if task.type == TaskType.Collect and task.target == self.lot:
-						mission.increment_task(task, self._v_server, player)
+						mission.increment_task(task, player)

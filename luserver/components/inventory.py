@@ -183,7 +183,7 @@ class InventoryComponent:
 					if mission.state == MissionState.Active:
 						for task in mission.tasks:
 							if task.type == TaskType.ObtainItem and stack.lot in task.target:
-								mission.increment_task(task, self._v_server, self)
+								mission.increment_task(task, self)
 
 		return stack
 
@@ -282,10 +282,14 @@ class InventoryComponent:
 						return
 
 	def move_item_between_inventory_types(self, address, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:c_bit=True, stack_count:c_uint=1, template_id:c_int=-1):
-		assert stack_count == 1
 		source = self.inventory_type_to_inventory(inventory_type_a)
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):
-				self.add_item_to_inventory(item.lot, item.amount, inventory_type=inventory_type_b, show_flying_loot=show_flying_loot)
-				self.remove_item_from_inv(inventory_type_a, item)
-				break
+				if stack_count == 0:
+					move_stack_count = item.amount
+				else:
+					assert item.amount >= stack_count
+					move_stack_count = stack_count
+				new_item = self.add_item_to_inventory(item.lot, move_stack_count, inventory_type=inventory_type_b, show_flying_loot=show_flying_loot)
+				self.remove_item_from_inv(inventory_type_a, item, amount=move_stack_count)
+				return new_item

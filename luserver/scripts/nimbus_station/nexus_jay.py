@@ -34,5 +34,5 @@ class ScriptComponent(script.ScriptComponent):
 		for achievement_id in achievements:
 			for mission in player.missions:
 				if mission.id == achievement_id:
-					mission.complete(self._v_server, player)
+					mission.complete(player)
 					break

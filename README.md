@@ -17,17 +17,8 @@ or
 
 If you don't want to compile the packages yourself, you can download precompiled ones from http://www.lfd.uci.edu/~gohlke/pythonlibs/ .
 
-##### Bugfixes
-
-ZEO has some unfixed bugs which you'll need to fix manually:
-in `<Python installation directory>/Lib/site-packages/ZEO/zrpc/client.py`
-line 453
-comment out:
-
-	if socktype != socket.SOCK_STREAM:
-		continue
-
-and in `<Python installation directory>/Lib/site-packages/ZEO/zrpc/trigger.py`
+ZEO has an unfixed bug which you'll need to fix manually:
+in `<Python installation directory>/Lib/site-packages/ZEO/zrpc/trigger.py`
 line 235
 change
 

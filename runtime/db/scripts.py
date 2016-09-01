@@ -1,4 +1,5 @@
-# consider converting all to path
+# consider converting all to path so components using the same script are automatically handled
+# some paths are removed from the database though
 
 SCRIPTS = {}
 SCRIPTS[313] = "general.death_trigger"
@@ -34,7 +35,9 @@ SCRIPTS[r"02_server\Map\General\L_TOUCH_MISSION_UPDATE_SERVER.lua"] = "general.t
 SCRIPTS[r"02_server\Map\NT\L_NT_PARADOXTELE_SERVER.lua"] = "nexus_tower.paradox_teleporter"
 SCRIPTS[r"ai\AG\L_ACT_SHARK_PLAYER_DEATH_TRIGGER.lua"] = "general.shark_death_trigger"
 SCRIPTS[r"ai\AG\L_AG_PICNIC_BLANKET.lua"] = "avant_gardens.picnic_blanket"
+SCRIPTS[r"ai\AG\L_AG_QB_Elevator.lua"] = "avant_gardens.quickbuild_elevator"
 SCRIPTS[r"ai\AG\L_AG_SHIP_PLAYER_DEATH_TRIGGER.lua"] = "venture_explorer.death_trigger"
 SCRIPTS[r"ai\AG\L_AG_SHIP_PLAYER_SHOCK_SERVER.lua"] = "venture_explorer.broken_console"
 SCRIPTS[r"ai\AG\L_AG_SHIP_SHAKE.lua"] = "venture_explorer.ship_shake"
 SCRIPTS[r"ai\NS\L_NS_JONNY_FLAG_MISSION_SERVER.lua"] = "nimbus_station.johnny_thunder"
+SCRIPTS[r"ai\NS\L_NS_QB_IMAGINATION_STATUE.lua"] = "nimbus_station.imagination_statue"

@@ -102,6 +102,9 @@ class ChatHandling(ServerModule):
 		build_cmd.add_argument("type", type=int)
 		build_cmd.set_defaults(func=self.build_cmd)
 
+		check_for_leaks_cmd = cmds.add_parser("checkforleaks")
+		check_for_leaks_cmd.set_defaults(func=self.check_for_leaks_cmd)
+
 		complete_mission_cmd = cmds.add_parser("completemission")
 		complete_mission_cmd.add_argument("--id", type=int)
 		complete_mission_cmd.set_defaults(func=self.complete_mission_cmd)
@@ -118,6 +121,9 @@ class ChatHandling(ServerModule):
 		faction_cmd = cmds.add_parser("faction")
 		faction_cmd.add_argument("faction", type=int)
 		faction_cmd.set_defaults(func=self.faction_cmd)
+
+		glow_cmd = cmds.add_parser("glow")
+		glow_cmd.set_defaults(func=self.glow_cmd)
 
 		filelog_cmd = cmds.add_parser("filelog", description="Change which packets are logged to file")
 		filelog_cmd.add_argument("action", choices=("add", "remove", "show"), default="show")
@@ -280,6 +286,9 @@ class ChatHandling(ServerModule):
 	def build_cmd(self, args, sender):
 		self.server.send_game_message(sender.activate_brick_mode, build_type=args.type, address=sender.address)
 
+	def check_for_leaks_cmd(self, args, sender):
+		sender.check_for_leaks()
+
 	def complete_mission_cmd(self, args, sender):
 		if args.id:
 			for mission in sender.missions:
@@ -290,7 +299,7 @@ class ChatHandling(ServerModule):
 		if mission.state == 2:
 			for task_index, task_data in enumerate(self.server.db.missions[mission.id][2]):
 				target_value = task_data[2]
-				mission.increment_task(mission.tasks[task_index], self.server, sender, target_value)
+				mission.increment_task(mission.tasks[task_index], sender, target_value)
 				self.server.commit()
 
 	def dismount_cmd(self, args, sender):
@@ -312,6 +321,12 @@ class ChatHandling(ServerModule):
 			self.server.file_logged_packets.remove(args.packetname)
 		elif args.action == "show":
 			print(self.server.file_logged_packets)
+
+	def glow_cmd(self, args, sender):
+		if sender.rebuilding == 0:
+			sender.rebuilding = 1
+		else:
+			sender.rebuilding = 0
 
 	def help_cmd(self, args, sender):
 		print("Please use -h / --help for help.")
