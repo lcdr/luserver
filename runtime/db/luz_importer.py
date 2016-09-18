@@ -5,7 +5,7 @@ import BTrees
 
 import luserver.ldf as ldf
 from luserver.bitstream import BitStream, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
-from luserver.game_object_template import Template
+from luserver.game_object import GameObject
 from luserver.math.quaternion import Quaternion
 from luserver.math.vector import Vector3
 from luserver.world import BITS_LOCAL, World
@@ -53,7 +53,7 @@ class PathType:
 	Race = 6
 	Rail = 7
 
-WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12661, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14347, 14348, 14510, 14530, 16513, 16627
+WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14347, 14348, 14510, 14530, 16513, 16627
 
 def parse_lvl(conn, world_data, lvl_path):
 	with open(lvl_path, "rb") as file:
@@ -101,23 +101,14 @@ def parse_lvl(conn, world_data, lvl_path):
 							custom_script = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
 
 					spawned_vars = {}
+					spawned_vars["position"] = Vector3(*position)
+					spawned_vars["rotation"] = Quaternion(*rotation)
+
 					if "groupID" in config:
 						spawned_vars["groups"] = config["groupID"][:-1].split(";")
 					if "respawnname" in config:
 						spawned_vars["respawn_name"] = config["respawnname"]
 
-					obj = Template(lot, conn, custom_script=custom_script)(object_id, SimpleNamespace(db=conn.root), set_vars=spawned_vars)
-					if not hasattr(obj, "position"):
-						obj.position = Vector3(*position)
-					else:
-						obj.position.update(*position)
-
-					if not hasattr(obj, "rotation"):
-						obj.rotation = Quaternion(*rotation)
-					else:
-						obj.rotation.update(*rotation)
-
-					obj.scale = scale
 
 					script_vars = {}
 
@@ -134,10 +125,15 @@ def parse_lvl(conn, world_data, lvl_path):
 					if "transferZoneID" in config:
 						script_vars["transfer_world_id"] = int(config["transferZoneID"])
 
+					spawned_vars["script_vars"] = script_vars
+
+					obj = GameObject(SimpleNamespace(db=conn.root), lot, object_id, custom_script, spawned_vars)
+					obj.scale = scale
+
 					if lot == 176:
 						spawn_vars = {}
 
-						obj.spawntemplate = config["spawntemplate"]
+						obj.spawner.spawntemplate = config["spawntemplate"]
 						if "custom_script_server" in config:
 							if config["custom_script_server"] == "":
 								spawn_vars["custom_script"] = ""
@@ -157,9 +153,7 @@ def parse_lvl(conn, world_data, lvl_path):
 						if "openItemID" in config:
 							script_vars["package_lot"] = config["openItemID"]
 
-						obj.waypoints = (position, rotation, spawn_vars, spawned_vars, script_vars),
-					else:
-						obj.script_vars = script_vars
+						obj.spawner.waypoints = (position, rotation, spawn_vars, spawned_vars),
 
 					del obj._v_server
 					world_data.objects[object_id] = obj
@@ -243,9 +237,9 @@ def load_world_data(conn, maps_path):
 				unknown3 = luz.read(c_uint), luz.read(c_int), luz.read(c_uint)
 				object_id = luz.read(c_int64)
 				unknown4 = luz.read(c_ubyte)
-				spawner = Template(176, conn)(object_id, SimpleNamespace(db=conn.root))
+				spawner = GameObject(SimpleNamespace(db=conn.root), 176, object_id)
 				del spawner._v_server
-				spawner.spawntemplate = spawn_lot
+				spawner.spawner.spawntemplate = spawn_lot
 				if spawn_lot != 0:
 					conn.root.world_data[world.value].objects[object_id] = spawner
 
@@ -294,10 +288,9 @@ def load_world_data(conn, maps_path):
 				elif path_type == PathType.Spawner:
 					spawn_vars = {}
 					spawned_vars = {}
-					script_vars = {}
-					waypoints.append((position, rotation, spawn_vars, spawned_vars, script_vars))
+					waypoints.append((position, rotation, spawn_vars, spawned_vars))
 
 			if path_type == PathType.MovingPlatform:
 				conn.root.world_data[world.value].paths[path_name] = tuple(waypoints)
 			elif path_type == PathType.Spawner:
-				spawner.waypoints = tuple(waypoints)
+				spawner.spawner.waypoints = tuple(waypoints)

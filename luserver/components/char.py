@@ -10,6 +10,7 @@ from ..world import World
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from ..modules.social import FriendUpdateType
+from .component import Component
 from .inventory import InventoryType
 from .pet import PetTamingNotify
 from .mission import MissionProgress, MissionState, TaskType
@@ -31,31 +32,33 @@ class DeleteReason:
 	ReturningModelToInventory = 1
 	BreakingModelApart = 2
 
-class CharacterComponent:
-	def __init__(self, comp_id):
+class CharacterComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.char = self
 		# DB stuff
 
 		self.address = None
 		self._online = False
 		self._world = 0, 0, 0
 		self.currency = 0
-		self.position = Vector3(-627.18, 613.32, -29.22)
-		self.rotation = Quaternion(0.0, 0.733, 0.0, 0.679)
+		self.object.physics.position.update(-627.18, 613.32, -29.22)
+		self.object.physics.rotation.update(0.0, 0.733, 0.0, 0.679)
 		self.friends = PersistentList()
 		self.mails = PersistentList()
 		self.missions = PersistentList()
 		# add achievements
-		for mission_id, data in self._v_server.db.missions.items():
+		for mission_id, data in self.object._v_server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
 				self.missions.append(MissionProgress(mission_id, data))
 
 		self.unlocked_emotes = PersistentList()
 
-		self.clone_id = self._v_server.new_clone_id()
+		self.clone_id = self.object._v_server.new_clone_id()
 
 		for world in (World.BlockYard, World.AvantGrove, World.NimbusRock, World.NimbusIsle, World.ChanteyShanty, World.RavenBluff):
-			self._v_server.db.properties[world.value][self.clone_id] = PersistentMapping()
+			self.object._v_server.db.properties[world.value][self.clone_id] = PersistentMapping()
 
 		# Component stuff
 
@@ -78,7 +81,7 @@ class CharacterComponent:
 		self.account_id = 0
 		self.universe_score = 0
 		self.is_FTP = False
-
+		# statistics
 		self.total_currency_collected = 0
 		self.bricks_collected = 0
 		self.smashables_smashed = 0
@@ -220,7 +223,7 @@ class CharacterComponent:
 		update_notify = BitStream()
 		update_notify.write_header(WorldClientMsg.FriendUpdateNotify)
 		update_notify.write(c_ubyte(update_type))
-		update_notify.write(self.name, allocated_length=66)
+		update_notify.write(self.object.name, allocated_length=66)
 		update_notify.write(c_ushort(self.world[0]))
 		update_notify.write(c_ushort(self.world[1]))
 		update_notify.write(c_uint(self.world[2]))
@@ -228,55 +231,55 @@ class CharacterComponent:
 		update_notify.write(c_bool(False)) # is FTP
 
 		for friend_ref in self.friends:
-			self._v_server.send(update_notify, friend_ref().address)
+			self.object._v_server.send(update_notify, friend_ref().char.address)
 
 	def on_destruction(self):
-		if self.object_id in self._v_server.dropped_loot:
-			del self._v_server.dropped_loot[self.object_id]
+		if self.object.object_id in self.object._v_server.dropped_loot:
+			del self.object._v_server.dropped_loot[self.object.object_id]
 		self.vehicle_id = 0
 		self.online = False
 		self.check_for_leaks()
 
 	def check_for_leaks(self):
-		if self.temp_models:
+		if self.object.inventory.temp_models:
 			print("Temp Models not empty")
-			print(self.temp_models)
+			print(self.object.inventory.temp_models)
 
 	async def transfer_to_world(self, world, respawn_point_name=None):
 		if respawn_point_name is not None:
-			for obj in self._v_server.db.world_data[world[0]].objects.values():
+			for obj in self.object._v_server.db.world_data[world[0]].objects.values():
 				if obj.lot == 4945 and (not hasattr(obj, "respawn_name") or respawn_point_name == "" or obj.respawn_name == respawn_point_name): # respawn point lot
-					self.position.update(obj.position)
-					self.rotation.update(obj.rotation)
+					self.object.physics.position.update(obj.physics.position)
+					self.object.physics.rotation.update(obj.physics.rotation)
 					break
 			else:
-				self.position.update(self._v_server.db.world_data[world[0]].spawnpoint[0])
-				self.rotation.update(self._v_server.db.world_data[world[0]].spawnpoint[1])
-			self._v_server.commit()
+				self.object.physics.position.update(self.object._v_server.db.world_data[world[0]].spawnpoint[0])
+				self.object.physics.rotation.update(self.object._v_server.db.world_data[world[0]].spawnpoint[1])
+			self.object._v_server.commit()
 
-		server_address = await self._v_server.address_for_world(world)
+		server_address = await self.object._v_server.address_for_world(world)
 		log.info("Sending redirect to world %s", server_address)
 		redirect = BitStream()
 		redirect.write_header(WorldClientMsg.Redirect)
 		redirect.write(server_address[0], char_size=1, allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
-		self._v_server.send(redirect, self.address)
+		self.object._v_server.send(redirect, self.address)
 
 	def add_mission(self, mission_id):
-		mission_progress = MissionProgress(mission_id, self._v_server.db.missions[mission_id])
+		mission_progress = MissionProgress(mission_id, self.object._v_server.db.missions[mission_id])
 		self.missions.append(mission_progress)
-		self._v_server.send_game_message(self.notify_mission, mission_id, mission_state=mission_progress.state, sending_rewards=False, address=self.address)
+		self.object._v_server.send_game_message(self.notify_mission, mission_id, mission_state=mission_progress.state, sending_rewards=False, address=self.address)
 		# obtain item task: update according to items already in inventory
 		for task in mission_progress.tasks:
 			if task.type == TaskType.ObtainItem:
-				for item in self.items:
+				for item in self.object.inventory.items:
 					if item is not None and item.lot in task.target:
-						mission_progress.increment_task(task, self, increment=item.amount)
+						mission_progress.increment_task(task, self.object, increment=item.amount)
 						if task.value == task.target_value:
 							break
 
-		self._v_server.commit()
+		self.object._v_server.commit()
 
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
@@ -290,23 +293,23 @@ class CharacterComponent:
 		self.currency = currency
 
 	def pickup_currency(self, address, currency:c_uint=None, position:Vector3=None):
-		self._v_server.send_game_message(self.set_currency, currency=self.currency + currency, position=Vector3.zero, address=self.address)
+		self.object._v_server.send_game_message(self.set_currency, currency=self.currency + currency, position=Vector3.zero, address=self.address)
 
 	def pickup_item(self, address, loot_object_id:c_int64=None, player_id:c_int64=None):
-		assert player_id == self.object_id
-		lot = self._v_server.dropped_loot[player_id][loot_object_id]
+		assert player_id == self.object.object_id
+		lot = self.object._v_server.dropped_loot[player_id][loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
-			for skill_id in self._v_server.db.object_skills[lot]:
-				behavior = self._v_server.db.skill_behavior[skill_id]
-				self.handle_behavior(behavior, b"", self)
+			for skill_id in self.object._v_server.db.object_skills[lot]:
+				behavior = self.object._v_server.db.skill_behavior[skill_id]
+				self.object.skill.handle_behavior(behavior, b"", self.object)
 		else:
-			self.add_item_to_inventory(lot)
-		del self._v_server.dropped_loot[player_id][loot_object_id]
+			self.object.inventory.add_item_to_inventory(lot)
+		del self.object._v_server.dropped_loot[player_id][loot_object_id]
 
 	def request_resurrect(self, address):
-		self._v_server.send_game_message(self.resurrect, broadcast=True)
-		self.life = 4
-		self.imagination = 6
+		self.object._v_server.send_game_message(self.object.destructible.resurrect, broadcast=True)
+		self.object.stats.life = 4
+		self.object.stats.imagination = 6
 
 	def knockback(self, address, caster:c_int64=0, originator:c_int64=0, knock_back_time_ms:c_int=0, vector:Vector3=None):
 		pass
@@ -315,7 +318,10 @@ class CharacterComponent:
 		pass
 
 	def respond_to_mission(self, address, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=0):
-		self._v_server.game_objects[receiver].respond_to_mission(address, mission_id, self, reward_item)
+		obj = self.object._v_server.game_objects[receiver]
+		for comp in obj.components:
+			if hasattr(comp, "respond_to_mission"):
+				comp.respond_to_mission(address, mission_id, self.object, reward_item)
 
 	def notify_mission(self, address, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
 		pass
@@ -332,15 +338,16 @@ class CharacterComponent:
 			multi_interact_id = None
 		assert object_id != 0
 		assert not secondary
-		obj = self._v_server.get_object(object_id)
+		obj = self.object._v_server.get_object(object_id)
 		if not obj:
 			return
-		if hasattr(obj, "on_use"):
-			for base in obj.__class__.__bases__:
-				if hasattr(base, "on_use"):
-					if base.on_use(obj, self, multi_interact_id):
-						break
-		else:
+		handled = False
+		for comp in obj.components:
+			if hasattr(comp, "on_use"):
+				handled = True
+				if comp.on_use(self.object, multi_interact_id):
+					break
+		if not handled:
 			log.warning("Object %s has no interaction callback", obj)
 
 		# update missions that have interacting with this object as requirement
@@ -348,7 +355,7 @@ class CharacterComponent:
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
 					if task.type == TaskType.Interact and task.target == obj.lot:
-						mission.increment_task(task, self)
+						mission.increment_task(task, self.object)
 
 	def get_flag(self, flag_id):
 		return bool(self.flags & (1 << flag_id))
@@ -364,7 +371,7 @@ class CharacterComponent:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.Flag and flag_id in task.target:
-							mission.increment_task(task, self)
+							mission.increment_task(task, self.object)
 
 
 	def player_loaded(self, address, player_id:c_int64=None):
@@ -386,7 +393,7 @@ class CharacterComponent:
 		pass
 
 	def client_exit_taming_minigame(self, address, voluntary_exit:c_bit=True):
-		self._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.position, tele_pos=self.position, tele_rot=self.rotation, address=address)
+		self.object._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation, address=address)
 
 	def pet_taming_try_build_result(self, address, success:c_bit=True, num_correct:c_int=0):
 		pass
@@ -407,30 +414,30 @@ class CharacterComponent:
 	def update_model_from_client(self, address, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
 		for model in self.models:
 			if model is not None and model.object_id == model_id:
-				spawner_id = self._v_server.new_object_id()
+				spawner_id = self.object._v_server.new_object_id()
 				rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped
-				self._v_server.db.properties[self._v_server.world_id[0]][self._v_server.world_id[2]][spawner_id] = model.lot, position, rotation
-				self._v_server.spawn_model(spawner_id, model.lot, position, rotation)
-				self.remove_item_from_inv(InventoryType.Models, model)
+				self.object._v_server.db.properties[self.object._v_server.world_id[0]][self.object._v_server.world_id[2]][spawner_id] = model.lot, position, rotation
+				self.object._v_server.spawn_model(spawner_id, model.lot, position, rotation)
+				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
 				break
 
 	def delete_model_from_client(self, address, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
 		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
-		self._v_server.destruct(self._v_server.game_objects[model_id])
-		for spawner, model in self._v_server.models:
+		self.object._v_server.destruct(self.object._v_server.game_objects[model_id])
+		for spawner, model in self.object._v_server.models:
 			if model.object_id == model_id:
-				self._v_server.models.remove((spawner, model))
-				prop_spawners = self._v_server.db.properties[self._v_server.world_id[0]][self._v_server.world_id[2]]
+				self.object._v_server.models.remove((spawner, model))
+				prop_spawners = self.object._v_server.db.properties[self.object._v_server.world_id[0]][self.object._v_server.world_id[2]]
 				del prop_spawners[spawner.object_id]
-				item = self.add_item_to_inventory(model.lot)
+				item = self.object.inventory.add_item_to_inventory(model.lot)
 				if reason == DeleteReason.PickingModelUp:
-					self.equip_inventory(None, item_to_equip=item.object_id)
-					self._v_server.send_game_message(self.handle_u_g_c_equip_post_delete_based_on_edit_mode, inv_item=item.object_id, items_total=item.amount, address=address)
+					self.inventory.equip_inventory(None, item_to_equip=item.object_id)
+					self.object._v_server.send_game_message(self.handle_u_g_c_equip_post_delete_based_on_edit_mode, inv_item=item.object_id, items_total=item.amount, address=address)
 				break
 
 	def parse_chat_message(self, address, client_state:c_int, text:"wstr"):
 		if text[0] == "/":
-			self._v_server.chat.parse_command(text[1:], self)
+			self.object._v_server.chat.parse_command(text[1:], self.object)
 
 	def ready_for_updates(self, address, object_id:c_int64=None):
 		pass
@@ -444,10 +451,10 @@ class CharacterComponent:
 		save_response.write(c_int64(local_id))
 		save_response.write(c_uint(0))
 		save_response.write(c_uint(1))
-		save_response.write(c_int64(self._v_server.new_object_id()))
+		save_response.write(c_int64(self.object._v_server.new_object_id()))
 		save_response.write(c_uint(len(lxfml_data_compressed)))
 		save_response.write(lxfml_data_compressed)
-		self._v_server.send(save_response, address)
+		self.object._v_server.send(save_response, address)
 
 	def start_arranging_with_item(self, address, first_time:c_bit=True, build_area_id:c_int64=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		pass
@@ -460,27 +467,27 @@ class CharacterComponent:
 
 	def pet_taming_try_build(self, address, selections:(c_uint, c_uint64)=None, client_failed:c_bit=False):
 		if not client_failed:
-			self._v_server.send_game_message(self.pet_taming_try_build_result, address=address)
-			self._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.position, tele_pos=self.position, tele_rot=self.rotation, address=self.address)
+			self.object._v_server.send_game_message(self.pet_taming_try_build_result, address=address)
+			self.object._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation, address=self.address)
 
 	def report_bug(self, address, body:"wstr"=None, client_version:"str"=None, other_player_id:"str"=None, selection:"str"=None):
-		for account in self._v_server.accounts.values():
-			self._v_server.mail.send_mail(self.name, "Bug Report: "+selection, body, account.characters.selected())
+		for account in self.object._v_server.accounts.values():
+			self.object._v_server.mail.send_mail(self.name, "Bug Report: "+selection, body, account.characters.selected())
 
 	def request_smash_player(self, address):
-		self.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object_id, loot_owner_id=0)
+		self.object.destructible.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
 
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, address, inv_item:c_int64=None, items_total:c_int=0):
 		pass
 
 	def property_contents_from_client(self, address, query_db:c_bit=False):
-		self._v_server.send_game_message(self.get_models_on_property, models={model.object_id:spawner.object_id for spawner, model in self._v_server.models}, address=address)
+		self.object._v_server.send_game_message(self.get_models_on_property, models={model.object_id:spawner.object_id for spawner, model in self.object._v_server.models}, address=address)
 
 	def get_models_on_property(self, address, models:(c_uint, c_int64, c_int64)=None):
 		pass
 
 	def match_request(self, address, activator:c_int64=None, player_choices:"ldf"=None, type:c_int=None, value:c_int=None):
-		self._v_server.send_game_message(self.match_response, response=0, address=address)
+		self.object._v_server.send_game_message(self.match_response, response=0, address=address)
 		#asyncio.ensure_future(self.transfer_to_world((1302, 0, 0)))
 
 	def match_response(self, address, response:c_int=None):
@@ -494,7 +501,7 @@ class CharacterComponent:
 
 	def modify_lego_score(self, address, score:c_int64=None, source_type:c_int=0):
 		self.universe_score += score
-		if self.universe_score > self._v_server.db.level_scores[self.level]:
+		if self.universe_score > self.object._v_server.db.level_scores[self.level]:
 			self.level += 1
 
 	def restore_to_post_load_stats(self, address):

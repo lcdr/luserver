@@ -1,7 +1,6 @@
 import asyncio
 
 import luserver.components.script as script
-from luserver.components.rebuild import RebuildComponent
 
 IMAGINATION_POWERUP_LOT = 935
 SPAWN_AMOUNT = 10
@@ -9,6 +8,5 @@ SPAWN_INTERVAL = 1.5
 
 class ScriptComponent(script.ScriptComponent):
 	def complete_rebuild(self, player):
-		RebuildComponent.complete_rebuild(self, player)
 		for i in range(SPAWN_AMOUNT):
-			asyncio.get_event_loop().call_later(i*SPAWN_INTERVAL, self.drop_loot, IMAGINATION_POWERUP_LOT, player)
+			asyncio.get_event_loop().call_later(i*SPAWN_INTERVAL, self.object.stats.drop_loot, IMAGINATION_POWERUP_LOT, player)

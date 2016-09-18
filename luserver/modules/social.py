@@ -29,7 +29,7 @@ class SocialHandling(ServerModule):
 	def on_get_friends_list(self, data, address):
 		assert sum(data) == 0 # seem to always be 0?
 
-		friends = self.server.accounts[address].characters.selected().friends
+		friends = self.server.accounts[address].characters.selected().char.friends
 
 		friends_list = BitStream()
 		friends_list.write_header(WorldClientMsg.FriendsList)
@@ -38,13 +38,13 @@ class SocialHandling(ServerModule):
 		friends_list.write(c_ushort(len(friends)))
 		for friend_ref in friends:
 			friend = friend_ref()
-			friends_list.write(c_bool(friend.online))
+			friends_list.write(c_bool(friend.char.online))
 			friends_list.write(c_bool(False)) # is best friend
 			friends_list.write(c_bool(False)) # is FTP
 			friends_list.write(bytes(5)) # ???
-			friends_list.write(c_ushort(friend.world[0]))
-			friends_list.write(c_ushort(friend.world[1]))
-			friends_list.write(c_uint(friend.world[2]))
+			friends_list.write(c_ushort(friend.char.world[0]))
+			friends_list.write(c_ushort(friend.char.world[1]))
+			friends_list.write(c_uint(friend.char.world[2]))
 			friends_list.write(c_int64(friend.object_id))
 			friends_list.write(friend.name, allocated_length=66)
 			friends_list.write(bytes(6)) # ???
@@ -62,7 +62,7 @@ class SocialHandling(ServerModule):
 			relayed_request.write_header(WorldClientMsg.AddFriendRequest)
 			relayed_request.write(self.server.accounts[address].characters.selected().name, allocated_length=66)
 			relayed_request.write(c_bool(is_best_friend_request))
-			self.send(relayed_request, requested_friend.address)
+			self.send(relayed_request, requested_friend.char.address)
 		except KeyError:
 			# friend cannot be found
 			self.send_add_friend_response(AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
@@ -72,12 +72,12 @@ class SocialHandling(ServerModule):
 		response.write_header(WorldClientMsg.AddFriendResponse)
 		response.write(c_ubyte(return_code))
 		if friend is not None:
-			response.write(c_bool(friend.online))
+			response.write(c_bool(friend.char.online))
 			response.write(friend.name, allocated_length=66)
 			response.write(c_int64(friend.object_id))
-			response.write(c_ushort(friend.world[0]))
-			response.write(c_ushort(friend.world[1]))
-			response.write(c_uint(friend.world[2]))
+			response.write(c_ushort(friend.char.world[0]))
+			response.write(c_ushort(friend.char.world[1]))
+			response.write(c_uint(friend.char.world[2]))
 		else:
 			response.write(bytes(1))
 			response.write(requested_name, allocated_length=66)
@@ -100,17 +100,17 @@ class SocialHandling(ServerModule):
 				requester = self.server.find_player_by_name(requester_name)
 				players = requester, responder
 				for player1, player2 in (players, reversed(players)):
-					player1.friends.append(persistent.wref.WeakRef(player2))
-					self.send_add_friend_response(AddFriendReturnCode.Success, player1.address, friend=player2)
+					player1.char.friends.append(persistent.wref.WeakRef(player2))
+					self.send_add_friend_response(AddFriendReturnCode.Success, player1.char.address, friend=player2)
 			except KeyError:
-				self.send_add_friend_response(AddFriendReturnCode.Failure, player1.address, requested_name=requester_name)
+				self.send_add_friend_response(AddFriendReturnCode.Failure, player1.char.address, requested_name=requester_name)
 
 	def on_remove_friend(self, request, address):
 		assert request.read(c_int64) == 0
 		requested_friend_name = request.read(str, allocated_length=66)
 
 		requester = self.server.accounts[address].characters.selected()
-		requested_friend_ref = [i for i in requester.friends if i().name == requested_friend_name][0]
+		requested_friend_ref = [i for i in requester.char.friends if i().name == requested_friend_name][0]
 		requester_ref = [i for i in requested_friend_ref().friends if i().name == requester.name][0]
 
 		players = requester_ref, requested_friend_ref
@@ -122,7 +122,7 @@ class SocialHandling(ServerModule):
 			remove_message.write_header(WorldClientMsg.RemoveFriendResponse)
 			remove_message.write(c_bool(True)) # Successful
 			remove_message.write(player2_ref().name, allocated_length=66)
-			self.send(remove_message, player1_ref().address)
+			self.send(remove_message, player1_ref().char.address)
 
 	def on_team_invite(self, invite, address):
 		assert invite.read(c_int64) == 0
@@ -135,7 +135,7 @@ class SocialHandling(ServerModule):
 		relayed_invite.write_header(WorldClientMsg.TeamInvite)
 		relayed_invite.write(sender.name, allocated_length=66)
 		relayed_invite.write(c_int64(sender.object_id))
-		self.server.send(relayed_invite, invitee.address)
+		self.server.send(relayed_invite, invitee.char.address)
 		# todo: error cases and response
 
 	def on_team_invite_response(self, response, address):

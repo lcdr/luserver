@@ -1,7 +1,9 @@
 from ..bitstream import c_bit, c_float, c_int64, c_uint
+from .component import Component
 
-class ScriptedActivityComponent:
-	def __init__(self, comp_id):
+class ScriptedActivityComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
 		self._flags["players"] = "activity_flag"
 		self.players = []
 

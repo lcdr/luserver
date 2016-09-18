@@ -4,6 +4,7 @@ from persistent import Persistent
 
 from ..bitstream import c_bit, c_int, c_int64
 from ..math.vector import Vector3
+from .component import Component
 from .inventory import InventoryType
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class MissionState:
 	Completed = 8
 
 def check_prereqs(mission_id, player):
-	player_missions = {mission.id: mission.state for mission in player.missions}
+	player_missions = {mission.id: mission.state for mission in player.char.missions}
 	prereqs = player._v_server.db.missions[mission_id][1]
 	for prereq_ors in prereqs:
 		for prereq_mission in prereq_ors:
@@ -89,7 +90,7 @@ class MissionProgress(Persistent):
 
 		task.value = min(task.value+increment, task.target_value)
 		task_index = self.tasks.index(task)
-		player._v_server.send_game_message(player.notify_mission_task, self.id, task_mask=1<<(task_index+1), updates=[task.value], address=player.address)
+		player._v_server.send_game_message(player.char.notify_mission_task, self.id, task_mask=1<<(task_index+1), updates=[task.value], address=player.char.address)
 		if not self.is_mission:
 			for task in self.tasks:
 				if task.value < task.target_value:
@@ -105,23 +106,23 @@ class MissionProgress(Persistent):
 		else:
 			source_type = LootType.Achievement
 
-		player._v_server.send_game_message(player.notify_mission, self.id, mission_state=MissionState.Unavailable, sending_rewards=True, address=player.address)
-		player._v_server.send_game_message(player.set_currency, currency=player.currency + self.rew_currency, position=Vector3.zero, source_type=source_type, address=player.address)
-		player._v_server.send_game_message(player.modify_lego_score, self.rew_universe_score, source_type=source_type, address=player.address)
+		player._v_server.send_game_message(player.char.notify_mission, self.id, mission_state=MissionState.Unavailable, sending_rewards=True, address=player.char.address)
+		player._v_server.send_game_message(player.char.set_currency, currency=player.char.currency + self.rew_currency, position=Vector3.zero, source_type=source_type, address=player.char.address)
+		player._v_server.send_game_message(player.char.modify_lego_score, self.rew_universe_score, source_type=source_type, address=player.char.address)
 
 		for lot, amount in self.rew_items:
-			player.add_item_to_inventory(lot, amount, source_type=source_type)
+			player.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
 
 		if self.rew_emote is not None:
-			player._v_server.send_game_message(player.set_emote_lock_state, lock=False, emote_id=self.rew_emote, address=player.address)
+			player._v_server.send_game_message(player.char.set_emote_lock_state, lock=False, emote_id=self.rew_emote, address=player.char.address)
 
-		player.max_life += self.rew_max_life
-		player.max_imagination += self.rew_max_imagination
+		player.stats.max_life += self.rew_max_life
+		player.stats.max_imagination += self.rew_max_imagination
 
 		if self.rew_max_items:
-			player._v_server.send_game_message(player.set_inventory_size, inventory_type=InventoryType.Items, size=len(player.items)+self.rew_max_items, address=player.address)
+			player._v_server.send_game_message(player.inventory.set_inventory_size, inventory_type=InventoryType.Items, size=len(player.inventory.items)+self.rew_max_items, address=player.char.address)
 
-		player._v_server.send_game_message(player.notify_mission, self.id, mission_state=MissionState.Completed, sending_rewards=False, address=player.address)
+		player._v_server.send_game_message(player.char.notify_mission, self.id, mission_state=MissionState.Completed, sending_rewards=False, address=player.char.address)
 
 		# No longer required, delete to free memory in db
 
@@ -137,7 +138,7 @@ class MissionProgress(Persistent):
 
 		# Update missions that check if this mission was completed
 
-		for mission in player.missions:
+		for mission in player.char.missions:
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
 					if task.type == TaskType.MissionComplete and self.id in task.target:
@@ -145,9 +146,11 @@ class MissionProgress(Persistent):
 
 		player._v_server.commit()
 
-class MissionNPCComponent:
-	def __init__(self, comp_id):
-		self.missions = self._v_server.db.mission_npc_component[comp_id]
+class MissionNPCComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.mission = self
+		self.missions = self.object._v_server.db.mission_npc_component[comp_id]
 
 	def serialize(self, out, is_creation):
 		pass
@@ -157,7 +160,7 @@ class MissionNPCComponent:
 		if multi_interact_id is not None:
 			offer = multi_interact_id
 		else:
-			player_missions = {mission.id: mission.state for mission in player.missions}
+			player_missions = {mission.id: mission.state for mission in player.char.missions}
 
 			for mission_id, offers_mission, accepts_mission in self.missions:
 				if mission_id in player_missions:
@@ -172,8 +175,8 @@ class MissionNPCComponent:
 
 		if offer is not None:
 			log.debug("offering %i", offer)
-			self._v_server.send_game_message(self.offer_mission, offer, offerer=self.object_id, address=player.address)
-			self._v_server.send_game_message(player.offer_mission, offer, offerer=self.object_id, address=player.address)
+			self.object._v_server.send_game_message(self.offer_mission, offer, offerer=self.object.object_id, address=player.char.address)
+			self.object._v_server.send_game_message(player.char.offer_mission, offer, offerer=self.object.object_id, address=player.char.address)
 
 		return offer is not None
 
@@ -184,19 +187,19 @@ class MissionNPCComponent:
 		pass
 
 	def mission_dialogue_o_k(self, address, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
-		player = self._v_server.game_objects[responder]
+		player = self.object._v_server.game_objects[responder]
 
 		if mission_state == MissionState.Available:
 			assert not is_complete
-			player.add_mission(mission_id)
+			player.char.add_mission(mission_id)
 
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
-			for mission_progress in player.missions:
+			for mission_progress in player.char.missions:
 				if mission_progress.id == mission_id:
 					mission_progress.complete(player)
 					break
 
 	def request_linked_mission(self, address, player_id:c_int64=None, mission_id:c_int=None, mission_offered:c_bit=None):
-		player = self._v_server.game_objects[player_id]
-		MissionNPCComponent.on_use(self, player, None)
+		player = self.object._v_server.game_objects[player_id]
+		self.on_use(player, None)

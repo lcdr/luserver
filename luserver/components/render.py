@@ -1,8 +1,10 @@
 from ..bitstream import c_bit, c_float, c_int, c_int64
+from .component import Component
 
-class RenderComponent:
-	def __init__(self, comp_id):
-		pass
+class RenderComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.render = self
 
 	def serialize(self, out, is_creation):
 		if is_creation:

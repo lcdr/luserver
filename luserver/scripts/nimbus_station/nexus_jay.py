@@ -25,14 +25,14 @@ class ScriptComponent(script.ScriptComponent):
 			flag_id = 49
 			celebration_id = 17
 
-		self._v_server.send_game_message(player.set_flag, True, flag_id, address=player.address)
-		self._v_server.send_game_message(player.start_celebration_effect, animation="", duration=0, icon_id=0, main_text="", mixer_program="", music_cue="", path_node_name="", sound_guid="", sub_text="", celebration_id=celebration_id, address=player.address)
+		self.object._v_server.send_game_message(player.char.set_flag, True, flag_id, address=player.char.address)
+		self.object._v_server.send_game_message(player.char.start_celebration_effect, animation="", duration=0, icon_id=0, main_text="", mixer_program="", music_cue="", path_node_name="", sound_guid="", sub_text="", celebration_id=celebration_id, address=player.char.address)
 
 		achievements.append(778)
-		player.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually
+		player.char.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually
 
 		for achievement_id in achievements:
-			for mission in player.missions:
+			for mission in player.char.missions:
 				if mission.id == achievement_id:
 					mission.complete(player)
 					break
