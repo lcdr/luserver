@@ -1,8 +1,6 @@
 from ..bitstream import c_bit
+from .component import Component
 
-class BouncerComponent:
-	def __init__(self, comp_id):
-		pass
-
+class BouncerComponent(Component):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))

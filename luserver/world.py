@@ -52,12 +52,11 @@ import pyraknet.replicamanager
 from . import amf3
 from . import ldf
 from . import server
-from .bitstream import BitStream, c_bit, c_bool, c_float, c_int, c_int64, c_uint, c_ushort
-from .game_object_template import Template
+from .bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
+from .game_object import GameObject
 from .messages import GameMessage, WorldClientMsg, WorldServerMsg
 from .math.quaternion import Quaternion
 from .components.property import PropertyData, PropertySelectQueryProperty
-from .components.rebuild import RebuildComponent
 from .math.vector import Vector3
 from .modules.char import CharHandling
 from .modules.chat import ChatHandling
@@ -154,10 +153,11 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			self.world_data = self.db.world_data[self.world_id[0]]
 			for obj in self.world_data.objects.values():
 				obj._v_server = self
-				if hasattr(obj, "on_startup"):
-					obj.on_startup()
+				for comp in obj.components:
+					if hasattr(comp, "on_startup"):
+						comp.on_startup()
 				if obj.lot == 176:
-					obj.spawn()
+					obj.spawner.spawn()
 			if self.world_id[2] != 0:
 				self.models = []
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
@@ -166,12 +166,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			self.physics.init()
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
-		spawner = Template(176, self.conn)(spawner_id, self)
-		spawner.spawntemplate = lot
-		spawner.position.update(position)
-		spawner.rotation.update(rotation)
+		# todo: this is outdated, needs to be updated
+		spawner = GameObject(self, 176, spawner_id)
+		spawner.spawner.spawntemplate = lot
+		spawner.physics.position.update(position)
+		spawner.physics.rotation.update(rotation)
 		spawner._v_server = self
-		self.models.append((spawner, spawner.spawn()))
+		self.models.append((spawner, spawner.spawner.spawn()))
 
 	def on_disconnect_or_connection_lost(self, data, address):
 		super().on_disconnect_or_connection_lost(data, address)
@@ -230,27 +231,28 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			creator = spawner
 		if parent is not None:
 			creator = parent
-
 		if position:
 			if isinstance(position, Vector3):
-				set_vars["position"] = Vector3(position)
+				position = Vector3(position)
 			else:
-				set_vars["position"] = Vector3(*position)
+				position = Vector3(*position)
 		else:
-			set_vars["position"] = Vector3(creator.position)
+			position = Vector3(creator.physics.position)
 		if rotation:
 			if isinstance(rotation, Quaternion):
-				set_vars["rotation"] = Quaternion(rotation)
+				rotation = Quaternion(rotation)
 			else:
-				set_vars["rotation"] = Quaternion(*rotation)
+				rotation = Quaternion(*rotation)
 		else:
-			set_vars["rotation"] = Quaternion(creator.rotation)
+			rotation = Quaternion(creator.physics.rotation)
 
-		obj = Template(lot, self.conn, custom_script=custom_script)(self.new_spawned_id(), self, set_vars=set_vars)
+		set_vars["position"] = position
+		set_vars["rotation"] = rotation
+		obj = GameObject(self, lot, self.new_spawned_id(), custom_script, set_vars)
 
 		if spawner is not None:
-			obj.spawner = spawner
-			obj.spawner_waypoint_index = spawner.last_waypoint_index
+			obj.spawner_object = spawner
+			obj.spawner_waypoint_index = spawner.spawner.last_waypoint_index
 
 		if parent is not None:
 			obj.parent = parent.object_id
@@ -261,8 +263,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.game_objects[obj.object_id] = obj
 		self.construct(obj)
 
-		if isinstance(obj, RebuildComponent):
-			self.spawn_object(6604, parent=obj, position=obj.rebuild_activator_position)
+		if hasattr(obj, "rebuild"):
+			self.spawn_object(6604, parent=obj, position=obj.rebuild.rebuild_activator_position)
 		return obj
 
 	def get_object(self, object_id):
@@ -293,10 +295,21 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
 			The serialization type (c_int, c_float, etc) is taken from the argument annotation.
 		"""
+		multiple_components = isinstance(func, tuple)
+		if multiple_components:
+			obj, func_name = func
+			for comp in obj.components:
+				if hasattr(comp, func_name):
+					func = getattr(comp, func_name)
+
 		game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
 		out = BitStream()
 		out.write_header(WorldClientMsg.GameMessage)
-		out.write(c_int64(func.__self__.object_id))
+		if isinstance(func.__self__, GameObject):
+			object_id = func.__self__.object_id
+		else:
+			object_id = func.__self__.object.object_id
+		out.write(c_int64(object_id))
 		out.write(c_ushort(game_message_id))
 
 		signature = inspect.signature(func)
@@ -321,7 +334,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				assert value is not None
 				self.game_message_serialize(out, param.annotation, value)
 
-		func(address, *args, **kwargs)
+		if multiple_components:
+			for comp in obj.components:
+				if hasattr(comp, func_name):
+					getattr(comp, func_name)(address, *args, **kwargs)
+		else:
+			func(address, *args, **kwargs)
+
 		self.send(out, address, broadcast)
 
 	def read_game_message(self, obj, message, address, call_handler=True, return_kwargs=False):
@@ -333,11 +352,17 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			return
 		message_handler = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
 
-		if not hasattr(obj, message_handler):
-			log.warn("%s has no handler for %s", obj, message_name)
-			return
+		if hasattr(obj, message_handler):
+			message_handler = getattr(obj, message_handler)
+		else:
+			for comp in obj.components:
+				if hasattr(comp, message_handler):
+					message_handler = getattr(comp, message_handler)
+					break
+			else:
+				log.warn("%s has no handler for %s", obj, message_name)
+				return
 
-		message_handler = getattr(obj, message_handler)
 		signature = inspect.signature(message_handler)
 		kwargs = {}
 		for param in list(signature.parameters.values())[1:]:

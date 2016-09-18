@@ -347,7 +347,7 @@ if GENERATE_COMPS:
 			if comp_row is not None:
 				complete_time, smash_time, reset_time, take_imagination = comp_row
 				if complete_time is None:
-					complete_time = 0
+					complete_time = 1
 				root.rebuild_component[row[2]] = complete_time, smash_time, reset_time, take_imagination
 
 		elif row[1] == 53 and row[2] not in root.package_component:

@@ -31,8 +31,8 @@ from persistent.list import PersistentList
 
 from ..bitstream import c_bit, c_int, c_int64, c_uint
 from ..math.vector import Vector3
+from .component import Component
 from .mission import MissionState, TaskType
-from .skill import BehaviorTemplate
 
 log = logging.getLogger(__name__)
 
@@ -54,8 +54,10 @@ class Stack(Persistent):
 	def __repr__(self):
 		return "%ix %i" % (self.amount, self.lot)
 
-class InventoryComponent:
-	def __init__(self, comp_id):
+class InventoryComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.inventory = self
 		self.equipped_items_flag = False
 		self.items = PersistentList([None]*20)
 		self.bricks = PersistentList()
@@ -63,8 +65,8 @@ class InventoryComponent:
 		self.temp_models = PersistentList()
 		self.mission_objects = PersistentList()
 
-		if comp_id in self._v_server.db.inventory_component:
-			for item_lot, equip in self._v_server.db.inventory_component[comp_id]:
+		if comp_id in self.object._v_server.db.inventory_component:
+			for item_lot, equip in self.object._v_server.db.inventory_component[comp_id]:
 				item = self.add_item_to_inventory(item_lot, persistent=False, notify_client=False)
 				if equip:
 					self.equip_inventory(None, item_to_equip=item.object_id)
@@ -116,9 +118,9 @@ class InventoryComponent:
 				break
 
 	def add_item_to_inventory(self, lot, amount=1, module_lots=None, inventory_type=None, source_type=0, show_flying_loot=True, persistent=True, notify_client=True):
-		for component_type, component_id in self._v_server.db.components_registry[lot]:
+		for component_type, component_id in self.object._v_server.db.components_registry[lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
-				item_type, stack_size = self._v_server.db.item_component[component_id][1:]
+				item_type, stack_size = self.object._v_server.db.item_component[component_id][1:]
 				break
 		else:
 			raise ValueError("lot", lot)
@@ -150,10 +152,10 @@ class InventoryComponent:
 
 			if new_stack:
 				if persistent:
-					object_id = self._v_server.new_object_id()
+					object_id = self.object._v_server.new_object_id()
 				else:
-					object_id = self._v_server.new_spawned_id()
-				stack = Stack(self._v_server.db, object_id, lot)
+					object_id = self.object._v_server.new_spawned_id()
+				stack = Stack(self.object._v_server.db, object_id, lot)
 
 				if inventory_type in (InventoryType.Bricks, InventoryType.TempModels, InventoryType.MissionObjects):
 					inventory.append(stack)
@@ -175,15 +177,15 @@ class InventoryComponent:
 				if hasattr(stack, "module_lots"):
 					extra_info["assemblyPartLOTs"] = str, [(c_int, i) for i in stack.module_lots]
 
-				self._v_server.send_game_message(self.add_item_to_inventory_client_sync, bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=1, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index, address=self.address)
+				self.object._v_server.send_game_message(self.add_item_to_inventory_client_sync, bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=1, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index, address=self.object.char.address)
 
-			if self.lot == 1:
+			if self.object.lot == 1:
 				# update missions that have collecting this item as requirement
-				for mission in self.missions:
+				for mission in self.object.char.missions:
 					if mission.state == MissionState.Active:
 						for task in mission.tasks:
 							if task.type == TaskType.ObtainItem and stack.lot in task.target:
-								mission.increment_task(task, self)
+								mission.increment_task(task, self.object)
 
 		return stack
 
@@ -194,7 +196,7 @@ class InventoryComponent:
 		if item is not None:
 			object_id = item.object_id
 
-		self._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, object_id=object_id, object_template=lot, stack_count=amount, address=self.address)
+		self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
 
 	def remove_item_from_inventory(self, address, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:"ldf"=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if confirmed:
@@ -246,10 +248,10 @@ class InventoryComponent:
 
 					item.equipped = True
 					self.equipped_items_flag = True
-					self._serialize = True
+					self.object._serialize = True
 
-					if self.lot == 1:
-						self.add_skill_for_item(item)
+					if self.object.lot == 1:
+						self.object.skill.add_skill_for_item(item)
 					return
 
 	def un_equip_inventory(self, address, even_if_dead:c_bit=False, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
@@ -260,10 +262,10 @@ class InventoryComponent:
 				if item is not None and item.object_id == item_to_unequip:
 					item.equipped = False
 					self.equipped_items_flag = True
-					self._serialize = True
+					self.object._serialize = True
 
-					if self.lot == 1:
-						self.remove_skill_for_item(item)
+					if self.object.lot == 1:
+						self.object.skill.remove_skill_for_item(item)
 					return
 
 	def set_inventory_size(self, address, inventory_type:c_int=None, size:c_int=None):
@@ -273,10 +275,10 @@ class InventoryComponent:
 	def use_non_equipment_item(self, address, item_to_use:c_int64=None):
 		for item in self.items:
 			if item is not None and item.object_id == item_to_use:
-				for component_type, component_id in self._v_server.db.components_registry[item.lot]:
+				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
 					if component_type == 53: # PackageComponent, make an enum for this somewhen
 						self.remove_item_from_inv(InventoryType.Items, item)
-						for loot_table in self._v_server.db.package_component[component_id]:
+						for loot_table in self.object._v_server.db.package_component[component_id]:
 							for lot, _ in loot_table[0]:
 								self.add_item_to_inventory(lot)
 						return

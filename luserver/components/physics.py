@@ -1,30 +1,35 @@
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
+from .component import Component
 
-class Controllable:
-	def __init__(self, comp_id):
-		self._flags["position"] = "transform_data_flag"
-		self._flags["rotation"] = "transform_data_flag"
-		self._flags["on_ground"] = "transform_data_flag"
-		self._flags["unknown_bool"] = "transform_data_flag"
-		self._flags["velocity_flag"] = "transform_data_flag"
+class PhysicsComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.physics = self
+		self._flags["position"] = "physics_data_flag"
+		self._flags["rotation"] = "physics_data_flag"
+		self.position = Vector3()
+		self.rotation = Quaternion()
+		if "position" in set_vars:
+			self.position.update(set_vars["position"])
+		if "rotation" in set_vars:
+			self.rotation.update(set_vars["rotation"])
+
+class Controllable(PhysicsComponent):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self._flags["on_ground"] = "physics_data_flag"
+		self._flags["unknown_bool"] = "physics_data_flag"
+		self._flags["velocity_flag"] = "physics_data_flag"
 		self._flags["velocity"] = "velocity_flag"
-		self._flags["angular_velocity_flag"] = "transform_data_flag"
+		self._flags["angular_velocity_flag"] = "physics_data_flag"
 		self._flags["angular_velocity"] = "angular_velocity_flag"
-		self._flags["unknown_flag"] = "transform_data_flag"
+		self._flags["unknown_flag"] = "physics_data_flag"
 		self._flags["unknown_object_id"] = "unknown_flag"
 		self._flags["unknown_float3"] = "unknown_flag"
 		self._flags["deeper_unknown_flag"] = "unknown_flag"
 		self._flags["deeper_unknown_float3"] = "deeper_unknown_flag"
-		if not hasattr(self, "position"):
-			self.position = Vector3()
-		else:
-			self.attr_changed("position")
-		if not hasattr(self, "rotation"):
-			self.rotation = Quaternion()
-		else:
-			self.attr_changed("rotation")
 		self.on_ground = True
 		self.unknown_bool = False
 		self.velocity = Vector3()
@@ -34,8 +39,8 @@ class Controllable:
 		self.deeper_unknown_float3 = 0, 0, 0
 
 	def serialize(self, out, is_creation):
-		out.write(c_bit(self.transform_data_flag or is_creation))
-		if self.transform_data_flag or is_creation:
+		out.write(c_bit(self.physics_data_flag or is_creation))
+		if self.physics_data_flag or is_creation:
 			out.write(c_float(self.position.x))
 			out.write(c_float(self.position.y))
 			out.write(c_float(self.position.z))
@@ -79,7 +84,7 @@ class Controllable:
 				self.unknown_flag = False
 			if not is_creation:
 				out.write(c_bit(False))
-			self.transform_data_flag = False
+			self.physics_data_flag = False
 
 class ControllablePhysicsComponent(Controllable):
 	def serialize(self, out, is_creation):
@@ -92,27 +97,15 @@ class ControllablePhysicsComponent(Controllable):
 		out.write(c_bit(False))
 		super().serialize(out, is_creation)
 
-class SimplePhysicsComponent:
-	def __init__(self, comp_id):
-		self._flags["position"] = "position_rotation_flag"
-		self._flags["rotation"] = "position_rotation_flag"
-		if not hasattr(self, "position"):
-			self.position = Vector3()
-		else:
-			self.attr_changed("position")
-		if not hasattr(self, "rotation"):
-			self.rotation = Quaternion()
-		else:
-			self.attr_changed("rotation")
-
+class SimplePhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
 		if is_creation:
 			out.write(c_bit(False))
 			out.write(c_float(0))
 		out.write(c_bit(False))
 		out.write(c_bit(False))
-		out.write(c_bit(self.position_rotation_flag or is_creation))
-		if self.position_rotation_flag or is_creation:
+		out.write(c_bit(self.physics_data_flag or is_creation))
+		if self.physics_data_flag or is_creation:
 			out.write(c_float(self.position.x))
 			out.write(c_float(self.position.y))
 			out.write(c_float(self.position.z))
@@ -120,24 +113,12 @@ class SimplePhysicsComponent:
 			out.write(c_float(self.rotation.y))
 			out.write(c_float(self.rotation.z))
 			out.write(c_float(self.rotation.w))
-			self.position_rotation_flag = False
+			self.physics_data_flag = False
 
-class RigidBodyPhantomPhysicsComponent:
-	def __init__(self, comp_id):
-		self._flags["position"] = "position_rotation_flag"
-		self._flags["rotation"] = "position_rotation_flag"
-		if not hasattr(self, "position"):
-			self.position = Vector3()
-		else:
-			self.attr_changed("position")
-		if not hasattr(self, "rotation"):
-			self.rotation = Quaternion()
-		else:
-			self.attr_changed("rotation")
-
+class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
-		out.write(c_bit(self.position_rotation_flag or is_creation))
-		if self.position_rotation_flag or is_creation:
+		out.write(c_bit(self.physics_data_flag or is_creation))
+		if self.physics_data_flag or is_creation:
 			out.write(c_float(self.position.x))
 			out.write(c_float(self.position.y))
 			out.write(c_float(self.position.z))
@@ -145,7 +126,7 @@ class RigidBodyPhantomPhysicsComponent:
 			out.write(c_float(self.rotation.y))
 			out.write(c_float(self.rotation.z))
 			out.write(c_float(self.rotation.w))
-			self.position_rotation_flag = False
+			self.physics_data_flag = False
 
 class VehiclePhysicsComponent(Controllable):
 	def serialize(self, out, is_creation):
@@ -155,22 +136,10 @@ class VehiclePhysicsComponent(Controllable):
 			out.write(c_bit(False))
 		out.write(c_bit(False))
 
-class PhantomPhysicsComponent:
-	def __init__(self, comp_id):
-		self._flags["position"] = "position_rotation_flag"
-		self._flags["rotation"] = "position_rotation_flag"
-		if not hasattr(self, "position"):
-			self.position = Vector3()
-		else:
-			self.attr_changed("position")
-		if not hasattr(self, "rotation"):
-			self.rotation = Quaternion()
-		else:
-			self.attr_changed("rotation")
-
+class PhantomPhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
-		out.write(c_bit(self.position_rotation_flag or is_creation))
-		if self.position_rotation_flag or is_creation:
+		out.write(c_bit(self.physics_data_flag or is_creation))
+		if self.physics_data_flag or is_creation:
 			out.write(c_float(self.position.x))
 			out.write(c_float(self.position.y))
 			out.write(c_float(self.position.z))
@@ -178,6 +147,6 @@ class PhantomPhysicsComponent:
 			out.write(c_float(self.rotation.y))
 			out.write(c_float(self.rotation.z))
 			out.write(c_float(self.rotation.w))
-			self.position_rotation_flag = False
+			self.physics_data_flag = False
 
 		out.write(c_bit(False))

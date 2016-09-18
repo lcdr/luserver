@@ -3,14 +3,17 @@ import random
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
 from ..math.vector import Vector3
+from .component import Component
 
-class StatsSubcomponent:
-	def __init__(self, comp_id):
+class StatsSubcomponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.stats = self
 		self._flags["life"] = "stats_flag"
 		self._flags["armor"] = "stats_flag"
 		self._flags["imagination"] = "stats_flag"
 		self._flags["faction"] = "stats_flag"
-		if not hasattr(self, "faction"): # if this stuff hasn't already been assigned by DestructibleComponent
+		if not hasattr(self.object, "destructible"):
 			self.faction = -1
 			self._max_life = 1
 			self._max_armor = 0
@@ -19,6 +22,8 @@ class StatsSubcomponent:
 			self.armor = self.max_armor
 			self.imagination = self.max_imagination
 			self.is_smashable = False
+		else:
+			self.object.destructible.init()
 
 	@property
 	def max_life(self):
@@ -108,13 +113,14 @@ class StatsSubcomponent:
 		out.write(c_bit(False))
 
 	def on_destruction(self):
-		if self.spawner is not None:
-				asyncio.get_event_loop().call_later(8, self.spawner.spawn)
+		if self.object.spawner_object is not None:
+				asyncio.get_event_loop().call_later(8, self.object.spawner_object.spawner.spawn)
 
 	def drop_loot(self, lot, owner):
-		object_id = self._v_server.new_spawned_id()
-		self._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
-		self._v_server.send_game_message(owner.drop_client_loot, use_position=True, spawn_position=self.position, final_position=Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20), currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object_id, address=owner.address)
+		loot_position = Vector3(self.object.physics.position.x+(random.random()-0.5)*20, self.object.physics.position.y, self.object.physics.position.z+(random.random()-0.5)*20)
+		object_id = self.object._v_server.new_spawned_id()
+		self.object._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
+		self.object._v_server.send_game_message(owner.char.drop_client_loot, use_position=True, spawn_position=self.object.physics.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object.object_id, address=owner.char.address)
 
 	def die(self, address, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
 		pass

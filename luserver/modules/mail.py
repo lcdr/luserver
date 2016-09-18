@@ -42,7 +42,7 @@ class MailHandling(ServerModule):
 		elif mail_id == MailID.MailRead:
 			self.on_mail_read(message, player)
 		elif mail_id == MailID.MailNotificationRequest:
-			if player.mails:
+			if player.char.mails:
 				self.send_mail_notification(player)
 
 	def on_mail_send(self, data, player):
@@ -56,7 +56,7 @@ class MailHandling(ServerModule):
 		return_code = MailSendReturnCode.Success
 		try:
 			if attachment_item_count != 0:
-				self.server.chat.send_general_chat_message("", "Attachments aren't implemented at the moment.", player.address, broadcast=False)
+				self.server.chat.send_general_chat_message("", "Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
 				return_code = MailSendReturnCode.ItemCannotBeMailed
 				return
 			if recipient_name == player.name:
@@ -77,7 +77,7 @@ class MailHandling(ServerModule):
 			out.write_header(WorldClientMsg.Mail)
 			out.write(c_uint(MailID.MailSendResponse))
 			out.write(c_uint(return_code))
-			self.server.send(out, player.address)
+			self.server.send(out, player.char.address)
 
 	def send_mail(self, sender, subject, body, recipient):
 		mail = Mail(self.server.new_object_id(), sender=sender, subject=subject, body=body)
@@ -89,9 +89,9 @@ class MailHandling(ServerModule):
 		mails.write_header(WorldClientMsg.Mail)
 		mails.write(c_uint(MailID.MailData))
 		mails.write(bytes(4)) # return code success (enum is a bit overkill here)
-		mails.write(c_ushort(len(player.mails)))
+		mails.write(c_ushort(len(player.char.mails)))
 		mails.write(bytes(2)) # unknown
-		for mail in player.mails:
+		for mail in player.char.mails:
 			mails.write(c_int64(mail.id))
 			mails.write(mail.subject, allocated_length=100)
 			mails.write(mail.body, allocated_length=800)
@@ -108,21 +108,21 @@ class MailHandling(ServerModule):
 			mails.write(bytes(1))
 			mails.write(bytes(2))
 			mails.write(bytes(4))
-		self.server.send(mails, player.address)
+		self.server.send(mails, player.char.address)
 
 	def on_mail_delete(self, data, player):
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
-		for mail in player.mails:
+		for mail in player.char.mails:
 			if mail.id == mail_id:
-				player.mails.remove(mail)
+				player.char.mails.remove(mail)
 				break
 		out = BitStream()
 		out.write_header(WorldClientMsg.Mail)
 		out.write(c_uint(MailID.MailDeleteResponse))
 		out.write(bytes(4))
 		out.write(c_int64(mail_id))
-		self.server.send(out, player.address)
+		self.server.send(out, player.char.address)
 
 	def on_mail_read(self, data, player):
 		data.skip_read(4) # ???
@@ -136,7 +136,7 @@ class MailHandling(ServerModule):
 		out.write(c_uint(MailID.MailReadResponse))
 		out.write(bytes(4))
 		out.write(c_int64(mail_id))
-		self.server.send(out, player.address)
+		self.server.send(out, player.char.address)
 
 	def send_mail_notification(self, player):
 		notification = BitStream()
@@ -144,9 +144,9 @@ class MailHandling(ServerModule):
 		notification.write(c_uint(MailID.MailNotification))
 		notification.write(bytes(4)) # notification type, seems only 0 is used
 		notification.write(bytes(32))
-		notification.write(c_uint(len([mail for mail in player.mails if not mail.is_read])))
+		notification.write(c_uint(len([mail for mail in player.char.mails if not mail.is_read])))
 		notification.write(bytes(4))
-		self.server.send(notification, player.address)
+		self.server.send(notification, player.char.address)
 
 
 class Mail(persistent.Persistent):

@@ -6,6 +6,7 @@ import enum
 from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
+from .component import Component
 from .inventory import ItemType
 from .mission import MissionState, TaskType
 
@@ -92,8 +93,10 @@ class SkillSlot:
 	Neck = 2
 	Hat = 3
 
-class SkillComponent:
-	def __init__(self, comp_id):
+class SkillComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.object.skill = self
 		self.delayed_behaviors = {}
 		self.projectile_behaviors = {}
 
@@ -112,22 +115,22 @@ class SkillComponent:
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
-		assert optional_originator_id in (0, self.object_id)
+		assert optional_originator_id in (0, self.object.object_id)
 		assert originator_rot == Quaternion(0, 0, 0, 0)
 
-		self._v_server.send_game_message(self.echo_start_skill, used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, address=address, broadcast=True)
+		self.object._v_server.send_game_message(self.echo_start_skill, used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, address=address, broadcast=True)
 
-		if self.lot == 1:
+		if self.object.lot == 1:
 			# update missions that have using this skill as requirement
-			for mission in self.missions:
+			for mission in self.object.char.missions:
 				if mission.state == MissionState.Active:
 					for task in mission.tasks:
 						if task.type == TaskType.UseSkill and skill_id in task.parameter:
-							mission.increment_task(task, self)
+							mission.increment_task(task, self.object)
 
-		target = self
+		target = self.object
 		self.picked_target_id = optional_target_id
-		behavior = self._v_server.db.skill_behavior[skill_id]
+		behavior = self.object._v_server.db.skill_behavior[skill_id]
 		self.handle_behavior(behavior, bitstream, target)
 
 		if not bitstream.all_read():
@@ -146,19 +149,19 @@ class SkillComponent:
 		pass
 
 	def sync_skill(self, address, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
-		self._v_server.send_game_message(self.echo_sync_skill, done, bitstream, ui_behavior_handle, ui_skill_handle, address=address, broadcast=True)
+		self.object._v_server.send_game_message(self.echo_sync_skill, done, bitstream, ui_behavior_handle, ui_skill_handle, address=address, broadcast=True)
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
 		behavior = self.delayed_behaviors[ui_behavior_handle]
-		target = self
+		target = self.object
 		if behavior is None:
 			behavior_id = bitstream.read(c_uint)
 			target_id = bitstream.read(c_uint64)
 			if behavior_id != 0:
-				behavior = self._v_server.db.behavior[behavior_id]
+				behavior = self.object._v_server.db.behavior[behavior_id]
 			if target_id != 0:
-				target = self._v_server.game_objects[target_id]
+				target = self.object._v_server.game_objects[target_id]
 
 		if behavior is not None: # no, this is not an "else" from above
 			self.handle_behavior(behavior, bitstream, target)
@@ -169,12 +172,12 @@ class SkillComponent:
 
 	def request_server_projectile_impact(self, address, local_id:c_int64=0, target_id:c_int64=0, bitstream:BitStream=None):
 		if target_id == 0:
-			target = self
+			target = self.object
 		else:
-			if target_id not in self._v_server.game_objects:
+			if target_id not in self.object._v_server.game_objects:
 				log.warning("Projectile Target %i not in game objects!", target_id)
 				return
-			target = self._v_server.game_objects[target_id]
+			target = self.object._v_server.game_objects[target_id]
 
 		for behav in self.projectile_behaviors[local_id]:
 			self.handle_behavior(behav, bitstream, target)
@@ -201,13 +204,13 @@ class SkillComponent:
 			enemy_type = bitstream.read(c_ubyte) # ?
 			if enemy_type != 1:
 				log.debug(enemy_type)
-			target.deal_damage(damage, self)
+			target.destructible.deal_damage(damage, self.object)
 			if hasattr(behavior, "on_success"):
 				self.handle_behavior(behavior.on_success, bitstream, target, level+1)
 
 		elif behavior.template == BehaviorTemplate.TacArc:
 			if behavior.use_picked_target and self.picked_target_id != 0:
-				target = self._v_server.game_objects[self.picked_target_id]
+				target = self.object._v_server.game_objects[self.picked_target_id]
 				# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
 				log.debug("using picked target, not completely working")
 				self.handle_behavior(behavior.action, bitstream, target, level+1)
@@ -222,7 +225,7 @@ class SkillComponent:
 				targets = []
 				for _ in range(bitstream.read(c_uint)): # number of targets
 					target_id = bitstream.read(c_int64)
-					targets.append(self._v_server.game_objects[target_id])
+					targets.append(self.object._v_server.game_objects[target_id])
 				for target in targets:
 					self.handle_behavior(behavior.action, bitstream, target, level+1)
 
@@ -243,12 +246,12 @@ class SkillComponent:
 		elif behavior.template == BehaviorTemplate.ProjectileAttack:
 			target_id = bitstream.read(c_int64)
 			if target_id != 0:
-				target = self._v_server.game_objects[target_id]
+				target = self.object._v_server.game_objects[target_id]
 				log.debug("target %s", target)
 
 			proj_behavs = []
-			for skill_id in self._v_server.db.object_skills[int(behavior.projectile_lot)]:
-				proj_behavs.append(self._v_server.db.skill_behavior[skill_id])
+			for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
+				proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id])
 
 			projectile_count = 1
 			if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
@@ -258,7 +261,7 @@ class SkillComponent:
 				self.projectile_behaviors[local_id] = proj_behavs
 
 		elif behavior.template == BehaviorTemplate.Heal:
-			target.life += behavior.life
+			target.stats.life += behavior.life
 
 		elif behavior.template == BehaviorTemplate.MovementSwitch:
 			movement_type = bitstream.read(c_uint)
@@ -281,7 +284,7 @@ class SkillComponent:
 			targets = []
 			for _ in range(bitstream.read(c_uint)): # number of targets
 				target_id = bitstream.read(c_int64)
-				targets.append(self._v_server.game_objects[target_id])
+				targets.append(self.object._v_server.game_objects[target_id])
 			for target in targets:
 				self.handle_behavior(behavior.action, bitstream, target, level+1)
 
@@ -290,14 +293,14 @@ class SkillComponent:
 				asyncio.get_event_loop().call_later(interval * behavior.delay, self.handle_behavior, behavior.action, b"", target)
 
 		elif behavior.template == BehaviorTemplate.Imagination:
-			target.imagination += behavior.imagination
+			target.stats.imagination += behavior.imagination
 
 		elif behavior.template == BehaviorTemplate.TargetCaster:
 			casted_behavior = behavior.action
 			self.handle_behavior(casted_behavior, bitstream, target, level+1)
 
 		elif behavior.template == BehaviorTemplate.Stun:
-			if target != self:
+			if target != self.object:
 				log.debug("Stun reading bit")
 				assert not bitstream.read(c_bit)
 
@@ -314,10 +317,10 @@ class SkillComponent:
 			self.delayed_behaviors[handle] = behavior.action
 
 		elif behavior.template == BehaviorTemplate.RepairArmor:
-			target.armor += behavior.armor
+			target.stats.armor += behavior.armor
 
 		elif behavior.template in (BehaviorTemplate.SpawnObject, BehaviorTemplate.SpawnQuickbuild):
-			self._v_server.spawn_object(behavior.lot, parent=self)
+			self.object._v_server.spawn_object(behavior.lot, parent=self.object)
 
 		elif behavior.template == BehaviorTemplate.Switch:
 			switch = True
@@ -331,11 +334,11 @@ class SkillComponent:
 
 		elif behavior.template == BehaviorTemplate.Buff:
 			if hasattr(behavior, "life"):
-				self.max_life += behavior.life
+				self.object.stats.max_life += behavior.life
 			if hasattr(behavior, "armor"):
-				self.max_armor += behavior.armor
+				self.object.stats.max_armor += behavior.armor
 			if hasattr(behavior, "imagination"):
-				self.max_imagination += behavior.imagination
+				self.object.stats.max_imagination += behavior.imagination
 
 		elif behavior.template == BehaviorTemplate.Chain:
 			chain_index = bitstream.read(c_uint)
@@ -350,7 +353,7 @@ class SkillComponent:
 				self.delayed_behaviors[handle] = None # not known yet
 
 		elif behavior.template == BehaviorTemplate.Interrupt:
-			if target != self:
+			if target != self.object:
 				log.debug("Interrupt: target != self, reading bit")
 				assert not bitstream.read(c_bit)
 			if not getattr(behavior, "interrupt_block", False):
@@ -379,19 +382,19 @@ class SkillComponent:
 	def undo_behavior(self, behavior):
 		if behavior.template == BehaviorTemplate.Buff:
 			if hasattr(behavior, "life"):
-				self.max_life -= behavior.life
+				self.object.stats.max_life -= behavior.life
 			if hasattr(behavior, "armor"):
-				self.max_armor -= behavior.armor
+				self.object.stats.max_armor -= behavior.armor
 			if hasattr(behavior, "imagination"):
-				self.max_imagination -= behavior.imagination
+				self.object.stats.max_imagination -= behavior.imagination
 
 	def add_skill_for_item(self, item, add_buffs=True):
-		if item.lot in self._v_server.db.object_skills:
-			for skill_id in self._v_server.db.object_skills[item.lot]:
-				behavior = self._v_server.db.skill_behavior[skill_id]
+		if item.lot in self.object._v_server.db.object_skills:
+			for skill_id in self.object._v_server.db.object_skills[item.lot]:
+				behavior = self.object._v_server.db.skill_behavior[skill_id]
 				if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
 					if add_buffs:
-						self.handle_behavior(behavior, b"", self)
+						self.handle_behavior(behavior, b"", self.object)
 				else:
 					slot_id = SkillSlot.RightHand
 					if item.item_type == ItemType.Hat:
@@ -400,13 +403,13 @@ class SkillComponent:
 						slot_id = SkillSlot.LeftHand
 					elif item.item_type == ItemType.Neck:
 						slot_id = SkillSlot.Neck
-					self._v_server.send_game_message(self.add_skill, skill_id=skill_id, slot_id=slot_id, address=self.address)
+					self.object._v_server.send_game_message(self.add_skill, skill_id=skill_id, slot_id=slot_id, address=self.object.char.address)
 
 	def remove_skill_for_item(self, item):
-		if item.lot in self._v_server.db.object_skills:
-			for skill_id in self._v_server.db.object_skills[item.lot]:
-				behavior = self._v_server.db.skill_behavior[skill_id]
+		if item.lot in self.object._v_server.db.object_skills:
+			for skill_id in self.object._v_server.db.object_skills[item.lot]:
+				behavior = self.object._v_server.db.skill_behavior[skill_id]
 				if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
 					self.undo_behavior(behavior)
 				else:
-					self._v_server.send_game_message(self.remove_skill, skill_id=skill_id, address=self.address)
+					self.object._v_server.send_game_message(self.remove_skill, skill_id=skill_id, address=self.object.char.address)

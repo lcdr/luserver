@@ -4,7 +4,7 @@ import logging
 import persistent.wref
 
 from ..bitstream import BitStream, c_int64, c_bool, c_ubyte, c_uint, c_ushort
-from ..game_object_template import PlayerObject
+from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
 from .module import ServerModule
 
@@ -99,25 +99,25 @@ class CharHandling(ServerModule):
 			response.write(c_bool(is_ftp))
 			response.write(bytes(10))
 
-			response.write(c_uint(char.shirt_color))
+			response.write(c_uint(char.char.shirt_color))
 			response.write(bytes(4))
 
-			response.write(c_uint(char.pants_color))
-			response.write(c_uint(char.hair_style))
-			response.write(c_uint(char.hair_color))
+			response.write(c_uint(char.char.pants_color))
+			response.write(c_uint(char.char.hair_style))
+			response.write(c_uint(char.char.hair_color))
 			response.write(bytes(8))
 
-			response.write(c_uint(char.eyebrow_style))
-			response.write(c_uint(char.eye_style))
-			response.write(c_uint(char.mouth_style))
+			response.write(c_uint(char.char.eyebrow_style))
+			response.write(c_uint(char.char.eye_style))
+			response.write(c_uint(char.char.mouth_style))
 			response.write(bytes(4))
 
-			response.write(c_ushort(char.world[0]))
-			response.write(c_ushort(char.world[1]))
-			response.write(c_uint(char.world[2]))
+			response.write(c_ushort(char.char.world[0]))
+			response.write(c_ushort(char.char.world[1]))
+			response.write(c_uint(char.char.world[2]))
 			response.write(bytes(8))
 
-			items = [i for i in char.items if i is not None and i.equipped]
+			items = [i for i in char.inventory.items if i is not None and i.equipped]
 			response.write(c_ushort(len(items)))
 			for item in items:
 				response.write(c_uint(item.lot))
@@ -141,25 +141,25 @@ class CharHandling(ServerModule):
 
 		try:
 			if return_code == CharacterCreateReturnCode.Success:
-				new_char = PlayerObject(self.server.new_object_id(), self.server)
+				new_char = PersistentObject(self.server, 1, self.server.new_object_id())
 				new_char.name = char_name
-				new_char.address = address
+				new_char.char.address = address
 
 				request.skip_read(9)
-				new_char.shirt_color = request.read(c_uint)
-				new_char.shirt_style = request.read(c_uint)
-				new_char.pants_color = request.read(c_uint)
-				new_char.hair_style = request.read(c_uint)
-				new_char.hair_color = request.read(c_uint)
+				new_char.char.shirt_color = request.read(c_uint)
+				new_char.char.shirt_style = request.read(c_uint)
+				new_char.char.pants_color = request.read(c_uint)
+				new_char.char.hair_style = request.read(c_uint)
+				new_char.char.hair_color = request.read(c_uint)
 				request.skip_read(8)
-				new_char.eyebrow_style = request.read(c_uint)
-				new_char.eye_style = request.read(c_uint)
-				new_char.mouth_style = request.read(c_uint)
+				new_char.char.eyebrow_style = request.read(c_uint)
+				new_char.char.eye_style = request.read(c_uint)
+				new_char.char.mouth_style = request.read(c_uint)
 
-				shirt = new_char.add_item_to_inventory(self.shirt_to_lot(new_char.shirt_color, new_char.shirt_style), notify_client=False)
-				pants = new_char.add_item_to_inventory(pants_lot[new_char.pants_color], notify_client=False)
-				new_char.equip_inventory(None, item_to_equip=shirt.object_id)
-				new_char.equip_inventory(None, item_to_equip=pants.object_id)
+				shirt = new_char.inventory.add_item_to_inventory(self.shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
+				pants = new_char.inventory.add_item_to_inventory(pants_lot[new_char.char.pants_color], notify_client=False)
+				new_char.inventory.equip_inventory(None, item_to_equip=shirt.object_id)
+				new_char.inventory.equip_inventory(None, item_to_equip=pants.object_id)
 
 				characters = self.server.accounts[address].characters
 				characters[char_name] = new_char
@@ -202,16 +202,16 @@ class CharHandling(ServerModule):
 		characters = self.server.accounts[address].characters
 		selected_char = [i for i in characters.values() if i.object_id == char_id][0]
 		characters.selected = persistent.wref.WeakRef(selected_char)
-		selected_char.address = address
+		selected_char.char.address = address
 		selected_char._v_server = self.server
-		selected_char.online = True
+		selected_char.char.online = True
 
-		if selected_char.world[0] == 0:
-			selected_char.world = 1000, 0, 0
+		if selected_char.char.world[0] == 0:
+			selected_char.char.world = 1000, 0, 0
 
 		self.server.commit()
 
-		asyncio.ensure_future(selected_char.transfer_to_world(selected_char.world))
+		asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world))
 
 	def shirt_to_lot(self, color, style):
 		# The LOTs for the shirts are for some reason in two batches of IDs

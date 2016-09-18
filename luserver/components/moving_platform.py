@@ -3,17 +3,20 @@ import itertools
 
 from ..bitstream import c_bit, c_float, c_int, c_uint
 from ..math.vector import Vector3
+from .component import Component
 
-class MovingPlatformComponent:
-	def __init__(self, comp_id):
+class MovingPlatformComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
 		self._flags["moving_platform_unknown"] = "moving_platform_flag"
 		self._flags["target_position"] = "moving_platform_flag"
 		self.target_position = Vector3()
-		if hasattr(self, "attached_path"):
+		if "attached_path" in set_vars:
+			self.attached_path = set_vars["attached_path"]
 			self.moving_platform_unknown = 2
 			self.current_waypoint_index = 0
 			self.next_waypoint_index = 1
-			self.waypoint_cycler = itertools.cycle(enumerate(self._v_server.world_data.paths[self.attached_path]))
+			self.waypoint_cycler = itertools.cycle(enumerate(self.object._v_server.world_data.paths[self.attached_path]))
 			self.update_waypoint()
 
 	def serialize(self, out, is_creation):
