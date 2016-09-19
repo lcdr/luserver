@@ -74,8 +74,8 @@ BITS_SPAWNED = 1 << 58 | BITS_LOCAL
 class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 	PEER_TYPE = WorldServerMsg.__int__()
 
-	def __init__(self, address, external_host, world_id, max_connections, db):
-		server.Server.__init__(self, address, max_connections, db)
+	def __init__(self, address, external_host, world_id, max_connections, db_conn):
+		server.Server.__init__(self, address, max_connections, db_conn)
 		pyraknet.replicamanager.ReplicaManager.__init__(self)
 		self.external_address = external_host, address[1]
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
@@ -109,13 +109,14 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 	def log_packet(self, data, address, received):
 		try:
 			packetname = self.packetname(data)
-			if packetname in self.file_logged_packets:
-				with open("logs/"+packetname+str(time.time())+".bin", "wb") as file:
-					file.write(data)
 			console_log = packetname not in self.not_console_logged_packets
 		except ValueError:
 			packetname = self.unknown_packetname(data)
 			console_log = True
+
+		if packetname in self.file_logged_packets:
+			with open("logs/"+packetname+str(time.time())+".bin", "wb") as file:
+				file.write(data)
 
 		if console_log:
 			if received:
@@ -196,10 +197,10 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 
 		try:
 			if self.db.accounts[username.lower()].session_key != session_key:
-				log.error("Database session key %s does not match supplied session key %s" % (self.db.accounts[username.lower()].session_key, session_key))
+				log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username.lower()].session_key, session_key)
 				self.close_connection(address, reason=server.DisconnectReason.InvalidSessionKey)
 		except KeyError:
-			log.error("User %s not found in database" % username.lower())
+			log.error("User %s not found in database", username.lower())
 			self.close_connection(address)
 		else:
 			account = self.db.accounts[username.lower()]
@@ -283,11 +284,11 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 
 	# Game message stuff
 
-	def send_game_message(self, func, *args, address=None, broadcast=False, **kwargs):
+	def send_game_message(self, handler, *args, address=None, broadcast=False, **kwargs):
 		"""
 		Serialize a game message call.
 		Arguments:
-			func: The game message function to serialize
+			handler: The game message function to serialize
 			*args, **kwargs: The arguments to pass to the function.
 		The serialization is handled as follows:
 			The Game Message ID is taken from the function name.
@@ -295,24 +296,31 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
 			The serialization type (c_int, c_float, etc) is taken from the argument annotation.
 		"""
-		multiple_components = isinstance(func, tuple)
-		if multiple_components:
-			obj, func_name = func
+		handlers = []
+		if isinstance(handler, tuple):
+			obj, handler_name = handler
+			if hasattr(obj, handler_name):
+				handlers.append(getattr(comp, handler_name))
 			for comp in obj.components:
-				if hasattr(comp, func_name):
-					func = getattr(comp, func_name)
+				if hasattr(comp, handler_name):
+					handlers.append(getattr(comp, handler_name))
+			if not handlers:
+				log.error("Object %s has no handler for outgoing game message %s", obj, handler_name)
+				return
+		else:
+			handlers.append(handler)
 
-		game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
+		game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), handlers[0].__name__)].value
 		out = BitStream()
 		out.write_header(WorldClientMsg.GameMessage)
-		if isinstance(func.__self__, GameObject):
-			object_id = func.__self__.object_id
+		if isinstance(handlers[0].__self__, GameObject):
+			object_id = handlers[0].__self__.object_id
 		else:
-			object_id = func.__self__.object.object_id
+			object_id = handlers[0].__self__.object.object_id
 		out.write(c_int64(object_id))
 		out.write(c_ushort(game_message_id))
 
-		signature = inspect.signature(func)
+		signature = inspect.signature(handlers[0])
 		bound_args = signature.bind(None, *args, **kwargs)
 
 		for param in list(signature.parameters.values())[1:]:
@@ -333,15 +341,10 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				value = bound_args.arguments[param.name]
 				assert value is not None
 				self.game_message_serialize(out, param.annotation, value)
-
-		if multiple_components:
-			for comp in obj.components:
-				if hasattr(comp, func_name):
-					getattr(comp, func_name)(address, *args, **kwargs)
-		else:
-			func(address, *args, **kwargs)
-
 		self.send(out, address, broadcast)
+
+		for handler in handlers:
+			handler(address, *args, **kwargs)
 
 	def read_game_message(self, obj, message, address, call_handler=True, return_kwargs=False):
 		"""Does the opposite of send_game_message."""
@@ -350,20 +353,19 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			message_name = GameMessage(message_id).name
 		except ValueError:
 			return
-		message_handler = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
+		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
 
-		if hasattr(obj, message_handler):
-			message_handler = getattr(obj, message_handler)
-		else:
-			for comp in obj.components:
-				if hasattr(comp, message_handler):
-					message_handler = getattr(comp, message_handler)
-					break
-			else:
-				log.warn("%s has no handler for %s", obj, message_name)
-				return
+		handlers = []
+		if hasattr(obj, handler_name):
+			handlers.append(getattr(obj, handler_name))
+		for comp in obj.components:
+			if hasattr(comp, handler_name):
+				handlers.append(getattr(comp, handler_name))
+		if not handlers:
+			log.warn("%s has no handler for %s", obj, message_name)
+			return
 
-		signature = inspect.signature(message_handler)
+		signature = inspect.signature(handlers[0])
 		kwargs = {}
 		for param in list(signature.parameters.values())[1:]:
 			if param.annotation == c_bit:
@@ -381,7 +383,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			kwargs[param.name] = value
 		assert message.all_read()
 		if call_handler:
-			message_handler(address=address, **kwargs)
+			for handler in handlers:
+				handler(address=address, **kwargs)
 		if return_kwargs:
 			return kwargs
 

@@ -6,9 +6,7 @@ from types import SimpleNamespace
 
 import BTrees
 import transaction
-import ZEO.Exceptions
-from ZEO.ClientStorage import ClientStorage
-from ZODB import DB
+import ZEO
 
 from luserver.world import World
 from luserver.components.inventory import ItemType
@@ -31,14 +29,12 @@ GENERATE_WORLD_DATA = 1
 
 while True:
 	try:
-		db = DB(ClientStorage(("localhost", 12345), wait=False, wait_timeout=1))
+		conn = ZEO.connection(12345, wait_timeout=3)
 		break
 	except ZEO.Exceptions.ClientDisconnected:
 		os.system(r"start runzeo -a 12345 -f ./server_db.db")
 		time.sleep(3)
 
-db.pack()
-conn = db.open()
 root = conn.root
 
 if GENERATE_ACCOUNTS:

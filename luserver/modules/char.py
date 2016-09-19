@@ -71,7 +71,7 @@ class CharHandling(ServerModule):
 
 		self.server.conn_sync()
 		characters = self.server.accounts[address].characters
-		log.info("sending %i characters" % len(characters))
+		log.info("sending %i characters", len(characters))
 		character_list = [i[1] for i in sorted(characters.items(), key=lambda x: x[0])]
 
 		response = BitStream()

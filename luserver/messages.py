@@ -200,3 +200,4 @@ class GameMessage(Enum):
 	PropertyEntranceBegin = 1553
 	StartCelebrationEffect = 1618
 	ServerDoneLoadingAllObjects = 1642
+	NotifyServerLevelProcessingComplete = 1734

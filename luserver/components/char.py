@@ -518,3 +518,6 @@ class CharacterComponent(Component):
 
 	def server_done_loading_all_objects(self, address):
 		pass
+
+	def notify_server_level_processing_complete(self, address):
+		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="7074", effect_type="create", effect_id=7074, broadcast=True)

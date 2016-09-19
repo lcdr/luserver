@@ -13,6 +13,8 @@ class MailID(IntEnum):
 	MailNotification = 2
 	MailDataRequest = 3
 	MailData = 4
+	MailAttachmentCollect = 5
+	MailAttachmentCollectResponse = 6
 	MailDelete = 7
 	MailDeleteResponse = 8
 	MailRead = 9
@@ -37,6 +39,8 @@ class MailHandling(ServerModule):
 			self.on_mail_send(message, player)
 		elif mail_id == MailID.MailDataRequest:
 			self.send_mail_data(player)
+		elif mail_id == MailID.MailAttachmentCollect:
+			self.on_mail_attachment_collect(message, player)
 		elif mail_id == MailID.MailDelete:
 			self.on_mail_delete(message, player)
 		elif mail_id == MailID.MailRead:
@@ -79,9 +83,9 @@ class MailHandling(ServerModule):
 			out.write(c_uint(return_code))
 			self.server.send(out, player.char.address)
 
-	def send_mail(self, sender, subject, body, recipient):
-		mail = Mail(self.server.new_object_id(), sender=sender, subject=subject, body=body)
-		recipient.mails.append(mail)
+	def send_mail(self, sender, subject, body, recipient, attachment=None):
+		mail = Mail(self.server.new_object_id(), sender, subject, body, attachment)
+		recipient.char.mails.append(mail)
 		self.send_mail_notification(recipient)
 
 	def send_mail_data(self, player):
@@ -97,10 +101,16 @@ class MailHandling(ServerModule):
 			mails.write(mail.body, allocated_length=800)
 			mails.write(mail.sender, allocated_length=64)
 			mails.write(bytes(12))
-			mails.write(c_int64(0)) # attachment object id
-			mails.write(c_int(-1)) # attachment LOT
-			mails.write(bytes(12))
-			mails.write(c_ushort(0)) # attachment amount
+			if mail.attachment is None:
+				mails.write(c_int64(0)) # attachment object id
+				mails.write(c_int(-1)) # attachment LOT
+				mails.write(bytes(12))
+				mails.write(c_ushort(0)) # attachment amount
+			else:
+				mails.write(c_int64(mail.attachment.object_id))
+				mails.write(c_int(mail.attachment.lot))
+				mails.write(bytes(12))
+				mails.write(c_ushort(mail.attachment.amount))
 			mails.write(bytes(6))
 			mails.write(c_uint64(mail.send_time))
 			mails.write(c_uint64(mail.send_time))
@@ -110,33 +120,48 @@ class MailHandling(ServerModule):
 			mails.write(bytes(4))
 		self.server.send(mails, player.char.address)
 
+	def on_mail_attachment_collect(self, data, player):
+		data.skip_read(4) # ???
+		mail_id = data.read(c_int64)
+		for mail in player.char.mails:
+			if mail.id == mail_id:
+				player.inventory.add_item_to_inventory(mail.attachment.lot, mail.attachment.amount)
+				mail.attachment = None
+				out = BitStream()
+				out.write_header(WorldClientMsg.Mail)
+				out.write(c_uint(MailID.MailAttachmentCollectResponse))
+				out.write(bytes(4))
+				out.write(c_int64(mail_id))
+				self.server.send(out, player.char.address)
+				break
+
 	def on_mail_delete(self, data, player):
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
 		for mail in player.char.mails:
 			if mail.id == mail_id:
 				player.char.mails.remove(mail)
+				out = BitStream()
+				out.write_header(WorldClientMsg.Mail)
+				out.write(c_uint(MailID.MailDeleteResponse))
+				out.write(bytes(4))
+				out.write(c_int64(mail_id))
+				self.server.send(out, player.char.address)
 				break
-		out = BitStream()
-		out.write_header(WorldClientMsg.Mail)
-		out.write(c_uint(MailID.MailDeleteResponse))
-		out.write(bytes(4))
-		out.write(c_int64(mail_id))
-		self.server.send(out, player.char.address)
 
 	def on_mail_read(self, data, player):
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
-		for mail in player.mails:
+		for mail in player.char.mails:
 			if mail.id == mail_id:
 				mail.is_read = True
+				out = BitStream()
+				out.write_header(WorldClientMsg.Mail)
+				out.write(c_uint(MailID.MailReadResponse))
+				out.write(bytes(4))
+				out.write(c_int64(mail_id))
+				self.server.send(out, player.char.address)
 				break
-		out = BitStream()
-		out.write_header(WorldClientMsg.Mail)
-		out.write(c_uint(MailID.MailReadResponse))
-		out.write(bytes(4))
-		out.write(c_int64(mail_id))
-		self.server.send(out, player.char.address)
 
 	def send_mail_notification(self, player):
 		notification = BitStream()
@@ -148,12 +173,12 @@ class MailHandling(ServerModule):
 		notification.write(bytes(4))
 		self.server.send(notification, player.char.address)
 
-
 class Mail(persistent.Persistent):
-	def __init__(self, id, sender, subject, body):
+	def __init__(self, id, sender, subject, body, attachment=None):
 		self.id = id
 		self.send_time = int(time.time())
 		self.is_read = False
 		self.sender = sender
 		self.subject = subject
 		self.body = body
+		self.attachment = attachment

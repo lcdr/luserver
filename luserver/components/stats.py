@@ -9,18 +9,21 @@ class StatsSubcomponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.stats = self
+		self._flags["_max_life"] = "stats_flag"
+		self._flags["_max_armor"] = "stats_flag"
+		self._flags["_max_imagination"] = "stats_flag"
 		self._flags["life"] = "stats_flag"
 		self._flags["armor"] = "stats_flag"
 		self._flags["imagination"] = "stats_flag"
 		self._flags["faction"] = "stats_flag"
 		if not hasattr(self.object, "destructible"):
-			self.faction = -1
 			self._max_life = 1
 			self._max_armor = 0
 			self._max_imagination = 0
 			self.life = self.max_life
 			self.armor = self.max_armor
 			self.imagination = self.max_imagination
+			self.faction = -1
 			self.is_smashable = False
 		else:
 			self.object.destructible.init()
