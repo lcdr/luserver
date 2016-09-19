@@ -33,8 +33,8 @@ class LoginReturnCode:
 class AuthServer(server.Server):
 	PEER_TYPE = AuthServerMsg.__int__()
 
-	def __init__(self, host, max_connections, db):
-		super().__init__((host, 1001), max_connections, db)
+	def __init__(self, host, max_connections, db_conn):
+		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
 

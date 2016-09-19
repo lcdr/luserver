@@ -1,12 +1,9 @@
 import code
 
 import transaction
-from ZEO.ClientStorage import ClientStorage
-from ZODB import DB
+import ZEO
 
-db = DB(ClientStorage(("localhost", 12345), wait=False, wait_timeout=0))
-
-conn = db.open()
+conn = ZEO.connection(12345)
 root = conn.root
 c = transaction.commit
 

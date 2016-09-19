@@ -1,8 +1,6 @@
 import asyncio
 import os
 
-import transaction
-
 import pyraknet.server
 from .bitstream import BitStream, c_uint, c_ushort
 from .messages import msg_enum, AuthServerMsg, GameMessage, GeneralMsg, Message, SocialMsg, WorldClientMsg, WorldServerMsg
@@ -13,13 +11,13 @@ class Server(pyraknet.server.Server):
 	SERVER_PASSWORD = b"3.25 ND1"
 	EXPECTED_PEER_TYPE = WorldClientMsg.__int__()
 
-	def __init__(self, address, max_connections, db):
+	def __init__(self, address, max_connections, db_conn):
 		super().__init__(address, max_connections, self.SERVER_PASSWORD)
 		self.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 
-		self.conn = db.open(transaction.TransactionManager())
+		self.conn = db_conn
 		self.db = self.conn.root
 		self.register_handler(GeneralMsg.Handshake, self.on_handshake)
 
