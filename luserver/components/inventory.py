@@ -24,6 +24,11 @@ class ItemType:
 	Vehicle = 22
 	Mount = 24
 
+class LootType:
+	Mission = 2
+	Achievement = 5
+	# loot drop = 11 ?
+
 import logging
 
 from persistent import Persistent
@@ -53,6 +58,10 @@ class Stack(Persistent):
 
 	def __repr__(self):
 		return "%ix %i" % (self.amount, self.lot)
+
+class ItemComponent(Component):
+	def serialize(self, out, is_creation):
+		out.write(c_bit(False))
 
 class InventoryComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -167,6 +176,8 @@ class InventoryComponent(Component):
 							break
 					else:
 						log.error("no space left")
+						# todo: send items in mail
+						# todo: there's a game message to warn the player that there's no space left, send it
 						return # should probably throw an exception?
 
 			if module_lots:
@@ -179,7 +190,7 @@ class InventoryComponent(Component):
 
 				self.object._v_server.send_game_message(self.add_item_to_inventory_client_sync, bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=1, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index, address=self.object.char.address)
 
-			if self.object.lot == 1:
+			if hasattr(self.object, "char"):
 				# update missions that have collecting this item as requirement
 				for mission in self.object.char.missions:
 					if mission.state == MissionState.Active:
@@ -250,7 +261,7 @@ class InventoryComponent(Component):
 					self.equipped_items_flag = True
 					self.object._serialize = True
 
-					if self.object.lot == 1:
+					if hasattr(self.object, "char"):
 						self.object.skill.add_skill_for_item(item)
 					return
 
@@ -264,7 +275,7 @@ class InventoryComponent(Component):
 					self.equipped_items_flag = True
 					self.object._serialize = True
 
-					if self.object.lot == 1:
+					if hasattr(self.object, "char"):
 						self.object.skill.remove_skill_for_item(item)
 					return
 

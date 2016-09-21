@@ -10,7 +10,7 @@ from .components.char import CharacterComponent
 from .components.collectible import CollectibleComponent
 from .components.comp108 import Comp108Component
 from .components.destructible import DestructibleComponent
-from .components.inventory import InventoryComponent
+from .components.inventory import InventoryComponent, ItemComponent
 from .components.launchpad import LaunchpadComponent
 from .components.mission import MissionNPCComponent, MissionState, TaskType
 from .components.modular_build import ModularBuildComponent
@@ -42,6 +42,7 @@ component[17] = InventoryComponent,
 component[26] = PetComponent,
 component[5] = ScriptComponent,
 component[9] = SkillComponent,
+component[11] = ItemComponent,
 component[60] = BaseCombatAIComponent,
 component[48] = StatsSubcomponent, RebuildComponent
 component[25] = MovingPlatformComponent,
@@ -138,7 +139,7 @@ class GameObject:
 		out = BitStream()
 		out.write(c_int64(self.object_id))
 		out.write(c_int(self.lot))
-		out.write(self.name, char_size=2, length_type=c_ubyte)
+		out.write(self.name, length_type=c_ubyte)
 
 		out.write(bytes(4)) # time since created on server?
 		out.write(c_bit(False))

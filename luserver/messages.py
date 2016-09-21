@@ -189,6 +189,7 @@ class GameMessage(Enum):
 	GetModelsOnProperty = 1306
 	MatchRequest = 1308
 	MatchResponse = 1309
+	MatchUpdate = 1310
 	UsedInformationPlaque = 1419
 	ActivateBrickMode = 1438
 	ModifyLegoScore = 1459

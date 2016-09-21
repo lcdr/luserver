@@ -68,6 +68,10 @@ if GENERATE_ACCOUNTS:
 
 	root.level_scores = tuple(i[0] for i in cdclient.execute("select requiredUScore from LevelProgressionLookup").fetchall())
 
+	root.world_info = BTrees.IOBTree.BTree()
+	for world_id, template in cdclient.execute("select zoneID, zoneControlTemplate from ZoneTable"):
+		root.world_info[world_id] = template
+
 def get_behavior(behavior_id):
 	if behavior_id == 0:
 		return None
@@ -217,7 +221,7 @@ if GENERATE_SKILLS:
 
 if GENERATE_MISSIONS:
 	root.missions = BTrees.IOBTree.BTree()
-	for id, prereq, currency, universe_score, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_max_imagination, reward_max_life, reward_max_items, is_mission in cdclient.execute("select id, prereqMissionID, reward_currency, LegoScore, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_maximagination, reward_maxhealth, reward_maxinventory, isMission from Missions"):
+	for id, prereq, currency, universe_score, is_choice_reward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_max_imagination, reward_max_life, reward_max_items, is_mission in cdclient.execute("select id, prereqMissionID, reward_currency, LegoScore, isChoiceReward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_maximagination, reward_maxhealth, reward_maxinventory, isMission from Missions"):
 		# prereqs
 		prereqs = []
 		if prereq:
@@ -248,7 +252,7 @@ if GENERATE_MISSIONS:
 		if reward_emote == -1:
 			reward_emote = None
 
-		root.missions[id] = (currency, universe_score, tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission)
+		root.missions[id] = (currency, universe_score, bool(is_choice_reward), tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission)
 
 if GENERATE_COMPS:
 	# temporary, not actually needed for the server (therefore dict instead of root assignment)

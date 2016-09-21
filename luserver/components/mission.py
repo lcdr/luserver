@@ -5,14 +5,9 @@ from persistent import Persistent
 from ..bitstream import c_bit, c_int, c_int64
 from ..math.vector import Vector3
 from .component import Component
-from .inventory import InventoryType
+from .inventory import InventoryType, LootType
 
 log = logging.getLogger(__name__)
-
-class LootType: # doesn't really belong in this module but currently is only used from this module
-	Mission = 2
-	Achievement = 5
-	# loot drop = 11 ?
 
 class TaskType:
 	KillEnemy = 0
@@ -74,11 +69,12 @@ class MissionProgress(Persistent):
 		rewards = mission_data[0]
 		self.rew_currency = rewards[0]
 		self.rew_universe_score = rewards[1]
-		self.rew_items = rewards[2]
-		self.rew_emote = rewards[3]
-		self.rew_max_life = rewards[4]
-		self.rew_max_imagination = rewards[5]
-		self.rew_max_items = rewards[6]
+		self.is_choice_reward = rewards[2]
+		self.rew_items = rewards[3]
+		self.rew_emote = rewards[4]
+		self.rew_max_life = rewards[5]
+		self.rew_max_imagination = rewards[6]
+		self.rew_max_items = rewards[7]
 		self.tasks = [MissionTask(task_type, target, target_value, parameter) for task_type, target, target_value, parameter in mission_data[2]]
 		self.is_mission = mission_data[3]
 
@@ -110,8 +106,9 @@ class MissionProgress(Persistent):
 		player._v_server.send_game_message(player.char.set_currency, currency=player.char.currency + self.rew_currency, position=Vector3.zero, source_type=source_type, address=player.char.address)
 		player._v_server.send_game_message(player.char.modify_lego_score, self.rew_universe_score, source_type=source_type, address=player.char.address)
 
-		for lot, amount in self.rew_items:
-			player.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
+		if not self.is_choice_reward:
+			for lot, amount in self.rew_items:
+				player.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
 
 		if self.rew_emote is not None:
 			player._v_server.send_game_message(player.char.set_emote_lock_state, lock=False, emote_id=self.rew_emote, address=player.char.address)
@@ -129,6 +126,7 @@ class MissionProgress(Persistent):
 		del self.tasks
 		del self.rew_currency
 		del self.rew_universe_score
+		del self.is_choice_reward
 		del self.rew_items
 		del self.rew_emote
 		del self.rew_max_life
@@ -179,9 +177,6 @@ class MissionNPCComponent(Component):
 			self.object._v_server.send_game_message(player.char.offer_mission, offer, offerer=self.object.object_id, address=player.char.address)
 
 		return offer is not None
-
-	def respond_to_mission(self, address, mission_id, player, reward_item):
-		pass
 
 	def offer_mission(self, address, mission_id:c_int=None, offerer:c_int64=None):
 		pass

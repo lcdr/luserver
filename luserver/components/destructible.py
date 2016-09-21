@@ -59,7 +59,7 @@ class DestructibleComponent(Component):
 		self.object._v_server.send_game_message((self.object, "die"), False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer_id, loot_owner_id, broadcast=True)
 
 		killer = self.object._v_server.get_object(killer_id)
-		if killer and killer.lot == 1:
+		if killer and hasattr(killer, "char"):
 			# update missions that have the death of this lot as requirement
 			for mission in killer.char.missions:
 				if mission.state == MissionState.Active:
@@ -78,7 +78,7 @@ class DestructibleComponent(Component):
 				for lot in loot:
 					self.object.stats.drop_loot(lot, killer)
 
-		if not hasattr(self.object, "comp_108") and self.object.lot != 1:
+		if not hasattr(self.object, "comp_108") and not hasattr(self.object, "char"):
 			self.object._v_server.destruct(self.object)
 
 	def resurrect(self, address, resurrect_immediately=False):

@@ -12,7 +12,7 @@ class BaseCombatAIComponent(Component):
 
 	def update(self): # currently disabled
 		if self.targeted_player is None:
-			players = [obj for obj in self.object._v_server.game_objects.values() if obj.lot == 1]
+			players = [obj for obj in self.object._v_server.game_objects.values() if hasattr(obj, "char")]
 			nearest_dist = 10 # starting distance is maximum distance
 			for player in players:
 				dist = self.object.physics.position.sq_distance(player.physics.position)
