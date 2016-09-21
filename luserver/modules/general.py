@@ -172,6 +172,8 @@ class GeneralHandling(ServerModule):
 		for item in player.inventory.items:
 			if item is not None and item.equipped:
 				player.skill.add_skill_for_item(item, add_buffs=False)
+		if self.server.world_control_object is not None:
+			self.server.send_game_message(self.server.world_control_object.script.player_ready, address=address)
 
 	def on_position_update(self, message, address):
 		player = self.server.accounts[address].characters.selected()

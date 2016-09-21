@@ -307,7 +307,7 @@ class ChatHandling(ServerModule):
 
 	def dismount_cmd(self, args, sender):
 		if sender.char.vehicle_id != 0:
-			self.server.game_objects[sender.char.vehicle_id].driver_id = 0
+			self.server.game_objects[sender.char.vehicle_id].comp_108.driver_id = 0
 			sender.char.vehicle_id = 0
 
 	def extend_inv_cmd(self, args, sender):
@@ -344,7 +344,7 @@ class ChatHandling(ServerModule):
 	def location_cmd(self, args, sender):
 		if args.player:
 			for obj in self.server.game_objects.values():
-				if obj.lot == 1 and obj.name.startswith(args.player):
+				if hasattr(obj, "char") and obj.name.startswith(args.player):
 					print(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
 					if obj.char._world[0] != self.server.world_id[0]:
 						print(World(obj.char._world[0]))
@@ -410,7 +410,7 @@ class ChatHandling(ServerModule):
 		elif args.player:
 			args.player = args.player.lower()
 			for obj in self.server.game_objects.values():
-				if obj.lot == 1 and obj.name.lower().startswith(args.player):
+				if hasattr(obj, "char") and obj.name.lower().startswith(args.player):
 					pos = obj.position
 					break
 			else:

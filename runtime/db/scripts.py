@@ -5,6 +5,7 @@ SCRIPTS = {}
 SCRIPTS[313] = "general.death_trigger"
 SCRIPTS[625] = "venture_explorer.bob"
 SCRIPTS[815] = "avant_gardens.stromling_mech"
+SCRIPTS[882] = "avant_gardens.survival.world_control"
 SCRIPTS[946] = "gnarled_forest.torch"
 SCRIPTS[952] = "general.binoculars"
 SCRIPTS[975] = "general.binoculars"

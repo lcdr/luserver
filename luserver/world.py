@@ -151,13 +151,22 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 	def set_world_id(self, world_id):
 		self.world_id = world_id[0], 0, world_id[1]
 		if self.world_id[0] != 0: # char
+			world_control_lot = self.db.world_info[self.world_id[0]]
+			if world_control_lot is not None:
+				self.world_control_object = self.spawn_object(world_control_lot, is_world_control=True)
+				for comp in self.world_control_object.components:
+					if hasattr(comp, "on_startup"):
+						comp.on_startup()
+			else:
+				self.world_control_object = None
+
 			self.world_data = self.db.world_data[self.world_id[0]]
 			for obj in self.world_data.objects.values():
 				obj._v_server = self
 				for comp in obj.components:
 					if hasattr(comp, "on_startup"):
 						comp.on_startup()
-				if obj.lot == 176:
+				if hasattr(obj, "spawner"):
 					obj.spawner.spawn()
 			if self.world_id[2] != 0:
 				self.models = []
@@ -227,29 +236,36 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.commit()
 		return current
 
-	def spawn_object(self, lot, spawner=None, parent=None, position=None, rotation=None, custom_script=None, set_vars={}):
-		if spawner is not None:
-			creator = spawner
-		if parent is not None:
-			creator = parent
-		if position:
-			if isinstance(position, Vector3):
-				position = Vector3(position)
+	def spawn_object(self, lot, spawner=None, parent=None, position=None, rotation=None, custom_script=None, set_vars={}, is_world_control=False):
+		if spawner is not None or parent is not None:
+			if spawner is not None:
+				creator = spawner
+			if parent is not None:
+				creator = parent
+			if position:
+				if isinstance(position, Vector3):
+					position = Vector3(position)
+				else:
+					position = Vector3(*position)
 			else:
-				position = Vector3(*position)
-		else:
-			position = Vector3(creator.physics.position)
-		if rotation:
-			if isinstance(rotation, Quaternion):
-				rotation = Quaternion(rotation)
+				position = Vector3(creator.physics.position)
+			if rotation:
+				if isinstance(rotation, Quaternion):
+					rotation = Quaternion(rotation)
+				else:
+					rotation = Quaternion(*rotation)
 			else:
-				rotation = Quaternion(*rotation)
-		else:
-			rotation = Quaternion(creator.physics.rotation)
+				rotation = Quaternion(creator.physics.rotation)
 
-		set_vars["position"] = position
-		set_vars["rotation"] = rotation
-		obj = GameObject(self, lot, self.new_spawned_id(), custom_script, set_vars)
+		if is_world_control:
+			object_id = 70368744177662
+		else:
+			object_id = self.new_spawned_id()
+		if position is not None:
+			set_vars["position"] = position
+		if rotation is not None:
+			set_vars["rotation"] = rotation
+		obj = GameObject(self, lot, object_id, custom_script, set_vars)
 
 		if spawner is not None:
 			obj.spawner_object = spawner

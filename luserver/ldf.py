@@ -1,8 +1,10 @@
-from .bitstream import BitStream, c_bool, c_int, c_int64, c_ubyte, c_uint
+from .bitstream import BitStream, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint
 
 DATA_TYPE = {}
 DATA_TYPE[str] = 0
 DATA_TYPE[c_int] = 1
+DATA_TYPE[c_float] = 3
+DATA_TYPE[c_bool] = 7
 DATA_TYPE[c_int64] = 9 # or 8?
 DATA_TYPE[bytes] = 13 # let's just use bytes for 13
 DATA_TYPE[0] = str

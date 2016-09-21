@@ -9,24 +9,11 @@ luserver requires Python 3.5 .
 To run the server, you must install the dependencies, ZEO and passlib (and their dependencies). If you want to use bcrypt instead of pbkdf2_sha256 you should also install bcrypt.
 Dependency installation should usually work using
 
-	pip install <x>
+	pip install passlib ZEO
 
 or
 
-	python -m pip install <x>
-
-If you don't want to compile the packages yourself, you can download precompiled ones from http://www.lfd.uci.edu/~gohlke/pythonlibs/ .
-
-ZEO has an unfixed bug which you'll need to fix manually:
-in `<Python installation directory>/Lib/site-packages/ZEO/zrpc/trigger.py`
-line 235
-change
-
-	self.trigger.send('x')
-
-to
-
-	self.trigger.send(b'x')
+	python -m pip install passlib ZEO
 
 luserver also requires pyraknet, which you can download from https://bitbucket.org/lcdr/pyraknet/ . Add its installation directory to the PYTHONPATH environment variable so python can find it.
 luserver should also be added to PYTHONPATH.

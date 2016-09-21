@@ -11,7 +11,7 @@ from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from ..modules.social import FriendUpdateType
 from .component import Component
-from .inventory import InventoryType
+from .inventory import InventoryType, LootType
 from .pet import PetTamingNotify
 from .mission import MissionProgress, MissionState, TaskType
 
@@ -31,6 +31,19 @@ class DeleteReason:
 	PickingModelUp = 0
 	ReturningModelToInventory = 1
 	BreakingModelApart = 2
+
+class MatchRequestType:
+	Join = 0
+	Ready = 1
+
+class MatchRequestValue:
+	Leave = 0
+	Ready = 1
+	Join = 5
+
+
+class MatchUpdateType:
+	Time = 3
 
 class CharacterComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -186,8 +199,6 @@ class CharacterComponent(Component):
 			out.write(c_uint64(self.racing_smashables_smashed))
 			out.write(c_uint64(self.races_finished))
 			out.write(c_uint64(self.first_place_race_finishes))
-
-			# Originally a [L:BIT2], simplified since we write 0 anyways
 			out.write(c_bit(False))
 			out.write(c_bit(False))
 
@@ -317,7 +328,14 @@ class CharacterComponent(Component):
 	def offer_mission(self, address, mission_id:c_int=None, offerer:c_int64=None):
 		pass
 
-	def respond_to_mission(self, address, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=0):
+	def respond_to_mission(self, address, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=-1):
+		if reward_item != -1:
+			for mission in self.missions:
+				if mission.id == mission_id:
+					for lot, amount in mission.rew_items:
+						if lot == reward_item:
+							self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
+							break
 		obj = self.object._v_server.game_objects[receiver]
 		for comp in obj.components:
 			if hasattr(comp, "respond_to_mission"):
@@ -487,10 +505,19 @@ class CharacterComponent(Component):
 		pass
 
 	def match_request(self, address, activator:c_int64=None, player_choices:"ldf"=None, type:c_int=None, value:c_int=None):
+		# todo: how does the server know which matchmaking activity the client wants?
 		self.object._v_server.send_game_message(self.match_response, response=0, address=address)
-		#asyncio.ensure_future(self.transfer_to_world((1302, 0, 0)))
+		if type == MatchRequestType.Join and value == MatchRequestValue.Join:
+			update_data = {}
+			update_data["time"] = c_float, 60
+			self.object._v_server.send_game_message(self.match_update, data=update_data, type=MatchUpdateType.Time, address=address)
+		elif type == MatchRequestType.Ready and value == MatchRequestValue.Ready:
+			asyncio.ensure_future(self.transfer_to_world((1101, 0, 0)))
 
 	def match_response(self, address, response:c_int=None):
+		pass
+
+	def match_update(self, address, data:"ldf"=None, type:c_int=None):
 		pass
 
 	def used_information_plaque(self, address, plaque_object_id:c_int64=None):

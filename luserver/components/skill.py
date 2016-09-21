@@ -120,7 +120,7 @@ class SkillComponent(Component):
 
 		self.object._v_server.send_game_message(self.echo_start_skill, used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, address=address, broadcast=True)
 
-		if self.object.lot == 1:
+		if hasattr(self.object, "char"):
 			# update missions that have using this skill as requirement
 			for mission in self.object.char.missions:
 				if mission.state == MissionState.Active:

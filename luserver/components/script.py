@@ -13,7 +13,7 @@ class ScriptComponent(Component):
 		if is_creation:
 			out.write(c_bit(False))
 
-	def script_network_var_update(self, address, vars:"ldf"=None):
+	def script_network_var_update(self, address, script_vars:"ldf"=None):
 		pass
 
 	def notify_client_object(self, address, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):
