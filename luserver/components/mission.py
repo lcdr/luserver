@@ -16,7 +16,7 @@ class TaskType:
 	Collect = 3
 	GoToNPC = 4
 	UseEmote = 5
-	# ??? = 9 # use collectible?
+	UseConsumable = 9
 	UseSkill = 10
 	ObtainItem = 11
 	# Discover = 12 # needs physics
@@ -115,6 +115,8 @@ class MissionProgress(Persistent):
 
 		player.stats.max_life += self.rew_max_life
 		player.stats.max_imagination += self.rew_max_imagination
+		if self.id == 173: # hardcoded since script wouldn't work due to call order
+			player.stats.imagination = player.stats.max_imagination
 
 		if self.rew_max_items:
 			player._v_server.send_game_message(player.inventory.set_inventory_size, inventory_type=InventoryType.Items, size=len(player.inventory.items)+self.rew_max_items, address=player.char.address)

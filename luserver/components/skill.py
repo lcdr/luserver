@@ -7,7 +7,7 @@ from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_ui
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
-from .inventory import ItemType
+from .inventory import InventoryType, ItemType
 from .mission import MissionState, TaskType
 
 log = logging.getLogger(__name__)
@@ -93,12 +93,17 @@ class SkillSlot:
 	Neck = 2
 	Hat = 3
 
+class CastType:
+	Consumable = 3
+	EverlastingConsumable = 4
+
 class SkillComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.skill = self
 		self.delayed_behaviors = {}
 		self.projectile_behaviors = {}
+		self.everlasting = False
 
 	def serialize(self, out, is_creation):
 		if is_creation:
@@ -131,10 +136,18 @@ class SkillComponent(Component):
 		target = self.object
 		self.picked_target_id = optional_target_id
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		self.original_target_id = target.object_id
 		self.handle_behavior(behavior, bitstream, target)
 
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
+
+		# remove consumable
+		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
+			for item in self.object.inventory.items:
+				if item is not None and item.object_id == consumable_item_id:
+					self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
+					break
 
 	def select_skill(self, address, from_skill_set:c_bit=False, skill_id:c_int=None):
 		pass
@@ -164,6 +177,7 @@ class SkillComponent(Component):
 				target = self.object._v_server.game_objects[target_id]
 
 		if behavior is not None: # no, this is not an "else" from above
+			self.original_target_id = target.object_id
 			self.handle_behavior(behavior, bitstream, target)
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
@@ -180,6 +194,7 @@ class SkillComponent(Component):
 			target = self.object._v_server.game_objects[target_id]
 
 		for behav in self.projectile_behaviors[local_id]:
+			self.original_target_id = target.object_id
 			self.handle_behavior(behav, bitstream, target)
 		del self.projectile_behaviors[local_id]
 		# todo: do client projectile impact
@@ -227,6 +242,7 @@ class SkillComponent(Component):
 					target_id = bitstream.read(c_int64)
 					targets.append(self.object._v_server.game_objects[target_id])
 				for target in targets:
+					log.debug("Target %s", target)
 					self.handle_behavior(behavior.action, bitstream, target, level+1)
 
 			else:
@@ -300,7 +316,7 @@ class SkillComponent(Component):
 			self.handle_behavior(casted_behavior, bitstream, target, level+1)
 
 		elif behavior.template == BehaviorTemplate.Stun:
-			if target != self.object:
+			if target.object_id != self.original_target_id:
 				log.debug("Stun reading bit")
 				assert not bitstream.read(c_bit)
 

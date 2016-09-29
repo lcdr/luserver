@@ -26,9 +26,7 @@ def _value_to_ldf_text(type_, value):
 def to_ldf(obj, ldf_type):
 	if ldf_type == "text":
 		if isinstance(obj, dict):
-			if len(obj) > 1:
-				raise NotImplementedError
-			output = "".join("%s=%s" % (key, _value_to_ldf_text(*value)) for key, value in obj.items())
+			output = "\n".join("%s=%s" % (key, _value_to_ldf_text(*value)) for key, value in obj.items())
 		else:
 			output = _value_to_ldf_text(*obj)
 

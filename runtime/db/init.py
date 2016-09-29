@@ -246,7 +246,9 @@ if GENERATE_MISSIONS:
 
 		reward_items = []
 		for lot, count in ((reward_item1, reward_item1_count), (reward_item2, reward_item2_count), (reward_item3, reward_item3_count), (reward_item4, reward_item4_count)):
-			if lot != -1 and count != 0:
+			if lot != -1:
+				if count == 0:
+					count = 1
 				reward_items.append((lot, count))
 
 		if reward_emote == -1:
@@ -267,6 +269,21 @@ if GENERATE_COMPS:
 			loot_table_entry.append((loot_table_row[0], loot_table_row[1]))
 		loot_table_entry = tuple(loot_table_entry)
 		loot_matrix.setdefault(row[0], []).append((loot_table_entry, row[2], row[3], row[3]))
+
+	activity_rewards = {}
+	for object_template, loot_matrix_index, currency_index in cdclient.execute("select objectTemplate, LootMatrixIndex, CurrencyIndex from ActivityRewards"):
+		# doesn't currently account for activity ratings
+		if loot_matrix_index is not None:
+			loot = loot_matrix.get(loot_matrix_index)
+		else:
+			loot = None
+		if currency_index is not None:
+			_, minvalue, maxvalue = currency_table[currency_index][0]
+		else:
+			 minvalue = None
+			 maxvalue = None
+
+		activity_rewards[object_template] = loot, minvalue, maxvalue
 
 	# actually persistent stuff
 
@@ -331,7 +348,7 @@ if GENERATE_COMPS:
 			if armor is not None:
 				armor = int(armor)
 
-			root.destructible_component[row[2]] = faction, loot, minvalue, maxvalue, life, armor, imagination, is_smashable
+			root.destructible_component[row[2]] = faction, (loot, minvalue, maxvalue), life, armor, imagination, is_smashable
 
 		elif row[1] == 16 and row[2] not in root.vendor_component:
 			comp_row = cdclient.execute("select LootMatrixIndex from VendorComponent where id == %i" % row[2]).fetchone()
@@ -343,12 +360,12 @@ if GENERATE_COMPS:
 				root.inventory_component.setdefault(row[2], []).append((comp_row[0], comp_row[1]))
 
 		elif row[1] == 48 and row[2] not in root.rebuild_component:
-			comp_row = cdclient.execute("select complete_time, time_before_smash, reset_time, take_imagination from RebuildComponent where id == %i" % row[2]).fetchone()
+			comp_row = cdclient.execute("select complete_time, time_before_smash, reset_time, take_imagination, activityID from RebuildComponent where id == %i" % row[2]).fetchone()
 			if comp_row is not None:
-				complete_time, smash_time, reset_time, take_imagination = comp_row
+				complete_time, smash_time, reset_time, take_imagination, activity_id = comp_row
 				if complete_time is None:
 					complete_time = 1
-				root.rebuild_component[row[2]] = complete_time, smash_time, reset_time, take_imagination
+				root.rebuild_component[row[2]] = complete_time, smash_time, reset_time, take_imagination, activity_rewards.get(activity_id, (None, None, None))
 
 		elif row[1] == 53 and row[2] not in root.package_component:
 			comp_row = cdclient.execute("select LootMatrixIndex from PackageComponent where id == %i" % row[2]).fetchone()
