@@ -51,9 +51,9 @@ if GENERATE_ACCOUNTS:
 	# All "tables" below don't need things like PersistentList instead of normal list, since they will never be modified
 
 	root.predef_names = []
-	for name_index in range(3):
+	for name_part in ("first", "middle", "last"):
 		names = []
-		with open("predef_names_"+str(name_index)+".txt") as file:
+		with open(os.path.join(config["paths"]["client_path"], "res/names/minifigname_"+name_part+".txt")) as file:
 			for name in file:
 				names.append(name[:-1])
 
@@ -369,6 +369,6 @@ if GENERATE_COMPS:
 # Create static objects
 
 if GENERATE_WORLD_DATA:
-	luz_importer.load_world_data(conn, config["paths"]["client_maps_path"])
+	luz_importer.load_world_data(conn, config["paths"]["client_path"]+"/res/maps")
 transaction.commit()
 print("Done initializing database!")

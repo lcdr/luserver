@@ -163,7 +163,7 @@ def parse_lvl(conn, world_data, lvl_path):
 def load_world_data(conn, maps_path):
 	conn.root.world_data = BTrees.IOBTree.BTree()
 	for world, luz_path in LUZ_PATHS.items():
-		luz_path = maps_path + luz_path
+		luz_path = os.path.join(maps_path, luz_path)
 		if world == World.KeelhaulCanyon:
 			continue
 		conn.root.world_data[world.value] = SimpleNamespace(objects=BTrees.OOBTree.BTree(), paths=BTrees.OOBTree.BTree(), spawnpoint=(Vector3(), Quaternion()))
