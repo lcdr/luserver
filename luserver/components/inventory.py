@@ -1,6 +1,7 @@
 class InventoryType:
 	Items = 0
 	Bricks = 2
+	# temp items = 4?
 	Models = 5
 	TempModels = 6
 	# Properties = 8 ?
@@ -176,8 +177,7 @@ class InventoryComponent(Component):
 							break
 					else:
 						log.error("no space left")
-						# todo: send items in mail
-						# todo: there's a game message to warn the player that there's no space left, send it
+						self.object._v_server.mail.send_mail("%[MAIL_SYSTEM_NOTIFICATION]", "%[MAIL_ACHIEVEMENT_OVERFLOW_HEADER]", "%[MAIL_ACHIEVEMENT_OVERFLOW_BODY]", self.object, stack)
 						return # should probably throw an exception?
 
 			if module_lots:
@@ -207,14 +207,13 @@ class InventoryComponent(Component):
 		if item is not None:
 			object_id = item.object_id
 
-		self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
+		self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
 
 	def remove_item_from_inventory(self, address, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:"ldf"=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if confirmed:
 			assert delete_item
 			assert not out_success
 			assert not extra_info
-			assert not force_deletion
 			assert loot_type_source_id == 0
 			assert requesting_object_id == 0
 			assert stack_remaining == 0
@@ -282,17 +281,6 @@ class InventoryComponent(Component):
 	def set_inventory_size(self, address, inventory_type:c_int=None, size:c_int=None):
 		inv = self.inventory_type_to_inventory(inventory_type)
 		inv.extend([None] * (size - len(inv)))
-
-	def use_non_equipment_item(self, address, item_to_use:c_int64=None):
-		for item in self.items:
-			if item is not None and item.object_id == item_to_use:
-				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
-					if component_type == 53: # PackageComponent, make an enum for this somewhen
-						self.remove_item_from_inv(InventoryType.Items, item)
-						for loot_table in self.object._v_server.db.package_component[component_id]:
-							for lot, _ in loot_table[0]:
-								self.add_item_to_inventory(lot)
-						return
 
 	def move_item_between_inventory_types(self, address, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:c_bit=True, stack_count:c_uint=1, template_id:c_int=-1):
 		source = self.inventory_type_to_inventory(inventory_type_a)

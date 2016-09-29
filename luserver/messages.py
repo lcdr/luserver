@@ -127,6 +127,7 @@ class GameMessage(Enum):
 	SellToVendor = 374
 	SetInventorySize = 389
 	VendorStatusUpdate = 417
+	ClientItemConsumed = 428
 	SetFlag = 471
 	HasBeenCollected = 486
 	PlayerLoaded = 505

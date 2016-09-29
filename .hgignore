@@ -1,0 +1,4 @@
+syntax: glob
+runtime/db/server_db*
+runtime/db/cdclient.sqlite
+runtime/packets/*

@@ -46,8 +46,7 @@ class MailHandling(ServerModule):
 		elif mail_id == MailID.MailRead:
 			self.on_mail_read(message, player)
 		elif mail_id == MailID.MailNotificationRequest:
-			if player.char.mails:
-				self.send_mail_notification(player)
+			self.send_mail_notification(player)
 
 	def on_mail_send(self, data, player):
 		subject = data.read(str, allocated_length=100)
@@ -164,12 +163,15 @@ class MailHandling(ServerModule):
 				break
 
 	def send_mail_notification(self, player):
+		unread_mails_amount = len([mail for mail in player.char.mails if not mail.is_read])
+		if unread_mails_amount == 0:
+			return
 		notification = BitStream()
 		notification.write_header(WorldClientMsg.Mail)
 		notification.write(c_uint(MailID.MailNotification))
 		notification.write(bytes(4)) # notification type, seems only 0 is used
 		notification.write(bytes(32))
-		notification.write(c_uint(len([mail for mail in player.char.mails if not mail.is_read])))
+		notification.write(c_uint(unread_mails_amount))
 		notification.write(bytes(4))
 		self.server.send(notification, player.char.address)
 

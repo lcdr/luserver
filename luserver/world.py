@@ -176,11 +176,9 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			self.physics.init()
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
-		# todo: this is outdated, needs to be updated
 		spawner = GameObject(self, 176, spawner_id)
 		spawner.spawner.spawntemplate = lot
-		spawner.physics.position.update(position)
-		spawner.physics.rotation.update(rotation)
+		spawner.spawner.waypoints = (position, rotation, {}, {}),
 		spawner._v_server = self
 		self.models.append((spawner, spawner.spawner.spawn()))
 

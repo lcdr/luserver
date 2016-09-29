@@ -28,6 +28,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.smash_time = self.object._v_server.db.rebuild_component[comp_id][1]
 		self.reset_time = self.object._v_server.db.rebuild_component[comp_id][2]
 		self.imagination_cost = self.object._v_server.db.rebuild_component[comp_id][3]
+		self.completion_rewards = self.object._v_server.db.rebuild_component[comp_id][4]
 		self.callback_handles = []
 		self.rebuild_start_time = 0
 		self.last_progress = 0
@@ -70,6 +71,11 @@ class RebuildComponent(ScriptedActivityComponent):
 				out.write(c_bit(True))
 			self.rebuild_flag = False
 
+	def on_destruction(self):
+		for handle in self.callback_handles:
+			handle.cancel()
+		self.callback_handles.clear()
+
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		assert self.rebuild_state in (RebuildState.Open, RebuildState.Incomplete)
@@ -107,7 +113,10 @@ class RebuildComponent(ScriptedActivityComponent):
 
 		assert len(self.object.children) == 1
 		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])
-		asyncio.get_event_loop().call_later(self.smash_time, self.smash_rebuild)
+		self.callback_handles.append(asyncio.get_event_loop().call_later(self.smash_time, self.smash_rebuild))
+
+		# drop rewards
+		self.object.stats.drop_rewards(*self.completion_rewards, player)
 
 		# update missions that have completing this rebuild as requirement
 		for mission in player.char.missions:

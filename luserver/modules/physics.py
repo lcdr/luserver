@@ -48,7 +48,6 @@ class PhysicsHandling(ServerModule):
 		for obj in self.server.world_data.objects.values():
 			if obj.lot in MODEL_DIMENSIONS:
 				if not hasattr(obj, "script") or not hasattr(obj.script, "on_collision"):
-					log.warn("Object %s doesn't have a collision callback!", obj)
 					continue
 				aabb = AABB(obj)
 				#self.server.spawn_object(2556, position=aabb.min, rotation=Quaternion.identity)

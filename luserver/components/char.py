@@ -375,6 +375,16 @@ class CharacterComponent(Component):
 					if task.type == TaskType.Interact and task.target == obj.lot:
 						mission.increment_task(task, self.object)
 
+	def client_item_consumed(self, address, item_id:c_int64=None):
+		for item in self.object.inventory.items:
+			if item is not None and item.object_id == item_id:
+				for mission in self.missions:
+					if mission.state == MissionState.Active:
+						for task in mission.tasks:
+							if task.type == TaskType.UseConsumable and item.lot == task.target:
+									mission.increment_task(task, self.object)
+				break
+
 	def get_flag(self, flag_id):
 		return bool(self.flags & (1 << flag_id))
 
@@ -407,6 +417,17 @@ class CharacterComponent(Component):
 	def display_tooltip(self, address, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:"wstr"=None, localize_params:"ldf"=None, str_image_name:"wstr"=None, str_text:"wstr"=None):
 		pass
 
+	def use_non_equipment_item(self, address, item_to_use:c_int64=None):
+		for item in self.object.inventory.items:
+			if item is not None and item.object_id == item_to_use:
+				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
+					if component_type == 53: # PackageComponent, make an enum for this somewhen
+						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
+						for loot_table in self.object._v_server.db.package_component[component_id]:
+							for lot, _ in loot_table[0]:
+								self.object.inventory.add_item_to_inventory(lot)
+						return
+
 	def notify_pet_taming_minigame(self, address, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
 		pass
 
@@ -430,7 +451,7 @@ class CharacterComponent(Component):
 		pass
 
 	def update_model_from_client(self, address, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
-		for model in self.models:
+		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = self.object._v_server.new_object_id()
 				rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped

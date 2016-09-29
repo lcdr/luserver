@@ -114,6 +114,10 @@ class ChatHandling(ServerModule):
 		dismount_cmd = cmds.add_parser("dismount")
 		dismount_cmd.set_defaults(func=self.dismount_cmd)
 
+		everlasting_cmd = cmds.add_parser("everlasting")
+		everlasting_cmd.add_argument("--enable", type=toggle_bool)
+		everlasting_cmd.set_defaults(func=self.everlasting_cmd)
+
 		extend_inv_cmd = cmds.add_parser("extendinv")
 		extend_inv_cmd.add_argument("amount", type=int)
 		extend_inv_cmd.set_defaults(func=self.extend_inv_cmd)
@@ -163,6 +167,10 @@ class ChatHandling(ServerModule):
 
 		refill_stats_cmd = cmds.add_parser("refillstats")
 		refill_stats_cmd.set_defaults(func=self.refill_stats_cmd)
+
+		remove_mission_cmd = cmds.add_parser("removemission")
+		remove_mission_cmd.add_argument("id", type=int)
+		remove_mission_cmd.set_defaults(func=self.remove_mission_cmd)
 
 		reset_missions_cmd = cmds.add_parser("resetmissions")
 		reset_missions_cmd.set_defaults(func=self.reset_missions_cmd)
@@ -310,6 +318,12 @@ class ChatHandling(ServerModule):
 			self.server.game_objects[sender.char.vehicle_id].comp_108.driver_id = 0
 			sender.char.vehicle_id = 0
 
+	def everlasting_cmd(self, args, sender):
+		if args.enable is None:
+			sender.skill.everlasting = not sender.skill.everlasting
+		else:
+			sender.skill.everlasting = args.enable
+
 	def extend_inv_cmd(self, args, sender):
 		# currently just items, add models functionality when necessary
 		self.server.send_game_message(sender.inventory.set_inventory_size, inventory_type=InventoryType.Items, size=len(sender.inventory.items)+args.amount, address=sender.char.address)
@@ -366,6 +380,15 @@ class ChatHandling(ServerModule):
 		sender.stats.life = sender.stats.max_life
 		sender.stats.armor = sender.stats.max_armor
 		sender.stats.imagination = sender.stats.max_imagination
+
+	def remove_mission_cmd(self, args, sender):
+		for mission in sender.char.missions:
+			if mission.id == args.id:
+				sender.char.missions.remove(mission)
+				print("Mission removed")
+				break
+		else:
+			print("Mission not found")
 
 	def reset_missions_cmd(self, args, sender):
 		sender.char.missions.clear()
