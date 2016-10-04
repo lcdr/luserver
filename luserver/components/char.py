@@ -55,8 +55,6 @@ class CharacterComponent(Component):
 		self._online = False
 		self._world = 0, 0, 0
 		self.currency = 0
-		self.object.physics.position.update(-627.18, 613.32, -29.22)
-		self.object.physics.rotation.update(0.0, 0.733, 0.0, 0.679)
 		self.friends = PersistentList()
 		self.mails = PersistentList()
 		self.missions = PersistentList()
@@ -266,6 +264,8 @@ class CharacterComponent(Component):
 			else:
 				self.object.physics.position.update(self.object._v_server.db.world_data[world[0]].spawnpoint[0])
 				self.object.physics.rotation.update(self.object._v_server.db.world_data[world[0]].spawnpoint[1])
+			self.object.physics.attr_changed("position")
+			self.object.physics.attr_changed("rotation")
 			self.object._v_server.commit()
 
 		server_address = await self.object._v_server.address_for_world(world)
