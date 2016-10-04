@@ -1,6 +1,5 @@
 import logging
 
-from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .module import ServerModule
 
@@ -50,8 +49,8 @@ class PhysicsHandling(ServerModule):
 				if not hasattr(obj, "script") or not hasattr(obj.script, "on_collision"):
 					continue
 				aabb = AABB(obj)
-				#self.server.spawn_object(2556, position=aabb.min, rotation=Quaternion.identity)
-				#self.server.spawn_object(2556, position=aabb.max, rotation=Quaternion.identity)
+				#self.server.spawn_object(2556, position=aabb.min)
+				#self.server.spawn_object(2556, position=aabb.max)
 				self.tracked_objects.append((aabb, obj))
 
 	def check_collisions(self, player):

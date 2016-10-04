@@ -176,10 +176,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			self.physics.init()
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
-		spawner = GameObject(self, 176, spawner_id)
-		spawner.spawner.spawntemplate = lot
-		spawner.spawner.waypoints = (position, rotation, {}, {}),
-		spawner._v_server = self
+		spawned_vars = {}
+		spawned_vars["position"] = position
+		spawned_vars["rotation"] = rotation
+		spawner_vars = {}
+		spawner_vars["spawntemplate"] = lot
+		spawner_vars["spawner_waypoints"] = spawned_vars,
+		spawner = GameObject(self, 176, spawner_id, set_vars=spawner_vars)
 		self.models.append((spawner, spawner.spawner.spawn()))
 
 	def on_disconnect_or_connection_lost(self, data, address):
@@ -234,36 +237,25 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.commit()
 		return current
 
-	def spawn_object(self, lot, spawner=None, parent=None, position=None, rotation=None, custom_script=None, set_vars={}, is_world_control=False):
-		if spawner is not None or parent is not None:
-			if spawner is not None:
-				creator = spawner
-			if parent is not None:
-				creator = parent
-			if position:
-				if isinstance(position, Vector3):
-					position = Vector3(position)
-				else:
-					position = Vector3(*position)
-			else:
-				position = Vector3(creator.physics.position)
-			if rotation:
-				if isinstance(rotation, Quaternion):
-					rotation = Quaternion(rotation)
-				else:
-					rotation = Quaternion(*rotation)
-			else:
-				rotation = Quaternion(creator.physics.rotation)
+	def spawn_object(self, lot, spawner=None, parent=None, position=None, rotation=None, set_vars=None, is_world_control=False):
+		if set_vars is None:
+			set_vars = {}
+		if "position" not in set_vars:
+			if position is not None:
+				set_vars["position"] = position
+			elif parent is not None:
+				set_vars["position"] = parent.physics.position
+		if "rotation" not in set_vars:
+			if rotation is not None:
+				set_vars["rotation"] = rotation
+			elif parent is not None:
+				set_vars["rotation"] = parent.physics.rotation
 
 		if is_world_control:
 			object_id = 70368744177662
 		else:
 			object_id = self.new_spawned_id()
-		if position is not None:
-			set_vars["position"] = position
-		if rotation is not None:
-			set_vars["rotation"] = rotation
-		obj = GameObject(self, lot, object_id, custom_script, set_vars)
+		obj = GameObject(self, lot, object_id, set_vars)
 
 		if spawner is not None:
 			obj.spawner_object = spawner
@@ -272,7 +264,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		if parent is not None:
 			obj.parent = parent.object_id
 			parent.children.append(obj.object_id)
-			parent.children_flag = True
+			parent.attr_changed("children")
 
 		obj._serialize = False
 		self.game_objects[obj.object_id] = obj

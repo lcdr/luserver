@@ -83,7 +83,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			handle.cancel()
 		self.callback_handles.clear()
 		self.players.append(player.object_id)
-		self.activity_flag = True
+		self.attr_changed("players")
 		self.rebuild_state = RebuildState.Building
 		player.char.rebuilding = 1
 		self.object._v_server.send_game_message(self.enable_rebuild, enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id, address=player.char.address)
@@ -138,7 +138,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.last_progress += time.time() - self.rebuild_start_time
 			self.rebuild_state = RebuildState.Incomplete
 			self.players.remove(user_id)
-			self.activity_flag = True
+			self.attr_changed("players")
 			player.char.rebuilding = 0
 			if early_release:
 				fail_reason = FailReason.CanceledEarly

@@ -429,7 +429,8 @@ class ChatHandling(ServerModule):
 
 	def teleport_cmd(self, args, sender):
 		if args.position:
-			pos = Vector3(*args.position)
+			pos = Vector3(args.position)
+
 		elif args.player:
 			args.player = args.player.lower()
 			for obj in self.server.game_objects.values():

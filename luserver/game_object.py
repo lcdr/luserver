@@ -67,7 +67,7 @@ class GameObject:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, server, lot, object_id, custom_script=None, set_vars={}):
+	def __init__(self, server, lot, object_id, set_vars={}):
 		self._v_server = server
 		self._flags = {}
 		self._flags["parent_flag"] = "related_objects_flag"
@@ -80,20 +80,24 @@ class GameObject:
 		self.name = ""
 		self.spawner_object = None
 		self.spawner_waypoint_index = 0
+		if "scale" in set_vars:
+			self.scale = set_vars["scale"]
+		else:
+			self.scale = 1
 		self.parent = None
 		self.children = []
 		if "groups" in set_vars:
 			self.groups = set_vars["groups"]
 		else:
 			self.groups = ()
-		vars(self).update(set_vars)
-
+		if "respawn_name" in set_vars:
+			self.respawn_name = set_vars["respawn_name"]
 		self.components = []
 
 		comps = OrderedDict()
 
 		comp_ids = list(self._v_server.db.components_registry[self.lot])
-		if custom_script is not None:
+		if "custom_script" in set_vars:
 			# remove any previous script and add the new script
 			for comp in comp_ids:
 				if comp[0] == 5:
@@ -104,8 +108,8 @@ class GameObject:
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
 				if component_id is None:
-					if custom_script != "":
-						script = importlib.import_module("luserver.scripts."+custom_script)
+					if "custom_script" in set_vars and set_vars["custom_script"] != "":
+						script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
 						comp = script.ScriptComponent,
 					else:
 						comp = ScriptComponent,
@@ -187,7 +191,7 @@ class GameObject:
 	def on_destruction(self):
 		if self.parent is not None:
 			self._v_server.game_objects[self.parent].children.remove(self.object_id)
-			self._v_server.game_objects[self.parent].children_flag = True
+			self._v_server.game_objects[self.parent].attr_changed("children")
 
 		for child in self.children:
 			self._v_server.destruct(self._v_server.game_objects[child])
@@ -219,8 +223,8 @@ class GameObject:
 		pass
 
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
-	def __init__(self, server, lot, object_id, custom_script=None, set_vars={}):
-		GameObject.__init__(self, server, lot, object_id, custom_script, set_vars)
+	def __init__(self, server, lot, object_id, set_vars={}):
+		GameObject.__init__(self, server, lot, object_id, set_vars)
 		Persistent.__init__(self)
 
 	def __setattr__(self, name, value):

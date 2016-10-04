@@ -1,3 +1,4 @@
+import collections.abc
 import math
 from .vector import Vector3
 
@@ -8,6 +9,11 @@ class Quaternion:
 			self.y = x.y
 			self.z = x.z
 			self.w = x.w
+		elif isinstance(x, collections.abc.Sequence):
+			self.x = x[0]
+			self.y = x[1]
+			self.z = x[2]
+			self.w = x[3]
 		else:
 			self.x = x
 			self.y = y

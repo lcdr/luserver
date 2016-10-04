@@ -24,7 +24,7 @@ class ModularBuildComponent(Component):
 
 	def modular_build_move_and_equip(self, address, template_id:c_int=None):
 		player = self.object._v_server.accounts[address].characters.selected()
-		new_item = player.move_item_between_inventory_types(None, inventory_type_a=InventoryType.TempModels, inventory_type_b=InventoryType.Models, object_id=0, template_id=template_id)
+		new_item = player.inventory.move_item_between_inventory_types(None, inventory_type_a=InventoryType.TempModels, inventory_type_b=InventoryType.Models, object_id=0, template_id=template_id)
 		player.inventory.equip_inventory(None, item_to_equip=new_item.object_id)
 
 	def modular_build_finish(self, address, module_lots:(c_ubyte, c_int)=None):
