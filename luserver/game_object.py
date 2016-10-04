@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from persistent import Persistent
 
+from . import ldf
 from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort
 from .components.ai import BaseCombatAIComponent
 from .components.bouncer import BouncerComponent
@@ -79,32 +80,31 @@ class GameObject:
 		self.lot = lot
 		self.object_id = object_id
 		self.name = ""
+		self.config = set_vars.get("config", {})
 		self.spawner_object = None
 		self.spawner_waypoint_index = 0
-		if "scale" in set_vars:
-			self.scale = set_vars["scale"]
-		else:
-			self.scale = 1
+		self.scale = set_vars.get("scale", 1)
 		self.parent = None
 		self.children = []
-		if "groups" in set_vars:
-			self.groups = set_vars["groups"]
-		else:
-			self.groups = ()
+		self.groups = set_vars.get("groups", ())
 		if "respawn_name" in set_vars:
 			self.respawn_name = set_vars["respawn_name"]
+		if "primitive_model_type" in set_vars:
+			self.primitive_model_type = set_vars["primitive_model_type"]
+		if "primitive_model_scale" in set_vars:
+			self.primitive_model_scale = set_vars["primitive_model_scale"]
 		self.components = []
 
 		comps = OrderedDict()
 
 		comp_ids = list(self._v_server.db.components_registry[self.lot])
 		if "custom_script" in set_vars:
-			# remove any previous script and add the new script
+			# add custom script if no script is already there
 			for comp in comp_ids:
 				if comp[0] == 5:
-					comp_ids.remove(comp)
 					break
-			comp_ids.append((5, None))
+			else:
+				comp_ids.append((5, None))
 
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
@@ -150,7 +150,9 @@ class GameObject:
 		out.write(self.name, length_type=c_ubyte)
 
 		out.write(bytes(4)) # time since created on server?
-		out.write(c_bit(False))
+		out.write(c_bit(self.config))
+		if self.config:
+			out.write(ldf.to_ldf(self.config, ldf_type="binary"))
 		out.write(c_bit(False))
 		out.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:

@@ -1,5 +1,6 @@
 import logging
 
+from ..bitstream import c_bool, c_float, c_int
 from ..math.vector import Vector3
 from .module import ServerModule
 
@@ -8,6 +9,8 @@ MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.00
 MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)
 MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5) # cube
 MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
+MODEL_DIMENSIONS[12384] = Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225) # POI wall
+MODEL_DIMENSIONS[14510] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model
 
 log = logging.getLogger(__file__)
 
@@ -15,8 +18,14 @@ log = logging.getLogger(__file__)
 
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
-		rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
-		rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
+		if obj.lot == 14510:
+			if obj.primitive_model_type != 1:
+				log.warn("Primitive model type not 1 %s", obj)
+			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.primitive_model_scale
+			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.primitive_model_scale
+		else:
+			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
+			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
 
 		rel_min = rel_min.rotate(obj.physics.rotation)
 		rel_max = rel_max.rotate(obj.physics.rotation)
@@ -91,12 +100,22 @@ class PhysicsHandling(ServerModule):
 
 	def debug_cmd(self, args, sender):
 		if not self.debug_markers:
-			for obj, aabb in self.tracked_objects.items():
+			for obj, aabb in self.tracked_objects.copy().items():
 				set_vars = {}
 				set_vars["position"] = obj.physics.position
 				set_vars["rotation"] = obj.physics.rotation
 				set_vars["scale"] = obj.scale
 				self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
+				set_vars = {}
+				set_vars["position"] = Vector3((aabb.min.x+aabb.max.x)/2, aabb.min.y, (aabb.min.z+aabb.max.z)/2)
+				config = {}
+				config["primitiveModelType"] = c_int, 1
+				config["primitiveModelValueX"] = c_float, aabb.max.x-aabb.min.x
+				config["primitiveModelValueY"] = c_float, aabb.max.y-aabb.min.y
+				config["primitiveModelValueZ"] = c_float, aabb.max.z-aabb.min.z
+				set_vars["config"] = config
+				self.debug_markers.append(self.server.spawn_object(14510, set_vars=set_vars))
+
 		else:
 			for marker in self.debug_markers:
 				self.server.destruct(marker)
