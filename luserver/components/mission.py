@@ -19,7 +19,7 @@ class TaskType:
 	UseConsumable = 9
 	UseSkill = 10
 	ObtainItem = 11
-	# Discover = 12 # needs physics
+	Discover = 12
 	MinigameAchievement = 14
 	Interact = 15
 	MissionComplete = 16
