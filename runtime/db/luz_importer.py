@@ -1,4 +1,5 @@
 import os
+import xml.etree.ElementTree as ET
 from types import SimpleNamespace
 
 import BTrees
@@ -55,7 +56,30 @@ class PathType:
 
 WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14347, 14348, 14510, 14530, 15902, 16513, 16627
 
-def parse_lvl(conn, world_data, lvl_path):
+EVENT_NAMES = {}
+EVENT_NAMES["OnCreate"] = "on_startup"
+
+def parse_lutriggers(lutriggers_path):
+	triggers = {}
+	tree = ET.parse(lutriggers_path)
+	triggers_elem = tree.getroot()
+	for trigger in triggers_elem:
+		events = {}
+		for event in trigger:
+			if event.attrib["id"] not in EVENT_NAMES:
+				continue
+			commands = []
+			for command in event:
+				if "args" in command.attrib:
+					args = command.attrib["args"].split(",")
+				else:
+					args = ()
+				commands.append((command.attrib["id"], command.attrib["target"], args))
+			events[EVENT_NAMES[event.attrib["id"]]] = commands
+		triggers[int(trigger.attrib["id"])] = events
+	return triggers
+
+def parse_lvl(conn, world_data, lvl_path, triggers):
 	with open(lvl_path, "rb") as file:
 		lvl = BitStream(file.read())
 
@@ -99,6 +123,11 @@ def parse_lvl(conn, world_data, lvl_path):
 							spawned_vars["custom_script"] = ""
 						else:
 							spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
+					if "trigger_id" in config:
+						trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
+						if trigger_scene_id in triggers and trigger_id in triggers[trigger_scene_id]:
+							spawned_vars["trigger_events"] = triggers[trigger_scene_id][trigger_id]
+
 					spawned_vars["scale"] = scale
 					spawned_vars["position"] = position
 					spawned_vars["rotation"] = rotation
@@ -171,13 +200,22 @@ def load_world_data(conn, maps_path):
 		else:
 			number_of_scenes = luz.read(c_ubyte)
 
+		scenes = {}
 		for _ in range(number_of_scenes):
 			filename = luz.read(str, char_size=1, length_type=c_ubyte)
-			luz.skip_read(8)
+			scene_id = luz.read(c_uint64)
 			luz.read(str, char_size=1, length_type=c_ubyte)
 			luz.read(bytes, length=3)
+			scenes[scene_id] = filename
 
-			parse_lvl(conn, conn.root.world_data[world.value], os.path.join(os.path.dirname(luz_path), filename))
+		triggers = {}
+		for scene_id, filename in scenes.items():
+			lutriggers_path = os.path.join(os.path.dirname(luz_path), os.path.splitext(filename)[0]+".lutriggers")
+			if os.path.exists(lutriggers_path):
+				triggers[scene_id] = parse_lutriggers(lutriggers_path)
+
+		for scene_id, filename in scenes.items():
+			parse_lvl(conn, conn.root.world_data[world.value], os.path.join(os.path.dirname(luz_path), filename), triggers)
 
 		assert luz.read(c_ubyte) == 0
 
