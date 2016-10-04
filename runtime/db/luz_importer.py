@@ -58,6 +58,7 @@ WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 624
 
 EVENT_NAMES = {}
 EVENT_NAMES["OnCreate"] = "on_startup"
+EVENT_NAMES["OnEnter"] = "on_enter"
 
 def parse_lutriggers(lutriggers_path):
 	triggers = {}

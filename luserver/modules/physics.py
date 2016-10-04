@@ -42,19 +42,62 @@ class AABB: # axis aligned bounding box
 		       self.min.z < point.z < self.max.z
 
 class PhysicsHandling(ServerModule):
-	def init(self):
-		self.tracked_objects = []
+	def __init__(self, server):
+		super().__init__(server)
+		self.last_collisions = {}
+		self.tracked_objects = {}
+		self.debug_markers = []
+		debug_cmd = self.server.chat.commands.add_parser("physicsdebug")
+		debug_cmd.set_defaults(func=self.debug_cmd)
+
+	def on_startup(self):
 		for obj in self.server.world_data.objects.values():
-			if obj.lot in MODEL_DIMENSIONS:
-				if not hasattr(obj, "script") or not hasattr(obj.script, "on_collision"):
-					continue
-				aabb = AABB(obj)
-				#self.server.spawn_object(2556, position=aabb.min)
-				#self.server.spawn_object(2556, position=aabb.max)
-				self.tracked_objects.append((aabb, obj))
+			self.check_add_object(obj)
+
+	def on_validated(self, address):
+		if self.server.world_id[0] != 0: # char
+			player = self.server.accounts[address].characters.selected()
+			self.last_collisions[player] = []
+
+	def on_disconnect_or_connection_lost(self, address):
+		if self.server.world_id[0] != 0: # char
+			player = self.server.accounts[address].characters.selected()
+			del self.last_collisions[player]
+
+	def on_construction(self, obj):
+		self.check_add_object(obj)
+
+	def on_destruction(self, obj):
+		if obj in self.tracked_objects:
+			del self.tracked_objects[obj]
+
+	def check_add_object(self, obj):
+		if obj.lot in MODEL_DIMENSIONS:
+			for comp in obj.components:
+				if hasattr(comp, "on_enter"):
+					self.tracked_objects[obj] = AABB(obj)
+					break
 
 	def check_collisions(self, player):
-		for aabb, obj in self.tracked_objects:
+		collisions = []
+		for obj, aabb in self.tracked_objects.items():
 			if aabb.is_point_within(player.physics.position):
-				#self.server.spawn_object(2556, parent=player)
-				obj.script.on_collision(player)
+				if obj not in self.last_collisions[player]:
+					for comp in obj.components:
+						if hasattr(comp, "on_enter"):
+							comp.on_enter(player)
+				collisions.append(obj)
+		self.last_collisions[player] = collisions
+
+	def debug_cmd(self, args, sender):
+		if not self.debug_markers:
+			for obj, aabb in self.tracked_objects.items():
+				set_vars = {}
+				set_vars["position"] = obj.physics.position
+				set_vars["rotation"] = obj.physics.rotation
+				set_vars["scale"] = obj.scale
+				self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
+		else:
+			for marker in self.debug_markers:
+				self.server.destruct(marker)
+			self.debug_markers.clear()

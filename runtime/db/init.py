@@ -239,6 +239,8 @@ if GENERATE_MISSIONS:
 					target += tuple(int(target_id) for target_id in target_group.split(","))
 			elif task_type in (TaskType.UseEmote, TaskType.UseSkill):
 				parameter = tuple(int(param_id) for param_id in parameter.split(","))
+			elif task_type == TaskType.Discover:
+				target = target_group
 			elif task_type == TaskType.Flag:
 				target = tuple(int(flag_id) for flag_id in target_group.split(","))
 

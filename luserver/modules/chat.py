@@ -87,58 +87,58 @@ class ChatHandling(ServerModule):
 	def __init__(self, server):
 		super().__init__(server)
 		self.chat_parser = CustomArgumentParser(prog="server command line")
-		cmds = self.chat_parser.add_subparsers(title="Available commands")
+		self.commands = self.chat_parser.add_subparsers(title="Available commands")
 
-		add_item_cmd = cmds.add_parser("additem")
+		add_item_cmd = self.commands.add_parser("additem")
 		add_item_cmd.add_argument("lot", type=int)
 		add_item_cmd.add_argument("--amount", type=int, default=1)
 		add_item_cmd.add_argument("--all")
 		add_item_cmd.set_defaults(func=self.add_item_cmd)
 
-		add_mission_cmd = cmds.add_parser("addmission")
+		add_mission_cmd = self.commands.add_parser("addmission")
 		add_mission_cmd.add_argument("id", type=int)
 		add_mission_cmd.set_defaults(func=self.add_mission_cmd)
 
-		build_cmd = cmds.add_parser("build")
+		build_cmd = self.commands.add_parser("build")
 		build_cmd.add_argument("type", type=int)
 		build_cmd.set_defaults(func=self.build_cmd)
 
-		check_for_leaks_cmd = cmds.add_parser("checkforleaks")
+		check_for_leaks_cmd = self.commands.add_parser("checkforleaks")
 		check_for_leaks_cmd.set_defaults(func=self.check_for_leaks_cmd)
 
-		complete_mission_cmd = cmds.add_parser("completemission")
+		complete_mission_cmd = self.commands.add_parser("completemission")
 		complete_mission_cmd.add_argument("--id", type=int)
 		complete_mission_cmd.set_defaults(func=self.complete_mission_cmd)
 
-		cmds.add_parser("dance") # client-side
+		self.commands.add_parser("dance") # client-side
 
-		dismount_cmd = cmds.add_parser("dismount")
+		dismount_cmd = self.commands.add_parser("dismount")
 		dismount_cmd.set_defaults(func=self.dismount_cmd)
 
-		everlasting_cmd = cmds.add_parser("everlasting")
+		everlasting_cmd = self.commands.add_parser("everlasting")
 		everlasting_cmd.add_argument("--enable", type=toggle_bool)
 		everlasting_cmd.set_defaults(func=self.everlasting_cmd)
 
-		extend_inv_cmd = cmds.add_parser("extendinv")
+		extend_inv_cmd = self.commands.add_parser("extendinv")
 		extend_inv_cmd.add_argument("amount", type=int)
 		extend_inv_cmd.set_defaults(func=self.extend_inv_cmd)
 
-		faction_cmd = cmds.add_parser("faction")
+		faction_cmd = self.commands.add_parser("faction")
 		faction_cmd.add_argument("faction", type=int)
 		faction_cmd.set_defaults(func=self.faction_cmd)
 
-		glow_cmd = cmds.add_parser("glow")
+		glow_cmd = self.commands.add_parser("glow")
 		glow_cmd.set_defaults(func=self.glow_cmd)
 
-		filelog_cmd = cmds.add_parser("filelog", description="Change which packets are logged to file")
+		filelog_cmd = self.commands.add_parser("filelog", description="Change which packets are logged to file")
 		filelog_cmd.add_argument("action", choices=("add", "remove", "show"), default="show")
 		filelog_cmd.add_argument("packetname")
 		filelog_cmd.set_defaults(func=self.filelog_cmd)
 
-		help_cmd = cmds.add_parser("help")
+		help_cmd = self.commands.add_parser("help")
 		help_cmd.set_defaults(func=self.help_cmd)
 
-		jetpack_cmd = cmds.add_parser("jetpack", description="Jetpacks!")
+		jetpack_cmd = self.commands.add_parser("jetpack", description="Jetpacks!")
 		jetpack_cmd.add_argument("enable", type=normal_bool)
 		jetpack_cmd.add_argument("--hover", action="store_true")
 		jetpack_cmd.add_argument("--bypass-checks", type=normal_bool, default=True)
@@ -148,49 +148,49 @@ class ChatHandling(ServerModule):
 		jetpack_cmd.add_argument("--vertical-velocity", type=float, default=1.5)
 		jetpack_cmd.set_defaults(func=self.jetpack_cmd)
 
-		level_cmd = cmds.add_parser("level", description="Set player level.")
+		level_cmd = self.commands.add_parser("level", description="Set player level.")
 		level_cmd.add_argument("--level", type=int, default=45)
 		level_cmd.set_defaults(func=self.level_cmd)
 
-		location_cmd = cmds.add_parser("location", aliases=("locate", "loc"), description="Print your location.")
+		location_cmd = self.commands.add_parser("location", aliases=("locate", "loc"), description="Print your location.")
 		location_cmd.add_argument("--player")
 		location_cmd.set_defaults(func=self.location_cmd)
 
-		log_cmd = cmds.add_parser("log", description="Set log level.")
+		log_cmd = self.commands.add_parser("log", description="Set log level.")
 		log_cmd.add_argument("logger")
 		log_cmd.add_argument("level")
 		log_cmd.set_defaults(func=self.log_cmd)
 
-		noconsolelog_cmd = cmds.add_parser("noconsolelog", description="Change which packets are logged to console. Adding a packet removes it from logging and vice versa.")
+		noconsolelog_cmd = self.commands.add_parser("noconsolelog", description="Change which packets are logged to console. Adding a packet removes it from logging and vice versa.")
 		noconsolelog_cmd.add_argument("action", choices=("add", "remove", "show"), default="show")
 		noconsolelog_cmd.add_argument("packetname")
 		noconsolelog_cmd.set_defaults(func=self.noconsolelog_cmd)
 
-		refill_stats_cmd = cmds.add_parser("refillstats")
+		refill_stats_cmd = self.commands.add_parser("refillstats")
 		refill_stats_cmd.set_defaults(func=self.refill_stats_cmd)
 
-		remove_mission_cmd = cmds.add_parser("removemission")
+		remove_mission_cmd = self.commands.add_parser("removemission")
 		remove_mission_cmd.add_argument("id", type=int)
 		remove_mission_cmd.set_defaults(func=self.remove_mission_cmd)
 
-		reset_missions_cmd = cmds.add_parser("resetmissions")
+		reset_missions_cmd = self.commands.add_parser("resetmissions")
 		reset_missions_cmd.set_defaults(func=self.reset_missions_cmd)
 
-		restart_cmd = cmds.add_parser("restart", aliases=("r",))
+		restart_cmd = self.commands.add_parser("restart", aliases=("r",))
 		restart_cmd.set_defaults(func=self.restart_cmd)
 
-		send_cmd = cmds.add_parser("send", description="This will manually send packets")
+		send_cmd = self.commands.add_parser("send", description="This will manually send packets")
 		send_cmd.add_argument("directory", help="Name of subdirectory of ./packets/ which contains the packets you want to send")
 		send_cmd.add_argument("--address")
 		send_cmd.add_argument("--broadcast", default=False)
 		send_cmd.set_defaults(func=self.send_cmd)
 
-		spawn_cmd = cmds.add_parser("spawn", description="Spawn an object")
+		spawn_cmd = self.commands.add_parser("spawn", description="Spawn an object")
 		spawn_cmd.add_argument("lot", type=int)
 		spawn_cmd.add_argument("--position", nargs=3, type=float)
 		spawn_cmd.set_defaults(func=self.spawn_cmd)
 
-		spawn_phantom_cmd = cmds.add_parser("spawnphantom")
+		spawn_phantom_cmd = self.commands.add_parser("spawnphantom")
 		spawn_phantom_cmd.add_argument("--type", choices=("wall", "cube"), default="cube")
 		spawn_phantom_cmd.add_argument("--effect", choices=("push", "attract", "repulse", "gravity", "friction"), default="push")
 		spawn_phantom_cmd.add_argument("--amount", type=float, default=500)
@@ -198,17 +198,17 @@ class ChatHandling(ServerModule):
 		spawn_phantom_cmd.add_argument("--scale", type=float, default=1)
 		spawn_phantom_cmd.set_defaults(func=self.spawn_phantom_cmd)
 
-		teleport_cmd = cmds.add_parser("teleport", aliases=("tp",))
+		teleport_cmd = self.commands.add_parser("teleport", aliases=("tp",))
 		teleport_cmd.add_argument("--position", nargs=3, type=float)
 		teleport_cmd.add_argument("--player")
 		teleport_cmd.add_argument("--y", action="store_false")
 		teleport_cmd.set_defaults(func=self.teleport_cmd)
 
-		whisper_cmd = cmds.add_parser("whisper", aliases=("w", "tell"), description="Private message") # client-side
+		whisper_cmd = self.commands.add_parser("whisper", aliases=("w", "tell"), description="Private message") # client-side
 		whisper_cmd.add_argument("name")
 		whisper_cmd.add_argument("text", nargs="+")
 
-		world_cmd = cmds.add_parser("world", description="Go to world")
+		world_cmd = self.commands.add_parser("world", description="Go to world")
 		world_cmd.add_argument("name")
 		world_cmd.set_defaults(func=self.world_cmd)
 
