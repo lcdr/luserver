@@ -13,6 +13,7 @@ from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..components.inventory import InventoryType
 from ..components.mission import MissionProgress
+from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
 from .module import ServerModule
 
@@ -188,6 +189,14 @@ class ChatHandling(ServerModule):
 		spawn_cmd.add_argument("lot", type=int)
 		spawn_cmd.add_argument("--position", nargs=3, type=float)
 		spawn_cmd.set_defaults(func=self.spawn_cmd)
+
+		spawn_phantom_cmd = cmds.add_parser("spawnphantom")
+		spawn_phantom_cmd.add_argument("--type", choices=("wall", "cube"), default="cube")
+		spawn_phantom_cmd.add_argument("--effect", choices=("push", "attract", "repulse", "gravity", "friction"), default="push")
+		spawn_phantom_cmd.add_argument("--amount", type=float, default=500)
+		spawn_phantom_cmd.add_argument("--direction", nargs=3, type=float, default=Vector3.up)
+		spawn_phantom_cmd.add_argument("--scale", type=float, default=1)
+		spawn_phantom_cmd.set_defaults(func=self.spawn_phantom_cmd)
 
 		teleport_cmd = cmds.add_parser("teleport", aliases=("tp",))
 		teleport_cmd.add_argument("--position", nargs=3, type=float)
@@ -427,6 +436,22 @@ class ChatHandling(ServerModule):
 	def spawn_cmd(self, args, sender):
 		self.server.spawn_object(args.lot, parent=sender, position=args.position)
 
+	def spawn_phantom_cmd(self, args, sender):
+		if args.type == "wall":
+			lot = 4734
+			displacement = Vector3()
+		elif args.type == "cube":
+			lot = 5652
+			displacement = Vector3(0, 2.5, 0)
+		if not isinstance(args.direction, Vector3):
+			args.direction = Vector3(args.direction)
+		set_vars = {}
+		set_vars["scale"] = args.scale
+		obj = self.server.spawn_object(lot, parent=sender, position=sender.physics.position+displacement, set_vars=set_vars)
+		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
+		obj.physics.physics_effect_amount = args.amount
+		obj.physics.physics_effect_direction = args.direction*args.amount
+
 	def teleport_cmd(self, args, sender):
 		if args.position:
 			pos = Vector3(args.position)
@@ -435,7 +460,7 @@ class ChatHandling(ServerModule):
 			args.player = args.player.lower()
 			for obj in self.server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.lower().startswith(args.player):
-					pos = obj.position
+					pos = obj.physics.position
 					break
 			else:
 				print("no player found")
