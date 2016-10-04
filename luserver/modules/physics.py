@@ -4,10 +4,10 @@ from ..math.vector import Vector3
 from .module import ServerModule
 
 MODEL_DIMENSIONS = {}
-MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)
+MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989) # wall
 MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)
-MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)
-MODEL_DIMENSIONS[8419] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)
+MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5) # cube
+MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
 
 log = logging.getLogger(__file__)
 

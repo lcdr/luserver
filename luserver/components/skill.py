@@ -84,6 +84,7 @@ class MovementType:
 	Jump = 2
 	Falling = 3
 	DoubleJump = 4
+	FallingAfterDoubleJumpAttack = 5
 	Jetpack = 6
 	Rail = 10
 
