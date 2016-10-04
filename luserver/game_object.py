@@ -25,6 +25,7 @@ from .components.script import ScriptComponent
 from .components.skill import SkillComponent
 from .components.spawner import SpawnerComponent
 from .components.stats import StatsSubcomponent
+from .components.trigger import TriggerComponent
 from .components.vendor import VendorComponent
 
 component = OrderedDict()
@@ -127,6 +128,9 @@ class GameObject:
 				if subcomp not in comps:
 					comps[subcomp] = component_id
 
+		if "trigger_events" in set_vars:
+			comps[TriggerComponent] = None
+
 		for comp, comp_id in comps.items():
 			self.components.append(comp(self, set_vars, comp_id))
 
@@ -154,8 +158,9 @@ class GameObject:
 		out.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
 			out.write(c_uint(self.spawner_waypoint_index))
-
-		out.write(c_bit(False))
+		out.write(c_bit(self.scale != 1))
+		if self.scale != 1:
+			out.write(c_float(self.scale))
 		out.write(c_bit(False))
 		out.write(c_bit(False))
 
