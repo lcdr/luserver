@@ -381,7 +381,7 @@ class CharacterComponent(Component):
 				for mission in self.missions:
 					if mission.state == MissionState.Active:
 						for task in mission.tasks:
-							if task.type == TaskType.UseConsumable and item.lot == task.target:
+							if task.type == TaskType.UseConsumable and task.target == item.lot:
 									mission.increment_task(task, self.object)
 				break
 

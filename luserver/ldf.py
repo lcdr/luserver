@@ -33,23 +33,32 @@ def to_ldf(obj, ldf_type):
 	elif ldf_type == "binary":
 		if not isinstance(obj, dict):
 			raise NotImplementedError
-		output = BitStream()
-		output.write(c_uint(len(obj)))
+		uncompressed = BitStream()
+		uncompressed.write(c_uint(len(obj)))
 		for key, value in obj.items():
 			value_type, value_value = value # meh this isn't exactly descriptive
 
 			# can't use normal variable string writing because this writes the length of the encoded instead of the original (include option for this behavior?)
 			encoded_key = key.encode("utf-16-le")
-			output.write(c_ubyte(len(encoded_key)))
-			output.write(encoded_key)
-			output.write(c_ubyte(DATA_TYPE[value_type]))
+			uncompressed.write(c_ubyte(len(encoded_key)))
+			uncompressed.write(encoded_key)
+			uncompressed.write(c_ubyte(DATA_TYPE[value_type]))
 			if value_type == str:
-				output.write(value_value, length_type=c_uint)
+				uncompressed.write(value_value, length_type=c_uint)
 
 			else:
 				if value_type == bytes:
-					output.write(c_uint(len(value_value)))
-				output.write(value_type(value_value))
+					uncompressed.write(c_uint(len(value_value)))
+				uncompressed.write(value_type(value_value))
+
+		output = BitStream()
+		is_compressed = False
+		if not is_compressed:
+			output.write(c_uint(len(uncompressed)+1))
+		else:
+			raise NotImplementedError
+		output.write(c_bool(is_compressed))
+		output.write(uncompressed)
 
 	return output
 

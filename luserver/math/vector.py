@@ -37,6 +37,9 @@ class Vector3:
 
 	__rmul__ = __mul__
 
+	def __truediv__(self, other):
+		return Vector3(self.x / other, self.y / other, self.z / other)
+
 	def magnitude(self):
 		return math.sqrt(self.sq_magnitude())
 

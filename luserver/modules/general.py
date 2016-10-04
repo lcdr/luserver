@@ -145,8 +145,6 @@ class GeneralHandling(ServerModule):
 		xml = xml.dom.minidom.parseString((ET.tostring(root, encoding="unicode")))
 		#log.debug(xml.toprettyxml(indent="  "))
 
-		is_compressed = False
-
 		chd_ldf = {}
 		chd_ldf["objid"] = c_int64, player.object_id
 		chd_ldf["template"] = c_int, 1
@@ -154,12 +152,6 @@ class GeneralHandling(ServerModule):
 		chd_ldf["xmlData"] = bytes, ET.tostring(root)
 
 		encoded_ldf = ldf.to_ldf(chd_ldf, ldf_type="binary")
-
-		if not is_compressed:
-			chardata.write(c_uint(len(encoded_ldf)+1))
-		else:
-			raise NotImplementedError
-		chardata.write(c_bool(is_compressed))
 		chardata.write(encoded_ldf)
 		self.server.send(chardata, address)
 
