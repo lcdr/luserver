@@ -185,6 +185,11 @@ class ChatHandling(ServerModule):
 		send_cmd.add_argument("--broadcast", default=False)
 		send_cmd.set_defaults(func=self.send_cmd)
 
+		set_flag_cmd = self.commands.add_parser("setflag")
+		set_flag_cmd.add_argument("flag_id", type=int)
+		set_flag_cmd.add_argument("--value", type=normal_bool, default=True)
+		set_flag_cmd.set_defaults(func=self.set_flag_cmd)
+
 		spawn_cmd = self.commands.add_parser("spawn", description="Spawn an object")
 		spawn_cmd.add_argument("lot", type=int)
 		spawn_cmd.add_argument("--position", nargs=3, type=float)
@@ -432,6 +437,8 @@ class ChatHandling(ServerModule):
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
 				self.server.send(data, args.address, args.broadcast)
 
+	def set_flag_cmd(self, args, sender):
+		self.server.send_game_message(sender.char.set_flag, args.value, args.flag_id, address=sender.char.address)
 
 	def spawn_cmd(self, args, sender):
 		self.server.spawn_object(args.lot, parent=sender, position=args.position)

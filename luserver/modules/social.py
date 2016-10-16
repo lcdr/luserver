@@ -62,7 +62,7 @@ class SocialHandling(ServerModule):
 			relayed_request.write_header(WorldClientMsg.AddFriendRequest)
 			relayed_request.write(self.server.accounts[address].characters.selected().name, allocated_length=66)
 			relayed_request.write(c_bool(is_best_friend_request))
-			self.send(relayed_request, requested_friend.char.address)
+			self.server.send(relayed_request, requested_friend.char.address)
 		except KeyError:
 			# friend cannot be found
 			self.send_add_friend_response(AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
@@ -85,7 +85,7 @@ class SocialHandling(ServerModule):
 
 		response.write(c_bool(False)) # is best friend (not implemented)
 		response.write(c_bool(False)) # is FTP
-		self.send(response, address)
+		self.server.send(response, address)
 
 
 	def on_add_friend_response(self, response, address):
@@ -122,7 +122,7 @@ class SocialHandling(ServerModule):
 			remove_message.write_header(WorldClientMsg.RemoveFriendResponse)
 			remove_message.write(c_bool(True)) # Successful
 			remove_message.write(player2_ref().name, allocated_length=66)
-			self.send(remove_message, player1_ref().char.address)
+			self.server.send(remove_message, player1_ref().char.address)
 
 	def on_team_invite(self, invite, address):
 		assert invite.read(c_int64) == 0
