@@ -15,6 +15,8 @@ or
 
 	python -m pip install passlib ZEO
 
+If you want the server logs to be colorful you can additionally install colorlog.
+
 luserver also requires pyraknet, which you can download from https://bitbucket.org/lcdr/pyraknet/ . Add its installation directory to the PYTHONPATH environment variable so python can find it.
 luserver should also be added to PYTHONPATH.
 

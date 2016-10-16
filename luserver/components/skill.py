@@ -225,7 +225,7 @@ class SkillComponent(Component):
 				self.handle_behavior(behavior.on_success, bitstream, target, level+1)
 
 		elif behavior.template == BehaviorTemplate.TacArc:
-			if behavior.use_picked_target and self.picked_target_id != 0:
+			if behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in self.object._v_server.game_objects:
 				target = self.object._v_server.game_objects[self.picked_target_id]
 				# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
 				log.debug("using picked target, not completely working")
@@ -322,8 +322,8 @@ class SkillComponent(Component):
 				assert not bitstream.read(c_bit)
 
 		elif behavior.template == BehaviorTemplate.Duration:
-			self.handle_behavior(behavior.action, bitstream, target, level+1)
-			asyncio.get_event_loop().call_later(behavior.duration, self.undo_behavior, behavior.action)
+			params = self.handle_behavior(behavior.action, bitstream, target, level+1)
+			asyncio.get_event_loop().call_later(behavior.duration, self.undo_behavior, behavior.action, params)
 
 		elif behavior.template == BehaviorTemplate.Knockback:
 			assert not bitstream.read(c_bit)
@@ -337,7 +337,7 @@ class SkillComponent(Component):
 			target.stats.armor += behavior.armor
 
 		elif behavior.template in (BehaviorTemplate.SpawnObject, BehaviorTemplate.SpawnQuickbuild):
-			self.object._v_server.spawn_object(behavior.lot, parent=self.object)
+			return self.object._v_server.spawn_object(behavior.lot, parent=self.object)
 
 		elif behavior.template == BehaviorTemplate.Switch:
 			switch = True
@@ -396,8 +396,10 @@ class SkillComponent(Component):
 		elif behavior.template == BehaviorTemplate.ClearTarget:
 			self.handle_behavior(behavior.action, bitstream, target, level+1)
 
-	def undo_behavior(self, behavior):
-		if behavior.template == BehaviorTemplate.Buff:
+	def undo_behavior(self, behavior, params=None):
+		if behavior.template == BehaviorTemplate.SpawnObject:
+			self.object._v_server.destruct(params)
+		elif behavior.template == BehaviorTemplate.Buff:
 			if hasattr(behavior, "life"):
 				self.object.stats.max_life -= behavior.life
 			if hasattr(behavior, "armor"):
