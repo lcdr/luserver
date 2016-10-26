@@ -294,6 +294,17 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			return self.world_data.objects[object_id]
 		log.warn("Object %i not found", object_id)
 
+	def get_objects_in_group(self, group):
+		matches = []
+		for obj in self.game_objects.values():
+			if group in obj.groups:
+				matches.append(obj)
+		if self.world_id[0] != 0:
+			for obj in self.world_data.objects.values():
+				if group in obj.groups:
+					matches.append(obj)
+		return matches
+
 	def find_player_by_name(self, name):
 		for acc in self.db.accounts.values():
 			for char in acc.characters.values():

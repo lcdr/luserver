@@ -148,9 +148,11 @@ class PhysicsEffect(enum.IntEnum):
 class PhantomPhysicsComponent(PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		self._flags["physics_effect_active"] = "physics_effect_flag"
 		self._flags["physics_effect_type"] = "physics_effect_flag"
 		self._flags["physics_effect_amount"] = "physics_effect_flag"
 		self._flags["physics_effect_direction"] = "physics_effect_flag"
+		self.physics_effect_active = False
 		self.physics_effect_type = 0
 		self.physics_effect_amount = 0
 		self.physics_effect_direction = Vector3()
@@ -167,14 +169,15 @@ class PhantomPhysicsComponent(PhysicsComponent):
 			out.write(c_float(self.rotation.w))
 			self.physics_data_flag = False
 
-		out.write(c_bit((is_creation and self.physics_effect_amount != 0) or self.physics_effect_flag))
-		if (is_creation and self.physics_effect_amount != 0) or self.physics_effect_flag:
-			out.write(c_bit(True))
-			out.write(c_uint(self.physics_effect_type))
-			out.write(c_float(self.physics_effect_amount))
-			out.write(c_bit(False))
-			out.write(c_bit(True))
-			out.write(c_float(self.physics_effect_direction.x))
-			out.write(c_float(self.physics_effect_direction.y))
-			out.write(c_float(self.physics_effect_direction.z))
+		out.write(c_bit(self.physics_effect_flag or is_creation))
+		if self.physics_effect_flag or is_creation:
+			out.write(c_bit(self.physics_effect_active))
+			if self.physics_effect_active:
+				out.write(c_uint(self.physics_effect_type))
+				out.write(c_float(self.physics_effect_amount))
+				out.write(c_bit(False))
+				out.write(c_bit(True))
+				out.write(c_float(self.physics_effect_direction.x))
+				out.write(c_float(self.physics_effect_direction.y))
+				out.write(c_float(self.physics_effect_direction.z))
 			self.physics_effect_flag = False

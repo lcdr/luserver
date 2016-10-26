@@ -455,6 +455,7 @@ class ChatHandling(ServerModule):
 		set_vars = {}
 		set_vars["scale"] = args.scale
 		obj = self.server.spawn_object(lot, parent=sender, position=sender.physics.position+displacement, set_vars=set_vars)
+		obj.physics.physics_effect_active = True
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
 		obj.physics.physics_effect_amount = args.amount
 		obj.physics.physics_effect_direction = args.direction*args.amount

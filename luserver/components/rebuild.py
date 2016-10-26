@@ -109,7 +109,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		player.char.rebuilding = 0
 		self.object._v_server.send_game_message(self.enable_rebuild, enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id, address=player.char.address)
 		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507, address=player.char.address)
-		self.object._v_server.send_game_message(player.play_animation, animation_id="rebuild-celebrate", play_immediate=False, address=player.char.address)
+		self.object._v_server.send_game_message(player.render.play_animation, animation_id="rebuild-celebrate", play_immediate=False, address=player.char.address)
 
 		assert len(self.object.children) == 1
 		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])

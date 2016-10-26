@@ -11,6 +11,7 @@ from .components.char import CharacterComponent
 from .components.collectible import CollectibleComponent
 from .components.comp108 import Comp108Component
 from .components.destructible import DestructibleComponent
+from .components.exhibit import ExhibitComponent
 from .components.inventory import InventoryComponent, ItemComponent
 from .components.launchpad import LaunchpadComponent
 from .components.mission import MissionNPCComponent, MissionState, TaskType
@@ -26,6 +27,7 @@ from .components.script import ScriptComponent
 from .components.skill import SkillComponent
 from .components.spawner import SpawnerComponent
 from .components.stats import StatsSubcomponent
+from .components.switch import SwitchComponent
 from .components.trigger import TriggerComponent
 from .components.vendor import VendorComponent
 
@@ -51,8 +53,10 @@ component[25] = MovingPlatformComponent,
 
 component[73] = MissionNPCComponent, # belongs to the other nonserialized components below but is moved up to have higher priority than VendorComponent
 
+component[49] = SwitchComponent,
 component[16] = VendorComponent,
 component[6] = BouncerComponent,
+component[75] = ExhibitComponent,
 component[2] = RenderComponent,
 
 component[10] = SpawnerComponent,
@@ -153,7 +157,7 @@ class GameObject:
 		out.write(c_bit(self.config))
 		if self.config:
 			out.write(ldf.to_ldf(self.config, ldf_type="binary"))
-		out.write(c_bit(False))
+		out.write(c_bit(hasattr(self, "trigger")))
 		out.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
 			out.write(c_int64(self.spawner_object.object_id))
@@ -219,9 +223,6 @@ class GameObject:
 					for task in mission.tasks:
 						if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self._v_server.game_objects[target_id].lot:
 							mission.increment_task(task, self)
-
-	def play_animation(self, address, animation_id:"wstr"=None, expect_anim_to_exist:c_bit=True, play_immediate:c_bit=None, trigger_on_complete_msg:c_bit=False, priority:c_float=2, f_scale:c_float=1):
-		pass
 
 	def emote_played(self, address, emote_id:c_int, target_id:c_int64):
 		pass
