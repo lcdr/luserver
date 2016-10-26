@@ -54,10 +54,12 @@ class PathType:
 	Race = 6
 	Rail = 7
 
-WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14347, 14348, 14510, 14530, 15902, 16513, 16627
+WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16513, 16627
 
 EVENT_NAMES = {}
+EVENT_NAMES["OnActivated"] = "on_activated"
 EVENT_NAMES["OnCreate"] = "on_startup"
+EVENT_NAMES["OnDectivated"] = "on_deactivated"
 EVENT_NAMES["OnEnter"] = "on_enter"
 
 def parse_lutriggers(lutriggers_path):
@@ -75,7 +77,11 @@ def parse_lutriggers(lutriggers_path):
 					args = command.attrib["args"].split(",")
 				else:
 					args = ()
-				commands.append((command.attrib["id"], command.attrib["target"], args))
+				if "targetName" in command.attrib:
+					target = command.attrib["target"], command.attrib["targetName"]
+				else:
+					target = command.attrib["target"]
+				commands.append((command.attrib["id"], target, args))
 			events[EVENT_NAMES[event.attrib["id"]]] = commands
 		triggers[int(trigger.attrib["id"])] = events
 	return triggers

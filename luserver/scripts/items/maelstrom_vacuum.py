@@ -7,4 +7,4 @@ class ScriptComponent(script.ScriptComponent):
 			player = self.object._v_server.game_objects[self.object.parent]
 			sample = self.object._v_server.game_objects[sender_id]
 			sample.destructible.deal_damage(1, player)
-			self.object._v_server.send_game_message(self.object.play_animation, animation_id="collect_maelstrom", play_immediate=False, address=player.char.address)
+			self.object._v_server.send_game_message(self.object.render.play_animation, animation_id="collect_maelstrom", play_immediate=False, address=player.char.address)

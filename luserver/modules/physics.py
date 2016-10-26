@@ -6,7 +6,9 @@ from .module import ServerModule
 
 MODEL_DIMENSIONS = {}
 MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989) # wall
+MODEL_DIMENSIONS[4956] = Vector3(-2, 0, -2), Vector3(2, 4, 2) # AG monument switch
 MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)
+MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
 MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5) # cube
 MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
 MODEL_DIMENSIONS[12384] = Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225) # POI wall
@@ -83,7 +85,7 @@ class PhysicsHandling(ServerModule):
 	def check_add_object(self, obj):
 		if obj.lot in MODEL_DIMENSIONS:
 			for comp in obj.components:
-				if hasattr(comp, "on_enter"):
+				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 					self.tracked_objects[obj] = AABB(obj)
 					break
 
@@ -91,11 +93,19 @@ class PhysicsHandling(ServerModule):
 		collisions = []
 		for obj, aabb in self.tracked_objects.items():
 			if aabb.is_point_within(player.physics.position):
-				if obj not in self.last_collisions[player]:
-					for comp in obj.components:
-						if hasattr(comp, "on_enter"):
-							comp.on_enter(player)
 				collisions.append(obj)
+
+		for obj in collisions:
+			if obj not in self.last_collisions[player]:
+				for comp in obj.components:
+					if hasattr(comp, "on_enter"):
+						comp.on_enter(player)
+		for obj in self.last_collisions[player]:
+			if obj not in collisions:
+				for comp in obj.components:
+					if hasattr(comp, "on_exit"):
+						comp.on_exit(player)
+
 		self.last_collisions[player] = collisions
 
 	def debug_cmd(self, args, sender):
