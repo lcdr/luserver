@@ -369,7 +369,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 						continue
 
 				value = bound_args.arguments[param.name]
-				assert value is not None
+				assert value is not None, "\"%s\" needs to be specified" % param.name
 				self.game_message_serialize(out, param.annotation, value)
 		self.send(out, address, broadcast)
 

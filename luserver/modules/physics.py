@@ -5,14 +5,17 @@ from ..math.vector import Vector3
 from .module import ServerModule
 
 MODEL_DIMENSIONS = {}
+MODEL_DIMENSIONS[1656] = Vector3(-1, -1, -1), Vector3(1, 2, 1) # imagination powerup
 MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989) # wall
 MODEL_DIMENSIONS[4956] = Vector3(-2, 0, -2), Vector3(2, 4, 2) # AG monument switch
-MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)
+MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2) # death plane
 MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
 MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5) # cube
 MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
 MODEL_DIMENSIONS[12384] = Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225) # POI wall
-MODEL_DIMENSIONS[14510] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model
+MODEL_DIMENSIONS[10042] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model
+MODEL_DIMENSIONS[14510] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model phantom (humans only)
+MODEL_DIMENSIONS[16506] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model phantom with skill component
 
 log = logging.getLogger(__file__)
 
@@ -20,7 +23,7 @@ log = logging.getLogger(__file__)
 
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
-		if obj.lot == 14510:
+		if obj.lot in (10042, 14510, 16506):
 			if obj.primitive_model_type != 1:
 				log.warn("Primitive model type not 1 %s", obj)
 			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.primitive_model_scale
@@ -59,6 +62,7 @@ class PhysicsHandling(ServerModule):
 		self.tracked_objects = {}
 		self.debug_markers = []
 		debug_cmd = self.server.chat.commands.add_parser("physicsdebug")
+		debug_cmd.add_argument("--original", action="store_true", default=False)
 		debug_cmd.set_defaults(func=self.debug_cmd)
 
 	def on_startup(self):
@@ -111,11 +115,12 @@ class PhysicsHandling(ServerModule):
 	def debug_cmd(self, args, sender):
 		if not self.debug_markers:
 			for obj, aabb in self.tracked_objects.copy().items():
-				set_vars = {}
-				set_vars["position"] = obj.physics.position
-				set_vars["rotation"] = obj.physics.rotation
-				set_vars["scale"] = obj.scale
-				self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
+				if args.original:
+					set_vars = {}
+					set_vars["position"] = obj.physics.position
+					set_vars["rotation"] = obj.physics.rotation
+					set_vars["scale"] = obj.scale
+					self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
 				set_vars = {}
 				set_vars["position"] = Vector3((aabb.min.x+aabb.max.x)/2, aabb.min.y, (aabb.min.z+aabb.max.z)/2)
 				config = {}

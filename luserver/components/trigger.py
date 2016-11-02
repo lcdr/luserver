@@ -22,7 +22,11 @@ class TriggerComponent(Component):
 
 	def on_event_process_commands(self, commands, *eventargs):
 		for command_name, target, args in commands:
-			if command_name == "fireEvent":
+			if command_name == "CastSkill":
+				assert target == "target"
+				player = eventargs[0]
+				player.skill.cast_skill(int(args[0]))
+			elif command_name == "fireEvent":
 				assert target[0] == "objGroup"
 				objs = self.object._v_server.get_objects_in_group(target[1])
 				for obj in objs:

@@ -211,7 +211,7 @@ class CharHandling(ServerModule):
 
 		self.server.commit()
 
-		asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, respawn_point_name=""))
+		asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world))
 
 	def shirt_to_lot(self, color, style):
 		# The LOTs for the shirts are for some reason in two batches of IDs

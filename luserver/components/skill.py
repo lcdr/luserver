@@ -104,6 +104,7 @@ class SkillComponent(Component):
 		self.object.skill = self
 		self.delayed_behaviors = {}
 		self.projectile_behaviors = {}
+		self.last_ui_skill_handle = 0
 		self.everlasting = False
 
 	def serialize(self, out, is_creation):
@@ -113,6 +114,12 @@ class SkillComponent(Component):
 	def on_destruction(self):
 		self.delayed_behaviors.clear()
 		self.projectile_behaviors.clear()
+
+	def cast_skill(self, skill_id, target=None):
+		if target is None:
+			target = self.object
+		self.start_skill(None, skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=BitStream())
+		self.last_ui_skill_handle += 1
 
 	def echo_start_skill(self, address, used_mouse:c_bit=False, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		pass
