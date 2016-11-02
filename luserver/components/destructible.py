@@ -30,6 +30,9 @@ class DestructibleComponent(Component):
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 		if self.object.stats.armor - damage < 0:
 			self.object.stats.life += self.object.stats.armor - damage
+		for comp in self.object.components:
+			if hasattr(comp, "on_hit"):
+				comp.on_hit(dealer)
 		if self.object.stats.life <= 0:
 			self.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
 

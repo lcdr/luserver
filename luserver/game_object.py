@@ -109,6 +109,15 @@ class GameObject:
 					break
 			else:
 				comp_ids.append((5, None))
+		if "render_disabled" in set_vars:
+			for comp in comp_ids.copy():
+				if comp[0] == 2:
+					comp_ids.remove(comp)
+		if "marked_as_phantom" in set_vars:
+			for comp in comp_ids.copy():
+				if comp[0] == 3:
+					comp_ids.remove(comp)
+			comp_ids.append((40, None))
 
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
@@ -139,7 +148,7 @@ class GameObject:
 			self.components.append(comp(self, set_vars, comp_id))
 
 	def __repr__(self):
-		return "<GameObject '%s', %i, %i>" % (self.name, self.object_id, self.lot)
+		return "<GameObject \"%s\", %i, %i>" % (self.name, self.object_id, self.lot)
 
 	def attr_changed(self, name):
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""

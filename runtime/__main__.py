@@ -21,8 +21,7 @@ except ImportError:
 	pass
 else:
 	handler = colorlog.StreamHandler()
-	handler.setFormatter(colorlog.ColoredFormatter(
-	'%(log_color)s%(levelname).1s:%(message)s'))
+	handler.setFormatter(colorlog.ColoredFormatter("%(log_color)s%(levelname).1s:%(message)s"))
 
 	logger = logging.getLogger()
 	logger.handlers[0] = handler

@@ -65,7 +65,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
 		"""Modified to raise original LU error message."""
 		if action.choices is not None and value not in action.choices:
 			if type(action) == argparse._SubParsersAction:
-				raise argparse.ArgumentError(action, "Invalid command '%s'. Type /--help for a list of commands." % value)
+				raise argparse.ArgumentError(action, "Invalid command \"%s\". Type /--help for a list of commands." % value)
 			else:
 				super()._check_value(action, value)
 

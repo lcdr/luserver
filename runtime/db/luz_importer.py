@@ -54,7 +54,7 @@ class PathType:
 	Race = 6
 	Rail = 7
 
-WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16513, 16627
+WHITELISTED_SERVERSIDE_LOTS = 176, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11274, 11279, 11280, 11281, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16506, 16513, 16627
 
 EVENT_NAMES = {}
 EVENT_NAMES["OnActivated"] = "on_activated"
@@ -90,104 +90,118 @@ def parse_lvl(conn, world_data, lvl_path, triggers):
 	with open(lvl_path, "rb") as file:
 		lvl = BitStream(file.read())
 
-	while True:
-		if lvl._read_offset//8 == len(lvl): # end of file
-			break
-		assert lvl._read_offset//8 % 16 == 0 # seems everything is aligned like this?
-		start_pos = lvl._read_offset//8
-		try:
+	if lvl[0:4] == b"CHNK":
+		while True:
+			if lvl._read_offset//8 == len(lvl): # end of file
+				break
+			assert lvl._read_offset//8 % 16 == 0 # seems everything is aligned like this?
+			start_pos = lvl._read_offset//8
 			assert lvl.read(bytes, length=4) == b"CHNK"
-		except AssertionError:
-			print(lvl_path, "doesn't start with usual header")
-			break
-		chunktype = lvl.read(c_uint)
-		assert lvl.read(c_ushort) == 1
-		assert lvl.read(c_ushort) in (1, 2)
-		chunk_length = lvl.read(c_uint) # position of next CHNK relative to this CHNK
-		data_pos = lvl.read(c_uint)
-		lvl._read_offset = data_pos * 8
-		assert lvl._read_offset//8 % 16 == 0
-		if chunktype == 2001:
-			for _ in range(lvl.read(c_uint)):
-				object_id = lvl.read(c_int64) # seems like the object id, but without some bits
-				lot = lvl.read(c_uint)
-				unknown1 = lvl.read(c_uint)
-				unknown2 = lvl.read(c_uint)
-				position = lvl.read(c_float), lvl.read(c_float), lvl.read(c_float)
-				w, x, y, z = lvl.read(c_float), lvl.read(c_float), lvl.read(c_float), lvl.read(c_float)
-				rotation = x, y, z, w
-				scale = lvl.read(c_float)
-				config_data = lvl.read(str, length_type=c_uint)
-				assert lvl.read(c_uint) == 0
+			chunktype = lvl.read(c_uint)
+			assert lvl.read(c_ushort) == 1
+			assert lvl.read(c_ushort) in (1, 2)
+			chunk_length = lvl.read(c_uint) # position of next CHNK relative to this CHNK
+			data_pos = lvl.read(c_uint)
+			lvl._read_offset = data_pos * 8
+			assert lvl._read_offset//8 % 16 == 0
+			if chunktype == 2001:
+				lvl_parse_chunk_type_2001(lvl, conn, world_data, triggers)
+			lvl._read_offset = (start_pos + chunk_length) * 8 # go to the next CHNK
+	else:
+		lvl.skip_read(265)
+		lvl.read(str, char_size=1, length_type=c_uint)
+		for _ in range(5):
+			lvl.read(str, char_size=1, length_type=c_uint)
+		lvl.skip_read(4)
+		for _ in range(lvl.read(c_uint)):
+			lvl.read(c_float), lvl.read(c_float), lvl.read(c_float)
 
-				object_id |= BITS_LOCAL
-				if lot in WHITELISTED_SERVERSIDE_LOTS:
-					config = ldf.from_ldf(config_data)
+		lvl_parse_chunk_type_2001(lvl, conn, world_data, triggers)
 
-					spawned_vars = {}
-					if "custom_script_server" in config:
-						if config["custom_script_server"] == "":
-							spawned_vars["custom_script"] = ""
-						else:
-							spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
-					if "trigger_id" in config:
-						trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
-						if trigger_scene_id in triggers and trigger_id in triggers[trigger_scene_id]:
-							spawned_vars["trigger_events"] = triggers[trigger_scene_id][trigger_id]
+def lvl_parse_chunk_type_2001(lvl, conn, world_data, triggers):
+	for _ in range(lvl.read(c_uint)):
+		object_id = lvl.read(c_int64) # seems like the object id, but without some bits
+		lot = lvl.read(c_uint)
+		unknown1 = lvl.read(c_uint)
+		unknown2 = lvl.read(c_uint)
+		position = lvl.read(c_float), lvl.read(c_float), lvl.read(c_float)
+		w, x, y, z = lvl.read(c_float), lvl.read(c_float), lvl.read(c_float), lvl.read(c_float)
+		rotation = x, y, z, w
+		scale = lvl.read(c_float)
+		config_data = lvl.read(str, length_type=c_uint)
+		assert lvl.read(c_uint) == 0
 
-					spawned_vars["scale"] = scale
-					spawned_vars["position"] = position
-					spawned_vars["rotation"] = rotation
-					if "groupID" in config:
-						spawned_vars["groups"] = config["groupID"][:-1].split(";")
-					if "primitiveModelType" in config:
-						spawned_vars["primitive_model_type"] = config["primitiveModelType"]
-						primitive_model_scale = Vector3(config["primitiveModelValueX"], config["primitiveModelValueY"], config["primitiveModelValueZ"])
-						spawned_vars["primitive_model_scale"] = primitive_model_scale
-					if "respawnname" in config:
-						spawned_vars["respawn_name"] = config["respawnname"]
-					script_vars = {}
-					spawned_vars["script_vars"] = script_vars
+		object_id |= BITS_LOCAL
+		if lot in WHITELISTED_SERVERSIDE_LOTS:
+			config = ldf.from_ldf(config_data)
 
-					if "altFlagID" in config:
-						script_vars["alt_flag_id"] = config["altFlagID"]
-					if "number" in config:
-						script_vars["flag_id"] = int(config["number"])
-					if "POI" in config:
-						script_vars["poi"] = config["POI"]
-					if "storyText" in config:
-						script_vars["flag_id"] = int(config["storyText"][-2:])
-					if "teleGroup" in config:
-						script_vars["teleport_respawn_point_name"] = config["teleGroup"]
-					if "TouchCompleteID" in config:
-						script_vars["touch_complete_mission_id"] = config["TouchCompleteID"]
-					if "transferZoneID" in config:
-						script_vars["transfer_world_id"] = int(config["transferZoneID"])
+			spawned_vars = {}
+			spawned_vars["scale"] = scale
+			spawned_vars["position"] = position
+			spawned_vars["rotation"] = rotation
 
-					if lot == 176:
-						if "attached_path" in config:
-							spawned_vars["attached_path"] = config["attached_path"]
-						if "rebuild_activators" in config:
-							spawned_vars["rebuild_activator_position"] = Vector3(*(float(i) for i in config["rebuild_activators"].split("\x1f")))
-						if "rail_path" in config:
-							spawned_vars["rail_path"] = config["rail_path"]
-							spawned_vars["rail_path_start"] = config["rail_path_start"]
+			if "custom_script_server" in config:
+				if config["custom_script_server"] == "":
+					spawned_vars["custom_script"] = ""
+				else:
+					spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
+			if "trigger_id" in config:
+				trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
+				if trigger_scene_id in triggers and trigger_id in triggers[trigger_scene_id]:
+					spawned_vars["trigger_events"] = triggers[trigger_scene_id][trigger_id]
+			if "renderDisabled" in config:
+				spawned_vars["render_disabled"] = True
+			if "markedAsPhantom" in config:
+				spawned_vars["marked_as_phantom"] = True
 
-						if "KeyNum" in config:
-							script_vars["key_lot"] = config["KeyNum"]
-						if "openItemID" in config:
-							script_vars["package_lot"] = config["openItemID"]
+			if "groupID" in config:
+				spawned_vars["groups"] = config["groupID"][:-1].split(";")
+			if "primitiveModelType" in config:
+				spawned_vars["primitive_model_type"] = config["primitiveModelType"]
+				primitive_model_scale = Vector3(config["primitiveModelValueX"], config["primitiveModelValueY"], config["primitiveModelValueZ"])
+				spawned_vars["primitive_model_scale"] = primitive_model_scale
+			if "respawnname" in config:
+				spawned_vars["respawn_name"] = config["respawnname"]
+			script_vars = {}
+			spawned_vars["script_vars"] = script_vars
 
-						spawner_vars = {}
-						spawner_vars["spawntemplate"] = config["spawntemplate"]
-						spawner_vars["spawner_waypoints"] = spawned_vars,
-						spawned_vars = spawner_vars
+			if "altFlagID" in config:
+				script_vars["alt_flag_id"] = config["altFlagID"]
+			if "number" in config:
+				script_vars["flag_id"] = int(config["number"])
+			if "POI" in config:
+				script_vars["poi"] = config["POI"]
+			if "storyText" in config:
+				script_vars["flag_id"] = int(config["storyText"][-2:])
+			if "teleGroup" in config:
+				script_vars["teleport_respawn_point_name"] = config["teleGroup"]
+			if "TouchCompleteID" in config:
+				script_vars["touch_complete_mission_id"] = config["TouchCompleteID"]
+			if "transferZoneID" in config:
+				script_vars["transfer_world_id"] = int(config["transferZoneID"])
 
-					obj = GameObject(SimpleNamespace(db=conn.root), lot, object_id, spawned_vars)
-					del obj._v_server
-					world_data.objects[object_id] = obj
+			if lot == 176:
+				if "attached_path" in config:
+					spawned_vars["attached_path"] = config["attached_path"]
+				if "rebuild_activators" in config:
+					spawned_vars["rebuild_activator_position"] = Vector3(*(float(i) for i in config["rebuild_activators"].split("\x1f")))
+				if "rail_path" in config:
+					spawned_vars["rail_path"] = config["rail_path"]
+					spawned_vars["rail_path_start"] = config["rail_path_start"]
 
-		lvl._read_offset = (start_pos + chunk_length) * 8 # go to the next CHNK
+				if "KeyNum" in config:
+					script_vars["key_lot"] = config["KeyNum"]
+				if "openItemID" in config:
+					script_vars["package_lot"] = config["openItemID"]
+
+				spawner_vars = {}
+				spawner_vars["spawntemplate"] = config["spawntemplate"]
+				spawner_vars["spawner_waypoints"] = spawned_vars,
+				spawned_vars = spawner_vars
+
+			obj = GameObject(SimpleNamespace(db=conn.root), lot, object_id, spawned_vars)
+			del obj._v_server
+			world_data.objects[object_id] = obj
 
 def load_world_data(conn, maps_path):
 	conn.root.world_data = BTrees.IOBTree.BTree()
