@@ -39,6 +39,11 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.success = False
 		self.enabled = True
 
+		if "activity_id" in set_vars:
+			self.activity_id = set_vars["activity_id"]
+		else:
+			self.activity_id = self.object.lot
+
 		if "rebuild_activator_position" in set_vars:
 			self.rebuild_activator_position = set_vars["rebuild_activator_position"]
 		else:
@@ -122,7 +127,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		for mission in player.char.missions:
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
-					if task.type == TaskType.QuickBuild and task.target == self.object.lot:
+					if task.type == TaskType.QuickBuild and task.target == self.activity_id:
 						mission.increment_task(task, player)
 
 	def smash_rebuild(self):

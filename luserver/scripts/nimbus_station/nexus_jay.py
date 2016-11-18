@@ -2,27 +2,37 @@ import luserver.components.script as script
 
 JOIN_FACTION_MISSION_ID = 474
 
+SENTINEL_COMMENDATION = 6978
+ASSEMBLY_COMMENDATION = 6979
+VENTURE_LEAGUE_COMMENDATION = 6980
+PARADOX_COMMENDATION = 6981
+
+VENTURE_LEAGUE_FLAG = 46
+ASSEMBLY_FLAG = 47
+PARADOX_FLAG = 48
+SENTINEL_FLAG = 49
+
 class ScriptComponent(script.ScriptComponent):
 	def respond_to_mission(self, address, mission_id, player, reward_item):
 
 		if mission_id != JOIN_FACTION_MISSION_ID:
 			return
 
-		if reward_item == 6980:
+		if reward_item == VENTURE_LEAGUE_COMMENDATION:
 			achievements = [555, 556]
-			flag_id = 46
+			flag_id = VENTURE_LEAGUE_FLAG
 			celebration_id = 14
-		elif reward_item == 6979:
+		elif reward_item == ASSEMBLY_COMMENDATION:
 			achievements = [544, 545]
-			flag_id = 47
+			flag_id = ASSEMBLY_FLAG
 			celebration_id = 15
-		elif reward_item == 6981:
+		elif reward_item == PARADOX_COMMENDATION:
 			achievements = [577, 578]
-			flag_id = 48
+			flag_id = PARADOX_FLAG
 			celebration_id = 16
-		elif reward_item == 6978:
+		elif reward_item == SENTINEL_COMMENDATION:
 			achievements = [566, 567]
-			flag_id = 49
+			flag_id = SENTINEL_FLAG
 			celebration_id = 17
 
 		self.object._v_server.send_game_message(player.char.set_flag, True, flag_id, address=player.char.address)

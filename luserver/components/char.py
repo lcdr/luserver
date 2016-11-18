@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
@@ -16,6 +17,17 @@ from .pet import PetTamingNotify
 from .mission import MissionProgress, MissionState, TaskType
 
 log = logging.getLogger(__name__)
+
+FACTION_TOKEN_PROXY = 13763
+ASSEMBLY_TOKEN = 8318
+SENTINEL_TOKEN = 8319
+PARADOX_TOKEN = 8320
+VENTURE_LEAGUE_TOKEN = 8321
+
+VENTURE_LEAGUE_FLAG = 46
+ASSEMBLY_FLAG = 47
+PARADOX_FLAG = 48
+SENTINEL_FLAG = 49
 
 class TerminateType:
 	Range = 0
@@ -40,7 +52,6 @@ class MatchRequestValue:
 	Leave = 0
 	Ready = 1
 	Join = 5
-
 
 class MatchUpdateType:
 	Time = 3
@@ -254,6 +265,26 @@ class CharacterComponent(Component):
 			print("Temp Models not empty")
 			print(self.object.inventory.temp_models)
 
+	def random_loot(self, loot_matrix):
+		# ridiculously bad and biased temporary implementation, please fix
+		loot = []
+		for loot_table, percent, min_to_drop, max_to_drop in loot_matrix:
+			for _ in range(random.randint(min_to_drop, max_to_drop)):
+				lot, _ = random.choice(loot_table)
+				if lot == FACTION_TOKEN_PROXY:
+					if self.get_flag(VENTURE_LEAGUE_FLAG):
+						lot = VENTURE_LEAGUE_TOKEN
+					elif self.get_flag(ASSEMBLY_FLAG):
+						lot = ASSEMBLY_TOKEN
+					elif self.get_flag(PARADOX_FLAG):
+						lot = PARADOX_TOKEN
+					elif self.get_flag(SENTINEL_FLAG):
+						lot = SENTINEL_TOKEN
+					else:
+						continue
+				loot.append(lot)
+		return loot
+
 	async def transfer_to_world(self, world, respawn_point_name=None):
 		if respawn_point_name is not None:
 			for obj in self.object._v_server.db.world_data[world[0]].objects.values():
@@ -291,6 +322,7 @@ class CharacterComponent(Component):
 							break
 
 		self.object._v_server.commit()
+		return mission_progress
 
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
@@ -423,9 +455,8 @@ class CharacterComponent(Component):
 				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
 					if component_type == 53: # PackageComponent, make an enum for this somewhen
 						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
-						for loot_table in self.object._v_server.db.package_component[component_id]:
-							for lot, _ in loot_table[0]:
-								self.object.inventory.add_item_to_inventory(lot)
+						for lot in self.random_loot(self.object._v_server.db.package_component[component_id]):
+							self.object.inventory.add_item_to_inventory(lot)
 						return
 
 	def notify_pet_taming_minigame(self, address, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):

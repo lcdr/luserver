@@ -197,7 +197,7 @@ class SkillComponent(Component):
 			target = self.object
 		else:
 			if target_id not in self.object._v_server.game_objects:
-				log.warning("Projectile Target %i not in game objects!", target_id)
+				log.debug("Projectile Target %i not in game objects", target_id)
 				return
 			target = self.object._v_server.game_objects[target_id]
 
@@ -420,6 +420,13 @@ class SkillComponent(Component):
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
 				if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
 					if add_buffs:
+						if hasattr(self.object, "char"):
+							# update missions that have using this skill as requirement
+							for mission in self.object.char.missions:
+								if mission.state == MissionState.Active:
+									for task in mission.tasks:
+										if task.type == TaskType.UseSkill and skill_id in task.parameter:
+											mission.increment_task(task, self.object)
 						self.handle_behavior(behavior, b"", self.object)
 				else:
 					slot_id = SkillSlot.RightHand
@@ -431,6 +438,18 @@ class SkillComponent(Component):
 						slot_id = SkillSlot.Neck
 					self.object._v_server.send_game_message(self.add_skill, skill_id=skill_id, slot_id=slot_id, address=self.object.char.address)
 
+	def add_skill_server(self, skill_id):
+		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+			if hasattr(self.object, "char"):
+				# update missions that have using this skill as requirement
+				for mission in self.object.char.missions:
+					if mission.state == MissionState.Active:
+						for task in mission.tasks:
+							if task.type == TaskType.UseSkill and skill_id in task.parameter:
+								mission.increment_task(task, self.object)
+			self.handle_behavior(behavior, b"", self.object)
+
 	def remove_skill_for_item(self, item):
 		if item.lot in self.object._v_server.db.object_skills:
 			for skill_id in self.object._v_server.db.object_skills[item.lot]:
@@ -439,3 +458,8 @@ class SkillComponent(Component):
 					self.undo_behavior(behavior)
 				else:
 					self.object._v_server.send_game_message(self.remove_skill, skill_id=skill_id, address=self.object.char.address)
+
+	def remove_skill_server(self, skill_id):
+		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+			self.undo_behavior(behavior)
