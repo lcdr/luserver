@@ -270,7 +270,7 @@ if GENERATE_COMPS:
 		for loot_table_row in cdclient.execute("select itemid, sortPriority from LootTable where LootTableIndex == %i" % row[1]):
 			loot_table_entry.append((loot_table_row[0], loot_table_row[1]))
 		loot_table_entry = tuple(loot_table_entry)
-		loot_matrix.setdefault(row[0], []).append((loot_table_entry, row[2], row[3], row[3]))
+		loot_matrix.setdefault(row[0], []).append((loot_table_entry, row[2], row[3], row[4]))
 
 	activity_rewards = {}
 	for object_template, loot_matrix_index, currency_index in cdclient.execute("select objectTemplate, LootMatrixIndex, CurrencyIndex from ActivityRewards"):
@@ -290,10 +290,39 @@ if GENERATE_COMPS:
 	# actually persistent stuff
 
 	root.item_component = BTrees.IOBTree.BTree()
-	for id, base_value, item_type, stack_size in cdclient.execute("select id, baseValue, itemType, stackSize from ItemComponent"):
+	for id, base_value, item_type, stack_size, sub_items in cdclient.execute("select id, baseValue, itemType, stackSize, subItems from ItemComponent"):
 		if item_type == ItemType.Vehicle:
 			stack_size = 1
-		root.item_component[id] = base_value, item_type, stack_size
+		if sub_items is None or not sub_items.strip():
+			sub_items = ()
+		else:
+			sub_items = [int(i) for i in sub_items.split(",")]
+		root.item_component[id] = base_value, item_type, stack_size, sub_items
+
+	root.item_sets = []
+	for item_ids, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in cdclient.execute("select itemIDs, skillSetWith2, skillSetWith3, skillSetWith4, skillSetWith5, skillSetWith6 from ItemSets"):
+		item_ids = [int(i) for i in item_ids.split(",")]
+		skill_set_2 = []
+		if skill_set_with_2 is not None:
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_2):
+				skill_set_2.append(row[0])
+		skill_set_3 = []
+		if skill_set_with_3 is not None:
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_3):
+				skill_set_3.append(row[0])
+		skill_set_4 = []
+		if skill_set_with_4 is not None:
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_4):
+				skill_set_4.append(row[0])
+		skill_set_5 = []
+		if skill_set_with_5 is not None:
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_5):
+				skill_set_5.append(row[0])
+		skill_set_6 = []
+		if skill_set_with_6 is not None:
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_6):
+				skill_set_6.append(row[0])
+		root.item_sets.append((item_ids, skill_set_2, skill_set_3, skill_set_4, skill_set_5, skill_set_6))
 
 	root.property_template = BTrees.IOBTree.BTree()
 	for map_id, path in cdclient.execute("select mapID, path from PropertyTemplate"):

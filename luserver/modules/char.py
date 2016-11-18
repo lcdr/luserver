@@ -117,9 +117,15 @@ class CharHandling(ServerModule):
 			response.write(c_uint(char.char.world[2]))
 			response.write(bytes(8))
 
-			items = [i for i in char.inventory.items if i is not None and i.equipped]
-			response.write(c_ushort(len(items)))
-			for item in items:
+			all_equipped_items = []
+			equipped_items = [i for i in char.inventory.items if i is not None and i.equipped]
+			equipped_temp_items = [i for i in char.inventory.temp_items if i is not None and i.equipped]
+			equipped_models = [i for i in char.inventory.models if i is not None and i.equipped]
+			all_equipped_items.extend(equipped_items)
+			all_equipped_items.extend(equipped_temp_items)
+			all_equipped_items.extend(equipped_models)
+			response.write(c_ushort(len(all_equipped_items)))
+			for item in all_equipped_items:
 				response.write(c_uint(item.lot))
 
 		self.server.send(response, address)
