@@ -265,6 +265,16 @@ class CharacterComponent(Component):
 			print("Temp Models not empty")
 			print(self.object.inventory.temp_models)
 
+	def faction_token_lot(self):
+		if self.get_flag(VENTURE_LEAGUE_FLAG):
+			return VENTURE_LEAGUE_TOKEN
+		if self.get_flag(ASSEMBLY_FLAG):
+			return ASSEMBLY_TOKEN
+		if self.get_flag(PARADOX_FLAG):
+			return PARADOX_TOKEN
+		if self.get_flag(SENTINEL_FLAG):
+			return SENTINEL_TOKEN
+
 	def random_loot(self, loot_matrix):
 		# ridiculously bad and biased temporary implementation, please fix
 		loot = []
@@ -272,15 +282,8 @@ class CharacterComponent(Component):
 			for _ in range(random.randint(min_to_drop, max_to_drop)):
 				lot, _ = random.choice(loot_table)
 				if lot == FACTION_TOKEN_PROXY:
-					if self.get_flag(VENTURE_LEAGUE_FLAG):
-						lot = VENTURE_LEAGUE_TOKEN
-					elif self.get_flag(ASSEMBLY_FLAG):
-						lot = ASSEMBLY_TOKEN
-					elif self.get_flag(PARADOX_FLAG):
-						lot = PARADOX_TOKEN
-					elif self.get_flag(SENTINEL_FLAG):
-						lot = SENTINEL_TOKEN
-					else:
+					lot = self.faction_token_lot()
+					if lot is None:
 						continue
 				loot.append(lot)
 		return loot
@@ -369,9 +372,7 @@ class CharacterComponent(Component):
 							self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
 							break
 		obj = self.object._v_server.game_objects[receiver]
-		for comp in obj.components:
-			if hasattr(comp, "respond_to_mission"):
-				comp.respond_to_mission(address, mission_id, self.object, reward_item)
+		obj.handle("respond_to_mission", address, mission_id, self.object, reward_item)
 
 	def notify_mission(self, address, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
 		pass
@@ -391,14 +392,7 @@ class CharacterComponent(Component):
 		obj = self.object._v_server.get_object(object_id)
 		if not obj:
 			return
-		handled = False
-		for comp in obj.components:
-			if hasattr(comp, "on_use"):
-				handled = True
-				if comp.on_use(self.object, multi_interact_id):
-					break
-		if not handled:
-			log.warning("Object %s has no interaction callback", obj)
+		obj.handle("on_use", self.object, multi_interact_id)
 
 		# update missions that have interacting with this object as requirement
 		for mission in self.missions:

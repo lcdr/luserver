@@ -219,7 +219,8 @@ class InventoryComponent(Component):
 		if item is not None:
 			object_id = item.object_id
 
-		self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
+		if hasattr(self.object, "char"):
+			self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info={}, force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
 
 	def remove_item_from_inventory(self, address, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:"ldf"=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if confirmed:
@@ -271,7 +272,7 @@ class InventoryComponent(Component):
 
 					# equip sub-items
 					for sub_item in item.sub_items:
-						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems, persistent=False)
+						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems)
 						self.equip_inventory(None, item_to_equip=sub.object_id)
 
 					item.equipped = True

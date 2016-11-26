@@ -83,7 +83,8 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		assert self.rebuild_state in (RebuildState.Open, RebuildState.Incomplete)
+		if self.rebuild_state not in (RebuildState.Open, RebuildState.Incomplete):
+			return
 		for handle in self.callback_handles:
 			handle.cancel()
 		self.callback_handles.clear()
@@ -97,9 +98,8 @@ class RebuildComponent(ScriptedActivityComponent):
 		remaining_cost = int((self.complete_time - self.last_progress) // drain_interval)
 		for i in range(remaining_cost):
 			self.callback_handles.append(asyncio.get_event_loop().call_later(self.last_progress%drain_interval + drain_interval*i, self.drain_imagination, player))
-		for comp in self.object.components:
-			if hasattr(comp, "complete_rebuild"):
-				self.callback_handles.append(asyncio.get_event_loop().call_later(self.complete_time-self.last_progress, comp.complete_rebuild, player))
+		for handler in self.object.handlers("complete_rebuild"):
+			self.callback_handles.append(asyncio.get_event_loop().call_later(self.complete_time-self.last_progress, handler, player))
 		return True
 
 	def drain_imagination(self, player):

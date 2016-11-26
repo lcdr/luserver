@@ -154,18 +154,14 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			world_control_lot = self.db.world_info[self.world_id[0]]
 			if world_control_lot is not None:
 				self.world_control_object = self.spawn_object(world_control_lot, is_world_control=True)
-				for comp in self.world_control_object.components:
-					if hasattr(comp, "on_startup"):
-						comp.on_startup()
+				self.world_control_object.handle("on_startup")
 			else:
 				self.world_control_object = None
 
 			self.world_data = self.db.world_data[self.world_id[0]]
 			for obj in self.world_data.objects.values():
 				obj._v_server = self
-				for comp in obj.components:
-					if hasattr(comp, "on_startup"):
-						comp.on_startup()
+				obj.handle("on_startup", silent=True)
 				if hasattr(obj, "spawner"):
 					obj.spawner.spawn()
 			if self.world_id[2] != 0:
@@ -330,15 +326,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		if isinstance(handler, tuple):
 			obj, handler_name = handler
 			if hasattr(obj, handler_name):
-				handlers.append(getattr(comp, handler_name))
-			for comp in obj.components:
-				if hasattr(comp, handler_name):
-					handlers.append(getattr(comp, handler_name))
-			if not handlers:
-				log.error("Object %s has no handler for outgoing game message %s", obj, handler_name)
-				return
+				handlers.append(getattr(obj, handler_name))
+			handlers.extend(obj.handlers(handler_name))
 		else:
 			handlers.append(handler)
+
+		if not handlers:
+			return
 
 		game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), handlers[0].__name__)].value
 		out = BitStream()
@@ -388,11 +382,9 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		handlers = []
 		if hasattr(obj, handler_name):
 			handlers.append(getattr(obj, handler_name))
-		for comp in obj.components:
-			if hasattr(comp, handler_name):
-				handlers.append(getattr(comp, handler_name))
+		handlers.extend(obj.handlers(handler_name))
+
 		if not handlers:
-			log.warn("%s has no handler for %s", obj, message_name)
 			return
 
 		signature = inspect.signature(handlers[0])

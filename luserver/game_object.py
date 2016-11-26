@@ -1,4 +1,5 @@
 import importlib
+import logging
 from collections import OrderedDict
 
 from persistent import Persistent
@@ -30,6 +31,8 @@ from .components.stats import StatsSubcomponent
 from .components.switch import SwitchComponent
 from .components.trigger import TriggerComponent
 from .components.vendor import VendorComponent
+
+log = logging.getLogger(__name__)
 
 component = OrderedDict()
 component[108] = Comp108Component,
@@ -216,11 +219,41 @@ class GameObject:
 		for child in self.children:
 			self._v_server.destruct(self._v_server.game_objects[child])
 
-		for comp in self.components:
-			if hasattr(comp, "on_destruction"):
-				comp.on_destruction()
+		self.handle("on_destruction")
 
 		del self._v_server.game_objects[self.object_id]
+
+	def handlers(self, func_name, silent=False):
+		"""
+		Return matching component handlers for a function.
+		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
+		"""
+		# Should this include the game object's handler too?
+		handlers = []
+		script_handler = None
+		for comp in self.components:
+			if hasattr(comp, func_name):
+				handler = getattr(comp, func_name)
+				if isinstance(comp, ScriptComponent):
+					script_handler = handler
+				else:
+					handlers.append(handler)
+		if script_handler is not None:
+			handlers.append(script_handler)
+
+		if not silent and not handlers:
+			log.info("Object %s has no handlers for %s", self, func_name)
+
+		return handlers
+
+	def handle(self, func_name, *args, silent=False, **kwargs):
+		"""
+		Calls component handlers for a function. See handlers() for the order of handlers.
+		If a handler returns True, it's assumed that the handler has sufficiently handled the event and no further handlers will be called.
+		"""
+		for handler in self.handlers(func_name, silent):
+			if handler(*args, **kwargs):
+				break
 
 	def play_emote(self, address, emote_id:c_int, target_id:c_int64):
 		# are we sure this message is not-char-component-specific?
