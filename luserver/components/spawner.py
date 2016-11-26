@@ -17,7 +17,5 @@ class SpawnerComponent(Component):
 		self.last_waypoint_index = random.randrange(len(self.waypoints))
 		spawned_vars = self.waypoints[self.last_waypoint_index]
 		spawned = self.object._v_server.spawn_object(self.spawntemplate, spawner=self.object, set_vars=spawned_vars)
-		for comp in spawned.components:
-			if hasattr(comp, "on_startup"):
-				comp.on_startup()
+		spawned.handle("on_startup", silent=True)
 		return spawned

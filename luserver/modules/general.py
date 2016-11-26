@@ -161,10 +161,11 @@ class GeneralHandling(ServerModule):
 		self.server.send_game_message(player.char.server_done_loading_all_objects, address=address)
 		self.server.send_game_message(player.char.player_ready, address=address)
 		self.server.send_game_message(player.char.restore_to_post_load_stats, address=address)
-		for item in player.inventory.items:
-			if item is not None and item.equipped:
-				player.skill.add_skill_for_item(item, add_buffs=False)
-		if self.server.world_control_object is not None and hasattr(self.server.world_control_object, "player_ready"):
+		for inv in (player.inventory.items, player.inventory.temp_items, player.inventory.models):
+			for item in inv:
+				if item is not None and item.equipped:
+					player.skill.add_skill_for_item(item, add_buffs=False)
+		if self.server.world_control_object is not None and hasattr(self.server.world_control_object.script, "player_ready"):
 			self.server.send_game_message(self.server.world_control_object.script.player_ready, address=address)
 
 	def on_position_update(self, message, address):

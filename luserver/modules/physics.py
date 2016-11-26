@@ -69,22 +69,16 @@ class PhysicsHandling(ServerModule):
 		for obj in self.server.world_data.objects.values():
 			self.check_add_object(obj)
 
-	def on_validated(self, address):
-		if self.server.world_id[0] != 0: # char
-			player = self.server.accounts[address].characters.selected()
-			self.last_collisions[player] = []
-
-	def on_disconnect_or_connection_lost(self, address):
-		if self.server.world_id[0] != 0: # char
-			player = self.server.accounts[address].characters.selected()
-			del self.last_collisions[player]
-
 	def on_construction(self, obj):
 		self.check_add_object(obj)
+		if hasattr(obj, "char"):
+			self.last_collisions[obj] = []
 
 	def on_destruction(self, obj):
 		if obj in self.tracked_objects:
 			del self.tracked_objects[obj]
+		if hasattr(obj, "char"):
+			del self.last_collisions[obj]
 
 	def check_add_object(self, obj):
 		if obj.lot in MODEL_DIMENSIONS:
@@ -101,14 +95,10 @@ class PhysicsHandling(ServerModule):
 
 		for obj in collisions:
 			if obj not in self.last_collisions[player]:
-				for comp in obj.components:
-					if hasattr(comp, "on_enter"):
-						comp.on_enter(player)
+				obj.handle("on_enter", player)
 		for obj in self.last_collisions[player]:
 			if obj not in collisions:
-				for comp in obj.components:
-					if hasattr(comp, "on_exit"):
-						comp.on_exit(player)
+				obj.handle("on_exit", player)
 
 		self.last_collisions[player] = collisions
 
