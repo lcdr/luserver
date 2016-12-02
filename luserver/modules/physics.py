@@ -1,6 +1,6 @@
 import logging
 
-from ..bitstream import c_bool, c_float, c_int
+from ..bitstream import c_float, c_int
 from ..math.vector import Vector3
 from .module import ServerModule
 
@@ -19,7 +19,7 @@ MODEL_DIMENSIONS[16506] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primiti
 
 log = logging.getLogger(__file__)
 
-# currently for static serverside objects only, does not handle position/rotation updates and object destructions
+# currently for static objects only, does not handle position/rotation updates
 
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):

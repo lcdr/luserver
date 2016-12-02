@@ -5,7 +5,7 @@ import logging
 import xml.etree.ElementTree as ET
 
 from .. import ldf
-from ..bitstream import BitStream, c_bit, c_bool, c_float, c_int, c_int64, c_uint, c_ushort
+from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_uint, c_ushort
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import World
 from .module import ServerModule

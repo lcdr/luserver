@@ -19,7 +19,7 @@ class LaunchpadComponent(Component):
 		assert multi_interact_id is None
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
-				self.object._v_server.send_game_message(self.object.fire_event_client_side, args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, address=player.char.address)
+				self.object._v_server.send_game_message(self.fire_event_client_side, args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, address=player.char.address)
 				break
 		else:
 			log.warning("Player has no rocket!")
@@ -30,3 +30,6 @@ class LaunchpadComponent(Component):
 			if param2:
 				param3 = self.default_world_id
 			asyncio.ensure_future(player.char.transfer_to_world((param3, 0, param1), self.respawn_point_name))
+
+	def fire_event_client_side(self, address, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+		pass
