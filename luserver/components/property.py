@@ -154,7 +154,7 @@ class PropertyEntranceComponent(Component):
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
-				self.object._v_server.send_game_message(self.object.fire_event_client_side, args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id, address=player.char.address)
+				self.object._v_server.send_game_message(self.fire_event_client_side, args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id, address=player.char.address)
 				break
 
 	def property_entrance_sync(self, address, include_null_address:c_bit=None, include_null_description:c_bit=None, players_own:c_bit=None, update_ui:c_bit=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:"str"=None):
@@ -166,6 +166,9 @@ class PropertyEntranceComponent(Component):
 		self.object._v_server.send_game_message(self.property_select_query, nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], address=address)
 
 	def property_select_query(self, address, nav_offset:c_int=None, there_are_more:c_bit=None, my_clone_id:c_int=None, has_featured_property:c_bit=None, was_friends:c_bit=None, properties:(c_uint, PropertySelectQueryProperty)=None):
+		pass
+
+	def fire_event_client_side(self, address, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
 		pass
 
 	def property_entrance_begin(self, address):

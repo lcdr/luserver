@@ -322,14 +322,11 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
 			The serialization type (c_int, c_float, etc) is taken from the argument annotation.
 		"""
-		handlers = []
 		if isinstance(handler, tuple):
 			obj, handler_name = handler
-			if hasattr(obj, handler_name):
-				handlers.append(getattr(obj, handler_name))
-			handlers.extend(obj.handlers(handler_name))
+			handlers = obj.handlers(handler_name)
 		else:
-			handlers.append(handler)
+			handlers = [handler]
 
 		if not handlers:
 			return

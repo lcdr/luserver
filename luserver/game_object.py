@@ -15,7 +15,7 @@ from .components.destructible import DestructibleComponent
 from .components.exhibit import ExhibitComponent
 from .components.inventory import InventoryComponent, ItemComponent
 from .components.launchpad import LaunchpadComponent
-from .components.mission import MissionNPCComponent, MissionState, TaskType
+from .components.mission import MissionNPCComponent
 from .components.modular_build import ModularBuildComponent
 from .components.moving_platform import MovingPlatformComponent
 from .components.pet import PetComponent
@@ -228,7 +228,6 @@ class GameObject:
 		Return matching component handlers for a function.
 		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
 		"""
-		# Should this include the game object's handler too?
 		handlers = []
 		script_handler = None
 		for comp in self.components:
@@ -254,23 +253,6 @@ class GameObject:
 		for handler in self.handlers(func_name, silent):
 			if handler(*args, **kwargs):
 				break
-
-	def play_emote(self, address, emote_id:c_int, target_id:c_int64):
-		# are we sure this message is not-char-component-specific?
-		self._v_server.send_game_message(self.emote_played, emote_id, target_id, broadcast=True)
-		# update missions that have the use of this emote as requirement
-		if target_id:
-			for mission in self.char.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self._v_server.game_objects[target_id].lot:
-							mission.increment_task(task, self)
-
-	def emote_played(self, address, emote_id:c_int, target_id:c_int64):
-		pass
-
-	def fire_event_client_side(self, address, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
-		pass
 
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
 	def __init__(self, server, lot, object_id, set_vars={}):

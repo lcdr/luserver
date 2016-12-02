@@ -8,4 +8,4 @@ class ScriptComponent(script.ScriptComponent):
 		else:
 			flag_id = 10000 + self.object._v_server.world_id[0] + self.script_vars["flag_id"]
 		player.char.set_flag(None, True, flag_id=flag_id)
-		self.object._v_server.send_game_message(self.object.fire_event_client_side, args="achieve", obj=0, sender_id=0, address=player.char.address)
+		self.object._v_server.send_game_message(self.object.script.fire_event_client_side, args="achieve", obj=0, sender_id=0, address=player.char.address)

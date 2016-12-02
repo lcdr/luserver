@@ -18,3 +18,6 @@ class ScriptComponent(Component):
 
 	def notify_client_object(self, address, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):
 		pass
+
+	def fire_event_client_side(self, address, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+		pass

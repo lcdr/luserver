@@ -335,6 +335,16 @@ class CharacterComponent(Component):
 	def drop_client_loot(self, address, use_position:c_bit=False, final_position:Vector3=Vector3.zero, currency:c_int=None, item_template:c_int=None, loot_id:c_int64=None, owner:c_int64=None, source_obj:c_int64=None, spawn_position:Vector3=Vector3.zero):
 		pass
 
+	def play_emote(self, address, emote_id:c_int, target_id:c_int64):
+		self.object._v_server.send_game_message(self.emote_played, emote_id, target_id, broadcast=True)
+		# update missions that have the use of this emote as requirement
+		if target_id:
+			for mission in self.missions:
+				if mission.state == MissionState.Active:
+					for task in mission.tasks:
+						if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self.object._v_server.game_objects[target_id].lot:
+							mission.increment_task(task, self.object)
+
 	def set_currency(self, address, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
 		self.currency = currency
 
@@ -401,6 +411,9 @@ class CharacterComponent(Component):
 					if task.type == TaskType.Interact and task.target == obj.lot:
 						mission.increment_task(task, self.object)
 
+	def emote_played(self, address, emote_id:c_int, target_id:c_int64):
+		pass
+
 	def client_item_consumed(self, address, item_id:c_int64=None):
 		for item in self.object.inventory.items:
 			if item is not None and item.object_id == item_id:
@@ -408,7 +421,7 @@ class CharacterComponent(Component):
 					if mission.state == MissionState.Active:
 						for task in mission.tasks:
 							if task.type == TaskType.UseConsumable and task.target == item.lot:
-									mission.increment_task(task, self.object)
+								mission.increment_task(task, self.object)
 				break
 
 	def get_flag(self, flag_id):

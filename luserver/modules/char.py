@@ -212,6 +212,8 @@ class CharHandling(ServerModule):
 		selected_char._v_server = self.server
 		selected_char.char.online = True
 
+		self.server.commit()
+
 		if selected_char.char.world[0] == 0:
 			selected_char.char.world = 1000, 0, 0
 			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, respawn_point_name=""))
