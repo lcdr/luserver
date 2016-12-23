@@ -1,6 +1,11 @@
 from .component import Component
 
 class RailActivatorComponent(Component):
+	def __init__(self, obj, set_vars, comp_id):
+		super().__init__(obj, set_vars, comp_id)
+		self.rail_path = set_vars.get("rail_path", "")
+		self.rail_path_start = set_vars.get("rail_path_start", 0)
+
 	def serialize(self, out, is_creation):
 		pass
 

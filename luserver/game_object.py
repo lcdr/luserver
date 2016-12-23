@@ -25,6 +25,7 @@ from .components.rail import RailActivatorComponent
 from .components.rebuild import RebuildComponent
 from .components.render import RenderComponent
 from .components.script import ScriptComponent
+from .components.scripted_activity import ScriptedActivityComponent
 from .components.skill import SkillComponent
 from .components.spawner import SpawnerComponent
 from .components.stats import StatsSubcomponent
@@ -59,6 +60,7 @@ component[73] = MissionNPCComponent, # belongs to the other nonserialized compon
 component[49] = SwitchComponent,
 component[16] = VendorComponent,
 component[6] = BouncerComponent,
+component[39] = ScriptedActivityComponent,
 component[75] = ExhibitComponent,
 component[2] = RenderComponent,
 

@@ -339,6 +339,7 @@ if GENERATE_COMPS:
 	root.destructible_component = BTrees.IOBTree.BTree()
 	root.vendor_component = BTrees.IOBTree.BTree()
 	root.inventory_component = BTrees.IOBTree.BTree()
+	root.activities = BTrees.IOBTree.BTree()
 	root.rebuild_component = BTrees.IOBTree.BTree()
 	root.package_component = BTrees.IOBTree.BTree()
 	root.launchpad_component = BTrees.IOBTree.BTree()
@@ -389,6 +390,10 @@ if GENERATE_COMPS:
 		elif row[1] == 17 and row[2] not in root.inventory_component:
 			for comp_row in cdclient.execute("select itemid, equip from InventoryComponent where id == %i" % row[2]):
 				root.inventory_component.setdefault(row[2], []).append((comp_row[0], comp_row[1]))
+
+		elif row[1] == 39 and row[2] not in root.activities:
+			for comp_row in cdclient.execute("select instanceMapID from Activities where ActivityID == %i" % row[2]):
+				root.activities[row[2]] = comp_row
 
 		elif row[1] == 48 and row[2] not in root.rebuild_component:
 			comp_row = cdclient.execute("select complete_time, time_before_smash, reset_time, take_imagination, activityID from RebuildComponent where id == %i" % row[2]).fetchone()
