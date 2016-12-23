@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 
@@ -566,12 +565,10 @@ class CharacterComponent(Component):
 	def match_request(self, address, activator:c_int64=None, player_choices:"ldf"=None, type:c_int=None, value:c_int=None):
 		# todo: how does the server know which matchmaking activity the client wants?
 		self.object._v_server.send_game_message(self.match_response, response=0, address=address)
-		if type == MatchRequestType.Join and value == MatchRequestValue.Join:
+		if type == MatchRequestType.Join:# and value == MatchRequestValue.Join:
 			update_data = {}
 			update_data["time"] = c_float, 60
 			self.object._v_server.send_game_message(self.match_update, data=update_data, type=MatchUpdateType.Time, address=address)
-		elif type == MatchRequestType.Ready and value == MatchRequestValue.Ready:
-			asyncio.ensure_future(self.transfer_to_world((1101, 0, 0)))
 
 	def match_response(self, address, response:c_int=None):
 		pass

@@ -98,6 +98,8 @@ class CastType:
 	Consumable = 3
 	EverlastingConsumable = 4
 
+PASSIVE_BEHAVIORS = BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.ApplyBuff
+
 class SkillComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -418,7 +420,7 @@ class SkillComponent(Component):
 		if item.lot in self.object._v_server.db.object_skills:
 			for skill_id in self.object._v_server.db.object_skills[item.lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
-				if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+				if behavior.template in PASSIVE_BEHAVIORS:
 					if add_buffs:
 						if hasattr(self.object, "char"):
 							# update missions that have using this skill as requirement
@@ -440,7 +442,7 @@ class SkillComponent(Component):
 
 	def add_skill_server(self, skill_id):
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
-		if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+		if behavior.template in PASSIVE_BEHAVIORS:
 			if hasattr(self.object, "char"):
 				# update missions that have using this skill as requirement
 				for mission in self.object.char.missions:
@@ -454,12 +456,12 @@ class SkillComponent(Component):
 		if item.lot in self.object._v_server.db.object_skills:
 			for skill_id in self.object._v_server.db.object_skills[item.lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
-				if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+				if behavior.template in PASSIVE_BEHAVIORS:
 					self.undo_behavior(behavior)
 				else:
 					self.object._v_server.send_game_message(self.remove_skill, skill_id=skill_id, address=self.object.char.address)
 
 	def remove_skill_server(self, skill_id):
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
-		if behavior.template in (BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.ApplyBuff):
+		if behavior.template in PASSIVE_BEHAVIORS:
 			self.undo_behavior(behavior)
