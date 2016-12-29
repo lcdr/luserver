@@ -1,5 +1,6 @@
 import asyncio
 from ..bitstream import c_bit, c_float, c_int, c_int64
+from ..ldf import LDF
 from .component import Component
 
 class Comp108Component(Component):
@@ -25,7 +26,7 @@ class Comp108Component(Component):
 		assert multi_interact_id is None
 		self.driver_id = player.object_id
 		player.char.vehicle_id = self.object.object_id
-		self.object._v_server.send_game_message(player.char.display_tooltip, show=True, time=1000, id="", localize_params={}, str_image_name="", str_text="Use /dismount to dismount.", address=player.char.address)
+		self.object._v_server.send_game_message(player.char.display_tooltip, show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="Use /dismount to dismount.", address=player.char.address)
 
 	def request_die(self, address, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash

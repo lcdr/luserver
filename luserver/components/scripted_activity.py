@@ -21,6 +21,9 @@ class ScriptedActivityComponent(Component):
 					out.write(c_float(0))
 			self.activity_flag = False
 
+	def activity_start(self, address):
+		pass
+
 	def message_box_respond(self, address, button:c_int=None, identifier:"wstr"=None, user_data:"wstr"=None):
 		if identifier == "LobbyReady" and button == 1:
 			player = self.object._v_server.accounts[address].characters.selected()

@@ -8,6 +8,7 @@ from .component import Component
 class MovingPlatformComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		self.object.moving_platform = self
 		self._flags["moving_platform_unknown"] = "moving_platform_flag"
 		self._flags["target_position"] = "moving_platform_flag"
 		self.target_position = Vector3()

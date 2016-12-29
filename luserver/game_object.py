@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from persistent import Persistent
 
-from . import ldf
+from .ldf import LDF
 from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort
 from .components.ai import BaseCombatAIComponent
 from .components.bouncer import BouncerComponent
@@ -89,7 +89,7 @@ class GameObject:
 		self.lot = lot
 		self.object_id = object_id
 		self.name = ""
-		self.config = set_vars.get("config", {})
+		self.config = set_vars.get("config", LDF())
 		self.spawner_object = None
 		self.spawner_waypoint_index = 0
 		self.scale = set_vars.get("scale", 1)
@@ -170,7 +170,7 @@ class GameObject:
 		out.write(bytes(4)) # time since created on server?
 		out.write(c_bit(self.config))
 		if self.config:
-			out.write(ldf.to_ldf(self.config, ldf_type="binary"))
+			out.write(self.config.to_bitstream())
 		out.write(c_bit(hasattr(self, "trigger")))
 		out.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:

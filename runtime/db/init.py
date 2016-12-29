@@ -282,8 +282,8 @@ if GENERATE_COMPS:
 		if currency_index is not None:
 			_, minvalue, maxvalue = currency_table[currency_index][0]
 		else:
-			 minvalue = None
-			 maxvalue = None
+			minvalue = None
+			maxvalue = None
 
 		activity_rewards[object_template] = loot, minvalue, maxvalue
 

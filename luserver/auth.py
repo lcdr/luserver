@@ -31,7 +31,7 @@ class LoginReturnCode:
 	AccountNotActivated = 14
 
 class AuthServer(server.Server):
-	PEER_TYPE = AuthServerMsg.__int__()
+	PEER_TYPE = AuthServerMsg.header()
 
 	def __init__(self, host, max_connections, db_conn):
 		super().__init__((host, 1001), max_connections, db_conn)

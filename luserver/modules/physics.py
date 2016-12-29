@@ -1,6 +1,6 @@
 import logging
 
-from ..bitstream import c_float, c_int
+from ..ldf import LDF, LDFDataType
 from ..math.vector import Vector3
 from .module import ServerModule
 
@@ -25,7 +25,7 @@ class AABB: # axis aligned bounding box
 	def __init__(self, obj):
 		if obj.lot in (10042, 14510, 16506):
 			if obj.primitive_model_type != 1:
-				log.warn("Primitive model type not 1 %s", obj)
+				log.warning("Primitive model type not 1 %s", obj)
 			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.primitive_model_scale
 			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.primitive_model_scale
 		else:
@@ -113,11 +113,11 @@ class PhysicsHandling(ServerModule):
 					self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
 				set_vars = {}
 				set_vars["position"] = Vector3((aabb.min.x+aabb.max.x)/2, aabb.min.y, (aabb.min.z+aabb.max.z)/2)
-				config = {}
-				config["primitiveModelType"] = c_int, 1
-				config["primitiveModelValueX"] = c_float, aabb.max.x-aabb.min.x
-				config["primitiveModelValueY"] = c_float, aabb.max.y-aabb.min.y
-				config["primitiveModelValueZ"] = c_float, aabb.max.z-aabb.min.z
+				config = LDF()
+				config.ldf_set("primitiveModelType", LDFDataType.INT32, 1)
+				config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, aabb.max.x-aabb.min.x)
+				config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, aabb.max.y-aabb.min.y)
+				config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, aabb.max.z-aabb.min.z)
 				set_vars["config"] = config
 				self.debug_markers.append(self.server.spawn_object(14510, set_vars=set_vars))
 

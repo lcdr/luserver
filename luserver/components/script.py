@@ -1,3 +1,4 @@
+from .. ldf import LDF
 from ..bitstream import c_bit, c_int, c_int64
 from .component import Component
 
@@ -9,11 +10,15 @@ class ScriptComponent(Component):
 		if "script_vars" in set_vars:
 			self.script_vars = set_vars["script_vars"]
 
+		self.script_network_vars = LDF()
+
 	def serialize(self, out, is_creation):
 		if is_creation:
-			out.write(c_bit(False))
+			out.write(c_bit(self.script_network_vars))
+			if self.script_network_vars:
+				out.write(self.script_network_vars.to_bitstream())
 
-	def script_network_var_update(self, address, script_vars:"ldf"=None):
+	def script_network_var_update(self, address, script_vars:LDF=None):
 		pass
 
 	def notify_client_object(self, address, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):

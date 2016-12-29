@@ -123,6 +123,10 @@ class RebuildComponent(ScriptedActivityComponent):
 		# drop rewards
 		self.object.stats.drop_rewards(*self.completion_rewards, player)
 
+		# if this is a moving platform, set the waypoint
+		if hasattr(self, "moving_platform"):
+			self.moving_platform.update_waypoint()
+
 		# update missions that have completing this rebuild as requirement
 		for mission in player.char.missions:
 			if mission.state == MissionState.Active:

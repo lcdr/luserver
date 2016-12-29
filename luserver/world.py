@@ -50,10 +50,10 @@ import time
 
 import pyraknet.replicamanager
 from . import amf3
-from . import ldf
 from . import server
 from .bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
 from .game_object import GameObject
+from .ldf import LDF
 from .messages import GameMessage, WorldClientMsg, WorldServerMsg
 from .math.quaternion import Quaternion
 from .components.property import PropertyData, PropertySelectQueryProperty
@@ -72,7 +72,7 @@ BITS_LOCAL = 1 << 46
 BITS_SPAWNED = 1 << 58 | BITS_LOCAL
 
 class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
-	PEER_TYPE = WorldServerMsg.__int__()
+	PEER_TYPE = WorldServerMsg.header()
 
 	def __init__(self, address, external_host, world_id, max_connections, db_conn):
 		server.Server.__init__(self, address, max_connections, db_conn)
@@ -288,7 +288,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			return self.game_objects[object_id]
 		elif self.world_id[0] != 0 and object_id in self.world_data.objects:
 			return self.world_data.objects[object_id]
-		log.warn("Object %i not found", object_id)
+		log.warning("Object %i not found", object_id)
 
 	def get_objects_in_group(self, group):
 		matches = []
@@ -432,13 +432,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		elif type == BitStream:
 			out.write(c_uint(len(value)))
 			out.write(bytes(value))
-		elif type == "amf":
-			amf3.write(value, out)
-		elif type == "ldf":
-			ldf_text = ldf.to_ldf(value, ldf_type="text")
+		elif type == LDF:
+			ldf_text = value.to_str()
 			out.write(ldf_text, length_type=c_uint)
 			if ldf_text:
 				out.write(bytes(2)) # for some reason has a null terminator
+		elif type == "amf":
+			amf3.write(value, out)
 		elif type == "str":
 			out.write(value, char_size=1, length_type=c_uint)
 		elif type == "wstr":
@@ -473,14 +473,14 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		if type == BitStream:
 			length = message.read(c_uint)
 			return BitStream(message.read(bytes, length=length))
-		if type == "amf":
-			return amf3.read(message)
-		if type == "ldf":
+		if type == LDF:
 			value = message.read(str, length_type=c_uint)
 			if value:
 				assert message.read(c_ushort) == 0 # for some reason has a null terminator
-			# todo: convert to dict
+			# todo: convert to LDF
 			return value
+		if type == "amf":
+			return amf3.read(message)
 		if type == "str":
 			return message.read(str, char_size=1, length_type=c_uint)
 		if type == "wstr":
