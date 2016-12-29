@@ -1,4 +1,5 @@
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..messages import broadcast, single
 from ..math.vector import Vector3
 from .component import Component
 
@@ -143,66 +144,67 @@ class PropertyEntranceComponent(Component):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		self.object._v_server.send_game_message(self.property_entrance_begin, address=player.char.address)
-		self.object._v_server.send_game_message(player.char.u_i_message_server_to_single_client, str_message_name="pushGameState", args={"state": "property_menu"}, address=player.char.address)
+		self.property_entrance_begin(player=player)
+		player.char.u_i_message_server_to_single_client(str_message_name="pushGameState", args={"state": "property_menu"})
 		return True
 
-	def enter_property1(self, address, index:c_int=None, return_to_zone:c_bit=True):
-		player = self.object._v_server.accounts[address].characters.selected()
+	def enter_property1(self, player, index:c_int=None, return_to_zone:c_bit=True):
 		clone_id = 0
 		if not return_to_zone and	index == -1:
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
-				self.object._v_server.send_game_message(self.fire_event_client_side, args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id, address=player.char.address)
+				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, address, include_null_address:c_bit=None, include_null_description:c_bit=None, players_own:c_bit=None, update_ui:c_bit=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:"str"=None):
-		player = self.object._v_server.accounts[address].characters.selected()
+	def property_entrance_sync(self, player, include_null_address:c_bit=None, include_null_description:c_bit=None, players_own:c_bit=None, update_ui:c_bit=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:"str"=None):
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		my_property.is_owned = True
 
-		self.object._v_server.send_game_message(self.property_select_query, nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], address=address)
+		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
-	def property_select_query(self, address, nav_offset:c_int=None, there_are_more:c_bit=None, my_clone_id:c_int=None, has_featured_property:c_bit=None, was_friends:c_bit=None, properties:(c_uint, PropertySelectQueryProperty)=None):
+	@single
+	def property_select_query(self, nav_offset:c_int=None, there_are_more:c_bit=None, my_clone_id:c_int=None, has_featured_property:c_bit=None, was_friends:c_bit=None, properties:(c_uint, PropertySelectQueryProperty)=None):
 		pass
 
-	def fire_event_client_side(self, address, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+	@broadcast
+	def fire_event_client_side(self, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
 		pass
 
-	def property_entrance_begin(self, address):
+	@single
+	def property_entrance_begin(self):
 		pass
 
 class PropertyManagementComponent(Component):
 	def serialize(self, out, is_creation):
 		pass
 
-	def download_property_data(self, address, data:PropertyData=None):
+	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
+	def download_property_data(self, data:PropertyData=None):
 		pass
 
-	def query_property_data(self, address):
-		player = self.object._v_server.accounts[address].characters.selected()
+	def query_property_data(self, player):
 		property = PropertyData()
 		property.owner = player
 		property.path = self.object._v_server.db.property_template[self.object._v_server.world_id[0]]
 
-		self.object._v_server.send_game_message(self.download_property_data, property, address=address)
+		self.download_property_data(property, player=player)
 
-	def start_building_with_item(self, address, first_time:c_bit=True, success:c_bit=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
+	def start_building_with_item(self, player, first_time:c_bit=True, success:c_bit=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
 		if source_type == 1:
 			source_type = 4
 
-		player = self.object._v_server.accounts[address].characters.selected()
-		self.object._v_server.send_game_message(player.char.start_arranging_with_item, first_time, self.object.object_id, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type, address=address)
+		player.char.start_arranging_with_item(first_time, self.object.object_id, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
-	def set_build_mode(self, address, start:c_bit=None, distance_type:c_int=-1, mode_paused:c_bit=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
-		self.object._v_server.send_game_message(self.set_build_mode_confirmed, start, False, mode_paused, mode_value, player_id, start_pos, address=address)
+	def set_build_mode(self, start:c_bit=None, distance_type:c_int=-1, mode_paused:c_bit=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
+		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
-	def set_build_mode_confirmed(self, address, start:c_bit=None, warn_visitors:c_bit=True, mode_paused:c_bit=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
+	@broadcast
+	def set_build_mode_confirmed(self, start:c_bit=None, warn_visitors:c_bit=True, mode_paused:c_bit=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
 		pass
 
 class PropertyVendorComponent(Component):
@@ -211,16 +213,17 @@ class PropertyVendorComponent(Component):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		self.object._v_server.send_game_message(self.open_property_vendor, address=player.char.address)
+		self.open_property_vendor(player=player)
 
-	def open_property_vendor(self, address):
+	@single
+	def open_property_vendor(self):
 		pass
 
-	def buy_from_vendor(self, address, confirmed:c_bit=False, count:c_int=1, item:c_int=None):
+	def buy_from_vendor(self, player, confirmed:c_bit=False, count:c_int=1, item:c_int=None):
 		# seems to actually add a 3188 property item to player's inventory?
-		self.object._v_server.send_game_message(self.property_rental_response, clone_id=0, code=0, property_id=0, rentdue=0, address=address) # not really implemented
-		player = self.object._v_server.accounts[address].characters.selected()
-		self.object._v_server.send_game_message(player.char.set_flag, True, 108, address=player.char.address)
+		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
+		player.char.set_flag(True, 108)
 
-	def property_rental_response(self, address, clone_id:c_uint=None, code:c_int=None, property_id:c_int64=None, rentdue:c_int64=None):
+	@single
+	def property_rental_response(self, clone_id:c_uint=None, code:c_int=None, property_id:c_int64=None, rentdue:c_int64=None):
 		pass

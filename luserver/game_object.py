@@ -256,6 +256,17 @@ class GameObject:
 			if handler(*args, **kwargs):
 				break
 
+	def send_game_message(self, handler_name, *args, **kwargs):
+		"""For game messages with multiple handlers: call all the handlers but only send one message over the network."""
+		handlers = self.handlers(handler_name)
+		if not handlers:
+			return
+
+		send_handler = handlers[0]
+		send_handler(*args, **kwargs)
+		for handler in handlers[1:]:
+			handler(*args, send=False, **kwargs)
+
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
 	def __init__(self, server, lot, object_id, set_vars={}):
 		GameObject.__init__(self, server, lot, object_id, set_vars)

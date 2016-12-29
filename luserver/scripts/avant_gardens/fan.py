@@ -20,10 +20,10 @@ class ScriptComponent(script.ScriptComponent):
 				obj.physics.physics_effect_active = enable
 
 		if enable:
-			self.object._v_server.send_game_message(self.object.render.play_animation, animation_id="fan-on", play_immediate=True, broadcast=True)
-			self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="fanOn",  effect_type="fanOn", effect_id=495, broadcast=True)
-			self.object._v_server.send_game_message(fx_obj.render.play_animation, animation_id="idle", play_immediate=True, broadcast=True)
+			self.object.render.play_animation(animation_id="fan-on", play_immediate=True)
+			self.object.render.play_f_x_effect(name="fanOn",  effect_type="fanOn", effect_id=495)
+			fx_obj.render.play_animation(animation_id="idle", play_immediate=True)
 		else:
-			self.object._v_server.send_game_message(self.object.render.play_animation, animation_id="fan-off", play_immediate=True, broadcast=True)
-			self.object._v_server.send_game_message(self.object.render.stop_f_x_effect, name="fanOn", kill_immediate=False, broadcast=True)
-			self.object._v_server.send_game_message(fx_obj.render.play_animation, animation_id="trigger", play_immediate=True, broadcast=True)
+			self.object.render.play_animation(animation_id="fan-off", play_immediate=True)
+			self.object.render.stop_f_x_effect(name="fanOn", kill_immediate=False)
+			fx_obj.render.play_animation(animation_id="trigger", play_immediate=True)

@@ -27,16 +27,12 @@ class PetComponent(Component):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		self.object._v_server.send_game_message(player.char.notify_pet_taming_minigame, pet_id=self.object.object_id, player_taming_id=0, force_teleport=True, notify_type=PetTamingNotify.Begin, pets_dest_pos=self.object.physics.position, tele_pos=player.physics.position, tele_rot=player.physics.rotation, address=player.char.address)
-		self.object._v_server.send_game_message(player.char.notify_pet_taming_puzzle_selected, bricks=[30367, 21, 48729, 1, 6141, 1, 6143, 21], address=player.char.address)
+		player.char.notify_pet_taming_minigame(pet_id=self.object.object_id, player_taming_id=0, force_teleport=True, notify_type=PetTamingNotify.Begin, pets_dest_pos=self.object.physics.position, tele_pos=player.physics.position, tele_rot=player.physics.rotation)
+		player.char.notify_pet_taming_puzzle_selected(bricks=[30367, 21, 48729, 1, 6141, 1, 6143, 21])
 		#self.flags = 80
 
-	def notify_pet_taming_minigame(self, address, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
-		pass
-
-	def pet_taming_minigame_result(self, address, success:c_bit=None):
+	def pet_taming_minigame_result(self, player, success:c_bit=None):
 		if success:
-			player = self.object._v_server.accounts[address].characters.selected()
 			# update missions that have taming this pet as requirement
 			for mission in player.char.missions:
 				if mission.state == MissionState.Active:

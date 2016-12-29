@@ -43,21 +43,13 @@ class World(Enum):
 	BattleAgainstFrakjaw = 2001
 	FVSiege = 58001
 
-import inspect
 import logging
-import re
 import time
 
 import pyraknet.replicamanager
-from . import amf3
 from . import server
-from .bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
 from .game_object import GameObject
-from .ldf import LDF
-from .messages import GameMessage, WorldClientMsg, WorldServerMsg
-from .math.quaternion import Quaternion
-from .components.property import PropertyData, PropertySelectQueryProperty
-from .math.vector import Vector3
+from .messages import WorldServerMsg
 from .modules.char import CharHandling
 from .modules.chat import ChatHandling
 from .modules.general import GeneralHandling
@@ -78,7 +70,10 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		server.Server.__init__(self, address, max_connections, db_conn)
 		pyraknet.replicamanager.ReplicaManager.__init__(self)
 		self.external_address = external_host, address[1]
+		self.not_console_logged_packets.add("ReplicaManagerSerialize")
+		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
+		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.modules = []
 		self.char = CharHandling(self)
 		self.chat = ChatHandling(self)
@@ -124,15 +119,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			else:
 				log.debug("snd %s", packetname)
 
-			if packetname.startswith("GameMessage"):
-				message = BitStream(data[8:])
-				object_id = message.read(c_int64)
-				obj = self.get_object(object_id)
-				if obj:
-					kwargs = self.read_game_message(obj, message, address, call_handler=False, return_kwargs=True)
-					if kwargs is not None:
-						log.debug(" ".join("%s: %s" % (key, value) for key, value in kwargs.items()))
-
 	def conn_sync(self):
 		super().conn_sync()
 		self.reset_v_()
@@ -159,8 +145,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				self.world_control_object = None
 
 			self.world_data = self.db.world_data[self.world_id[0]]
+			self.reset_v_()
 			for obj in self.world_data.objects.values():
-				obj._v_server = self
 				obj.handle("on_startup", silent=True)
 				if hasattr(obj, "spawner"):
 					obj.spawner.spawn()
@@ -307,183 +293,3 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				if char.name == name:
 					return char
 		raise KeyError
-
-	# Game message stuff
-
-	def send_game_message(self, handler, *args, address=None, broadcast=False, **kwargs):
-		"""
-		Serialize a game message call.
-		Arguments:
-			handler: The game message function to serialize
-			*args, **kwargs: The arguments to pass to the function.
-		The serialization is handled as follows:
-			The Game Message ID is taken from the function name.
-			The argument serialization order is taken from the function definition.
-			Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
-			The serialization type (c_int, c_float, etc) is taken from the argument annotation.
-		"""
-		if isinstance(handler, tuple):
-			obj, handler_name = handler
-			handlers = obj.handlers(handler_name)
-		else:
-			handlers = [handler]
-
-		if not handlers:
-			return
-
-		game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), handlers[0].__name__)].value
-		out = BitStream()
-		out.write_header(WorldClientMsg.GameMessage)
-		if isinstance(handlers[0].__self__, GameObject):
-			object_id = handlers[0].__self__.object_id
-		else:
-			object_id = handlers[0].__self__.object.object_id
-		out.write(c_int64(object_id))
-		out.write(c_ushort(game_message_id))
-
-		signature = inspect.signature(handlers[0])
-		bound_args = signature.bind(None, *args, **kwargs)
-
-		for param in list(signature.parameters.values())[1:]:
-			if param.annotation == c_bit:
-				if param.name in bound_args.arguments:
-					value = bound_args.arguments[param.name]
-				else:
-					value = param.default
-				assert value in (True, False)
-				out.write(param.annotation(value))
-			else:
-				if param.default not in (param.empty, None):
-					is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
-					out.write(c_bit(is_not_default))
-					if not is_not_default:
-						continue
-
-				value = bound_args.arguments[param.name]
-				assert value is not None, "\"%s\" needs to be specified" % param.name
-				self.game_message_serialize(out, param.annotation, value)
-		self.send(out, address, broadcast)
-
-		for handler in handlers:
-			handler(address, *args, **kwargs)
-
-	def read_game_message(self, obj, message, address, call_handler=True, return_kwargs=False):
-		"""Does the opposite of send_game_message."""
-		message_id = message.read(c_ushort)
-		try:
-			message_name = GameMessage(message_id).name
-		except ValueError:
-			return
-		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
-
-		handlers = []
-		if hasattr(obj, handler_name):
-			handlers.append(getattr(obj, handler_name))
-		handlers.extend(obj.handlers(handler_name))
-
-		if not handlers:
-			return
-
-		signature = inspect.signature(handlers[0])
-		kwargs = {}
-		for param in list(signature.parameters.values())[1:]:
-			if param.annotation == c_bit:
-				value = message.read(c_bit)
-				if param.default not in (param.empty, None) and value == param.default:
-					continue
-			else:
-				if param.default not in (param.empty, None):
-					is_not_default = message.read(c_bit)
-					if not is_not_default:
-						continue
-
-				value = self.game_message_deserialize(message, param.annotation)
-
-			kwargs[param.name] = value
-		assert message.all_read()
-		if call_handler:
-			for handler in handlers:
-				handler(address=address, **kwargs)
-		if return_kwargs:
-			return kwargs
-
-	def game_message_serialize(self, out, type, value):
-		if isinstance(type, tuple):
-			out.write(type[0](len(value)))
-			if len(type) == 2: # list
-				for i in value:
-					self.game_message_serialize(out, type[1], i)
-			elif len(type) == 3: # dict
-				for k, v in value.items():
-					self.game_message_serialize(out, type[1], k)
-					self.game_message_serialize(out, type[2], v)
-
-		elif type == Vector3:
-			out.write(c_float(value.x))
-			out.write(c_float(value.y))
-			out.write(c_float(value.z))
-		elif type == Quaternion:
-			out.write(c_float(value.x))
-			out.write(c_float(value.y))
-			out.write(c_float(value.z))
-			out.write(c_float(value.w))
-		elif type in (PropertyData, PropertySelectQueryProperty):
-			value.serialize(out)
-		elif type == BitStream:
-			out.write(c_uint(len(value)))
-			out.write(bytes(value))
-		elif type == LDF:
-			ldf_text = value.to_str()
-			out.write(ldf_text, length_type=c_uint)
-			if ldf_text:
-				out.write(bytes(2)) # for some reason has a null terminator
-		elif type == "amf":
-			amf3.write(value, out)
-		elif type == "str":
-			out.write(value, char_size=1, length_type=c_uint)
-		elif type == "wstr":
-			out.write(value, char_size=2, length_type=c_uint)
-		else:
-			out.write(type(value))
-
-	def game_message_deserialize(self, message, type):
-		if isinstance(type, tuple):
-			if len(type) == 2: # list
-				value = []
-				for _ in range(self.game_message_deserialize(message, type[0])):
-					value.append(self.game_message_deserialize(message, type[1]))
-			elif len(type) == 3: # dict
-				value = {}
-				for _ in range(self.game_message_deserialize(message, type[0])):
-					value[self.game_message_deserialize(message, type[1])] = self.game_message_deserialize(message, type[2])
-			return value
-
-		if type == Vector3:
-			return Vector3(message.read(c_float), message.read(c_float), message.read(c_float))
-		if type == Quaternion:
-			return Quaternion(message.read(c_float), message.read(c_float), message.read(c_float), message.read(c_float))
-		if type == PropertyData:
-			value = PropertyData()
-			value.deserialize(message)
-			return value
-		if type == PropertySelectQueryProperty:
-			value = PropertySelectQueryProperty()
-			value.deserialize(message)
-			return value
-		if type == BitStream:
-			length = message.read(c_uint)
-			return BitStream(message.read(bytes, length=length))
-		if type == LDF:
-			value = message.read(str, length_type=c_uint)
-			if value:
-				assert message.read(c_ushort) == 0 # for some reason has a null terminator
-			# todo: convert to LDF
-			return value
-		if type == "amf":
-			return amf3.read(message)
-		if type == "str":
-			return message.read(str, char_size=1, length_type=c_uint)
-		if type == "wstr":
-			return message.read(str, char_size=2, length_type=c_uint)
-
-		return message.read(type)

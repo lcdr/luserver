@@ -4,7 +4,7 @@ from luserver.components.inventory import Stack
 from luserver.components.mission import MissionState
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, address, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
+	def mission_dialogue_o_k(self, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
 		if mission_id == 1728 and mission_state == MissionState.Available:
 			player = self.object._v_server.game_objects[responder]
 			item = Stack(self.object._v_server.db, self.object._v_server.new_object_id(), 14397)

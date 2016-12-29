@@ -2,6 +2,7 @@ import asyncio
 import time
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from ..messages import broadcast
 from ..math.vector import Vector3
 from .char import TerminateType
 from .mission import MissionState, TaskType
@@ -56,7 +57,7 @@ class RebuildComponent(ScriptedActivityComponent):
 	@rebuild_state.setter
 	def rebuild_state(self, value):
 		player = self.object._v_server.get_object(self.players[0])
-		self.object._v_server.send_game_message(self.rebuild_notify_state, self.rebuild_state, value, player=player.object_id, address=player.char.address)
+		self.rebuild_notify_state(self.rebuild_state, value, player_id=player.object_id)
 		self._rebuild_state = value
 
 	def serialize(self, out, is_creation):
@@ -92,7 +93,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.attr_changed("players")
 		self.rebuild_state = RebuildState.Building
 		player.char.rebuilding = 1
-		self.object._v_server.send_game_message(self.enable_rebuild, enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id, address=player.char.address)
+		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id)
 		self.rebuild_start_time = time.time()
 		drain_interval = self.complete_time/self.imagination_cost
 		remaining_cost = int((self.complete_time - self.last_progress) // drain_interval)
@@ -104,7 +105,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def drain_imagination(self, player):
 		if player.stats.imagination == 0:
-			self.rebuild_cancel(None, early_release=False, user_id=player.object_id)
+			self.rebuild_cancel(early_release=False, user_id=player.object_id)
 		player.stats.imagination -= 1
 
 	def complete_rebuild(self, player):
@@ -112,9 +113,9 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.success = True
 		self.enabled = False
 		player.char.rebuilding = 0
-		self.object._v_server.send_game_message(self.enable_rebuild, enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id, address=player.char.address)
-		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507, address=player.char.address)
-		self.object._v_server.send_game_message(player.render.play_animation, animation_id="rebuild-celebrate", play_immediate=False, address=player.char.address)
+		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id)
+		self.object.render.play_f_x_effect(name="BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507)
+		player.render.play_animation(animation_id="rebuild-celebrate", play_immediate=False)
 
 		assert len(self.object.children) == 1
 		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])
@@ -135,10 +136,10 @@ class RebuildComponent(ScriptedActivityComponent):
 						mission.increment_task(task, player)
 
 	def smash_rebuild(self):
-		self.object._v_server.send_game_message(self.object.stats.die, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0, broadcast=True)
+		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0)
 		self.object._v_server.destruct(self.object)
 
-	def rebuild_cancel(self, address, early_release:c_bit=None, user_id:c_int64=None):
+	def rebuild_cancel(self, early_release:c_bit=None, user_id:c_int64=None):
 		player = self.object._v_server.get_object(user_id)
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
@@ -153,12 +154,14 @@ class RebuildComponent(ScriptedActivityComponent):
 				fail_reason = FailReason.CanceledEarly
 			else:
 				fail_reason = FailReason.OutOfImagination
-			self.object._v_server.send_game_message(self.enable_rebuild, enable=False, fail=True, success=self.success, fail_reason=fail_reason, duration=self.last_progress, user=player.object_id, address=player.char.address)
+			self.enable_rebuild(enable=False, fail=True, success=self.success, fail_reason=fail_reason, duration=self.last_progress, user=player.object_id)
 			self.callback_handles.append(asyncio.get_event_loop().call_later(self.reset_time, self.smash_rebuild))
-		self.object._v_server.send_game_message(player.char.terminate_interaction, obj_id_terminator=self.object.object_id, type=TerminateType.FromInteraction, address=player.char.address)
+		player.char.terminate_interaction(obj_id_terminator=self.object.object_id, type=TerminateType.FromInteraction)
 
-	def enable_rebuild(self, address, enable:c_bit=None, fail:c_bit=None, success:c_bit=None, fail_reason:c_uint=FailReason.NotGiven, duration:c_float=None, user:c_int64=None):
+	@broadcast
+	def enable_rebuild(self, enable:c_bit=None, fail:c_bit=None, success:c_bit=None, fail_reason:c_uint=FailReason.NotGiven, duration:c_float=None, user:c_int64=None):
 		pass
 
-	def rebuild_notify_state(self, address, prev_state:c_int=None, state:c_int=None, player:c_int64=None):
+	@broadcast
+	def rebuild_notify_state(self, prev_state:c_int=None, state:c_int=None, player_id:c_int64=None):
 		pass

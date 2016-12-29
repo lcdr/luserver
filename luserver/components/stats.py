@@ -2,6 +2,7 @@ import asyncio
 import random
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from ..messages import broadcast
 from ..math.vector import Vector3
 from .component import Component
 
@@ -122,7 +123,7 @@ class StatsSubcomponent(Component):
 	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner):
 		if currency_min is not None and currency_max is not None:
 			currency = random.randint(currency_min, currency_max)
-			self.object._v_server.send_game_message(owner.char.drop_client_loot, currency=currency, item_template=-1, loot_id=0, owner=owner.object_id, source_obj=self.object.object_id, address=owner.char.address)
+			owner.char.drop_client_loot(currency=currency, item_template=-1, loot_id=0, owner=owner.object_id, source_obj=self.object.object_id)
 
 		if loot_matrix is not None:
 			loot = owner.char.random_loot(loot_matrix)
@@ -133,7 +134,8 @@ class StatsSubcomponent(Component):
 		loot_position = Vector3(self.object.physics.position.x+(random.random()-0.5)*20, self.object.physics.position.y, self.object.physics.position.z+(random.random()-0.5)*20)
 		object_id = self.object._v_server.new_spawned_id()
 		self.object._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
-		self.object._v_server.send_game_message(owner.char.drop_client_loot, use_position=True, spawn_position=self.object.physics.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object.object_id, address=owner.char.address)
+		owner.char.drop_client_loot(use_position=True, spawn_position=self.object.physics.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object.object_id)
 
-	def die(self, address, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
+	@broadcast
+	def die(self, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
 		pass

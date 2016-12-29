@@ -164,8 +164,8 @@ class CharHandling(ServerModule):
 
 				shirt = new_char.inventory.add_item_to_inventory(self.shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
 				pants = new_char.inventory.add_item_to_inventory(pants_lot[new_char.char.pants_color], notify_client=False)
-				new_char.inventory.equip_inventory(None, item_to_equip=shirt.object_id)
-				new_char.inventory.equip_inventory(None, item_to_equip=pants.object_id)
+				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
+				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
 
 				characters = self.server.accounts[address].characters
 				characters[char_name] = new_char

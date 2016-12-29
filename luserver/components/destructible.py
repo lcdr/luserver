@@ -1,4 +1,5 @@
 from ..bitstream import c_bit, c_float, c_int, c_int64
+from ..messages import broadcast
 from .component import Component
 from .mission import MissionState, TaskType
 
@@ -30,11 +31,11 @@ class DestructibleComponent(Component):
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 		if self.object.stats.armor - damage < 0:
 			self.object.stats.life += self.object.stats.armor - damage
-		self.object.handle("on_hit", dealer)
+		self.object.handle("on_hit", dealer, silent=True)
 		if self.object.stats.life <= 0:
-			self.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
+			self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
 
-	def request_die(self, address, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
+	def request_die(self, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		if self.object.stats.armor != 0:
 			self.object.stats.armor = 0
 		if self.object.stats.life != 0:
@@ -42,7 +43,7 @@ class DestructibleComponent(Component):
 		if self.object.stats.imagination != 0:
 			self.object.stats.imagination = 0
 
-		self.object._v_server.send_game_message((self.object, "die"), False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer_id, loot_owner_id, broadcast=True)
+		self.object.send_game_message("die", False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer_id, loot_owner_id)
 
 		killer = self.object._v_server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
@@ -58,5 +59,6 @@ class DestructibleComponent(Component):
 		if not hasattr(self.object, "comp_108") and not hasattr(self.object, "char"):
 			self.object._v_server.destruct(self.object)
 
-	def resurrect(self, address, resurrect_immediately=False):
+	@broadcast
+	def resurrect(self, resurrect_immediately=False):
 		pass

@@ -1,6 +1,7 @@
 import asyncio
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from ..messages import broadcast
 from .component import Component
 
 class ScriptedActivityComponent(Component):
@@ -21,11 +22,11 @@ class ScriptedActivityComponent(Component):
 					out.write(c_float(0))
 			self.activity_flag = False
 
-	def activity_start(self, address):
+	@broadcast
+	def activity_start(self):
 		pass
 
-	def message_box_respond(self, address, button:c_int=None, identifier:"wstr"=None, user_data:"wstr"=None):
+	def message_box_respond(self, player, button:c_int=None, identifier:"wstr"=None, user_data:"wstr"=None):
 		if identifier == "LobbyReady" and button == 1:
-			player = self.object._v_server.accounts[address].characters.selected()
 			activity = self.object._v_server.db.activities[self.comp_id]
 			asyncio.ensure_future(player.char.transfer_to_world((activity[0], 0, 0)))

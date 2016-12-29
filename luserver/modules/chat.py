@@ -314,7 +314,7 @@ class ChatHandling(ServerModule):
 			sender.char.add_mission(int(args.mission))
 
 	def build_cmd(self, args, sender):
-		self.server.send_game_message(sender.char.activate_brick_mode, build_type=args.type, address=sender.char.address)
+		sender.char.activate_brick_mode(build_type=args.type)
 
 	def check_for_leaks_cmd(self, args, sender):
 		sender.char.check_for_leaks()
@@ -345,7 +345,7 @@ class ChatHandling(ServerModule):
 
 	def extend_inv_cmd(self, args, sender):
 		# currently just items, add models functionality when necessary
-		self.server.send_game_message(sender.inventory.set_inventory_size, inventory_type=InventoryType.Items, size=len(sender.inventory.items)+args.amount, address=sender.char.address)
+		sender.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(sender.inventory.items)+args.amount)
 
 	def faction_cmd(self, args, sender):
 		sender.stats.faction = args.faction
@@ -368,7 +368,7 @@ class ChatHandling(ServerModule):
 		print("Please use -h / --help for help.")
 
 	def jetpack_cmd(self, args, sender):
-		self.server.send_game_message(sender.char.set_jet_pack_mode, args.enable, args.hover, args.bypass_checks, args.effect_id, args.air_speed, args.max_air_speed, args.vertical_velocity, broadcast=True)
+		sender.char.set_jet_pack_mode(args.enable, args.hover, args.bypass_checks, args.effect_id, args.air_speed, args.max_air_speed, args.vertical_velocity)
 
 	def level_cmd(self, args, sender):
 		sender.char.level = args.level
@@ -443,7 +443,7 @@ class ChatHandling(ServerModule):
 				self.server.send(data, args.address, args.broadcast)
 
 	def set_flag_cmd(self, args, sender):
-		self.server.send_game_message(sender.char.set_flag, args.value, args.flag_id, address=sender.char.address)
+		sender.char.set_flag(args.value, args.flag_id)
 
 	def spawn_cmd(self, args, sender):
 		self.server.spawn_object(args.lot, parent=sender, position=args.position)
@@ -481,7 +481,7 @@ class ChatHandling(ServerModule):
 		else:
 			pos = Vector3(sender.physics.position.x, 100000, sender.physics.position.z)
 
-		self.server.send_game_message(sender.char.teleport, ignore_y=args.y, pos=pos, x=0, y=0, z=0, address=sender.char.address)
+		sender.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
 
 	def world_cmd(self, args, sender):
 		asyncio.ensure_future(sender.char.transfer_to_world((World[args.name].value, 0, 0), respawn_point_name=""))
