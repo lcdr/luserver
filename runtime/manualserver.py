@@ -3,6 +3,7 @@ Modification of pyraknet.__main__ manual server, with number sorting for packet 
 Mostly intended for manually replaying captures.
 """
 import asyncio
+import logging
 import os
 import re
 import threading
@@ -10,6 +11,8 @@ import time
 import traceback
 
 import pyraknet.server
+
+logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)
 
 def atoi(text):
 	return int(text) if text.isdigit() else text

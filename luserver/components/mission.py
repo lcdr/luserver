@@ -57,6 +57,8 @@ class MissionTask(Persistent):
 		self.target = target
 		self.value = 0
 		self.target_value = target_value
+		if task_type == TaskType.Collect:
+			parameter = set() # used for collectibles
 		self.parameter = parameter
 
 class MissionProgress(Persistent):
@@ -84,9 +86,16 @@ class MissionProgress(Persistent):
 		if not self.is_mission and not check_prereqs(self.id, player):
 			return
 
-		task.value = min(task.value+increment, task.target_value)
 		task_index = self.tasks.index(task)
-		player._v_server.send_game_message(player.char.notify_mission_task, self.id, task_mask=1<<(task_index+1), updates=[task.value], address=player.char.address)
+
+		if task.type == TaskType.Collect:
+			task.parameter.add(increment)
+			task.value = len(task.parameter)
+			update = increment
+		else:
+			task.value = min(task.value+increment, task.target_value)
+			update = task.value
+		player._v_server.send_game_message(player.char.notify_mission_task, self.id, task_mask=1<<(task_index+1), updates=[update], address=player.char.address)
 		if not self.is_mission:
 			for task in self.tasks:
 				if task.value < task.target_value:

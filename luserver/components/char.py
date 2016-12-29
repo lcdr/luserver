@@ -5,6 +5,7 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from ..bitstream import BitStream, c_bit, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..ldf import LDF, LDFDataType
 from ..messages import WorldClientMsg
 from ..world import World
 from ..math.quaternion import Quaternion
@@ -287,7 +288,7 @@ class CharacterComponent(Component):
 				loot.append(lot)
 		return loot
 
-	async def transfer_to_world(self, world, respawn_point_name=None):
+	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
 		if respawn_point_name is not None:
 			for obj in self.object._v_server.db.world_data[world[0]].objects.values():
 				if obj.lot == 4945 and (not hasattr(obj, "respawn_name") or respawn_point_name == "" or obj.respawn_name == respawn_point_name): # respawn point lot
@@ -299,9 +300,9 @@ class CharacterComponent(Component):
 				self.object.physics.rotation.update(self.object._v_server.db.world_data[world[0]].spawnpoint[1])
 			self.object.physics.attr_changed("position")
 			self.object.physics.attr_changed("rotation")
-			self.object._v_server.commit()
+		self.object._v_server.commit()
 
-		server_address = await self.object._v_server.address_for_world(world)
+		server_address = await self.object._v_server.address_for_world(world, include_self)
 		log.info("Sending redirect to world %s", server_address)
 		redirect = BitStream()
 		redirect.write_header(WorldClientMsg.Redirect)
@@ -309,6 +310,15 @@ class CharacterComponent(Component):
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
 		self.object._v_server.send(redirect, self.address)
+
+	async def transfer_to_last_non_instance(self, position=None, rotation=None):
+		if position is not None:
+			self.object.physics.position.update(position)
+			self.object.physics.attr_changed("position")
+		if rotation is not None:
+			self.object.physics.rotation.update(rotation)
+			self.object.physics.attr_changed("rotation")
+		await self.transfer_to_world(((self.world[0] // 100)*100, self.world[1], self.world[2]))
 
 	def add_mission(self, mission_id):
 		mission_progress = MissionProgress(mission_id, self.object._v_server.db.missions[mission_id])
@@ -439,7 +449,6 @@ class CharacterComponent(Component):
 						if task.type == TaskType.Flag and flag_id in task.target:
 							mission.increment_task(task, self.object)
 
-
 	def player_loaded(self, address, player_id:c_int64=None):
 		pass
 
@@ -452,7 +461,7 @@ class CharacterComponent(Component):
 	def set_jet_pack_mode(self, address, bypass_checks:c_bit=True, hover:c_bit=False, enable:c_bit=False, effect_id:c_uint=-1, air_speed:c_float=10, max_air_speed:c_float=15, vertical_velocity:c_float=1, warning_effect_id:c_uint=-1):
 		pass
 
-	def display_tooltip(self, address, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:"wstr"=None, localize_params:"ldf"=None, str_image_name:"wstr"=None, str_text:"wstr"=None):
+	def display_tooltip(self, address, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:"wstr"=None, localize_params:LDF=None, str_image_name:"wstr"=None, str_text:"wstr"=None):
 		pass
 
 	def use_non_equipment_item(self, address, item_to_use:c_int64=None):
@@ -562,18 +571,18 @@ class CharacterComponent(Component):
 	def get_models_on_property(self, address, models:(c_uint, c_int64, c_int64)=None):
 		pass
 
-	def match_request(self, address, activator:c_int64=None, player_choices:"ldf"=None, type:c_int=None, value:c_int=None):
+	def match_request(self, address, activator:c_int64=None, player_choices:LDF=None, type:c_int=None, value:c_int=None):
 		# todo: how does the server know which matchmaking activity the client wants?
 		self.object._v_server.send_game_message(self.match_response, response=0, address=address)
 		if type == MatchRequestType.Join:# and value == MatchRequestValue.Join:
-			update_data = {}
-			update_data["time"] = c_float, 60
+			update_data = LDF()
+			update_data.ldf_set("time", LDFDataType.FLOAT, 60.0)
 			self.object._v_server.send_game_message(self.match_update, data=update_data, type=MatchUpdateType.Time, address=address)
 
 	def match_response(self, address, response:c_int=None):
 		pass
 
-	def match_update(self, address, data:"ldf"=None, type:c_int=None):
+	def match_update(self, address, data:LDF=None, type:c_int=None):
 		pass
 
 	def used_information_plaque(self, address, plaque_object_id:c_int64=None):

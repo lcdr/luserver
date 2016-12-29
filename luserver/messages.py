@@ -4,11 +4,9 @@ from pyraknet.messages import Message
 
 Message.LUPacket = 0x53
 
-# for the enums below, __int__() returns the corresponding header
-
 class GeneralMsg(IntEnum):
 	@staticmethod
-	def __int__():
+	def header():
 		return 0x00
 
 	Handshake = 0x00
@@ -17,14 +15,14 @@ class GeneralMsg(IntEnum):
 
 class AuthServerMsg(IntEnum):
 	@staticmethod
-	def __int__():
+	def header():
 		return 0x01
 
 	LoginRequest = 0x00
 
 class SocialMsg(IntEnum):
 	@staticmethod
-	def __int__():
+	def header():
 		return 0x02
 
 	GeneralChatMessage = 0x01
@@ -40,7 +38,7 @@ class SocialMsg(IntEnum):
 
 class WorldServerMsg(IntEnum):
 	@staticmethod
-	def __int__():
+	def header():
 		return 0x04
 
 	SessionInfo = 0x01
@@ -58,7 +56,7 @@ class WorldServerMsg(IntEnum):
 
 class WorldClientMsg(IntEnum):
 	@staticmethod
-	def __int__():
+	def header():
 		return 0x05
 
 	LoginResponse = 0x00
@@ -90,7 +88,7 @@ msg_enum[0x05] = WorldClientMsg
 class GameMessage(Enum):
 	Teleport = 19
 	DropClientLoot = 30
-	Die	= 37
+	Die = 37
 	RequestDie = 38
 	PlayEmote = 41
 	PlayAnimation = 43
@@ -126,6 +124,7 @@ class GameMessage(Enum):
 	BuyFromVendor = 373
 	SellToVendor = 374
 	SetInventorySize = 389
+	ActivityStart = 407
 	VendorStatusUpdate = 417
 	ClientItemConsumed = 428
 	SetFlag = 471

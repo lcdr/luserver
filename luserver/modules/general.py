@@ -4,10 +4,11 @@ For world server packet handling that is general enough not to be grouped in a s
 import logging
 import xml.etree.ElementTree as ET
 
-from .. import ldf
+from ..ldf import LDF, LDFDataType
 from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_uint, c_ushort
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import World
+from ..components.mission import TaskType
 from .module import ServerModule
 
 log = logging.getLogger(__name__)
@@ -112,8 +113,8 @@ class GeneralHandling(ServerModule):
 		for model in models:
 			i = ET.SubElement(in_5, "i", l=str(model.lot), c=str(model.amount), id=str(model.object_id), s=str(player.inventory.models.index(model)))
 			if hasattr(model, "module_lots"):
-				module_lots = [(c_int, i) for i in model.module_lots]
-				module_lots = ldf.to_ldf((str, module_lots), ldf_type="text")
+				module_lots = [(LDFDataType.INT32, i) for i in model.module_lots]
+				module_lots = LDF().to_str_type(LDFDataType.STRING, module_lots)
 				ET.SubElement(i, "x", ma=module_lots)
 
 		flag = ET.SubElement(root, "flag")
@@ -138,6 +139,9 @@ class GeneralHandling(ServerModule):
 						ET.SubElement(m, "sv")
 					else:
 						ET.SubElement(m, "sv", v=str(task.value))
+						if task.type == TaskType.Collect:
+							for collectible_id in task.parameter:
+								ET.SubElement(m, "sv", v=str(collectible_id))
 			elif mission.state == 8:
 				ET.SubElement(done, "m", id=str(mission.id))
 
@@ -145,13 +149,13 @@ class GeneralHandling(ServerModule):
 		xml = xml.dom.minidom.parseString((ET.tostring(root, encoding="unicode")))
 		#log.debug(xml.toprettyxml(indent="  "))
 
-		chd_ldf = {}
-		chd_ldf["objid"] = c_int64, player.object_id
-		chd_ldf["template"] = c_int, 1
-		chd_ldf["name"] = str, player.name
-		chd_ldf["xmlData"] = bytes, ET.tostring(root)
+		chd_ldf = LDF()
+		chd_ldf.ldf_set("objid", LDFDataType.INT64_9, player.object_id)
+		chd_ldf.ldf_set("template", LDFDataType.INT32, 1)
+		chd_ldf.ldf_set("name", LDFDataType.STRING, player.name)
+		chd_ldf.ldf_set("xmlData", LDFDataType.BYTES, ET.tostring(root))
 
-		encoded_ldf = ldf.to_ldf(chd_ldf, ldf_type="binary")
+		encoded_ldf = chd_ldf.to_bitstream()
 		chardata.write(encoded_ldf)
 		self.server.send(chardata, address)
 

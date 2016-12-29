@@ -9,7 +9,7 @@ from .modules.mail import MailID
 class Server(pyraknet.server.Server):
 	NETWORK_VERSION = 171022
 	SERVER_PASSWORD = b"3.25 ND1"
-	EXPECTED_PEER_TYPE = WorldClientMsg.__int__()
+	EXPECTED_PEER_TYPE = WorldClientMsg.header()
 
 	def __init__(self, address, max_connections, db_conn):
 		super().__init__(address, max_connections, self.SERVER_PASSWORD)
@@ -23,12 +23,12 @@ class Server(pyraknet.server.Server):
 
 	def packetname(self, data):
 		if data[0] == Message.LUPacket:
-			if data[1] == WorldServerMsg.__int__() and data[3] == WorldServerMsg.Routing:
+			if data[1] == WorldServerMsg.header() and data[3] == WorldServerMsg.Routing:
 				data = b"\x53"+data[12:]
-			if (data[1], data[3]) == (WorldServerMsg.__int__(), WorldServerMsg.GameMessage) or (data[1], data[3]) == (WorldClientMsg.__int__(), WorldClientMsg.GameMessage):
+			if (data[1], data[3]) == (WorldServerMsg.header(), WorldServerMsg.GameMessage) or (data[1], data[3]) == (WorldClientMsg.header(), WorldClientMsg.GameMessage):
 				message_name = GameMessage(c_ushort.unpack(data[16:18])[0]).name
 				return "GameMessage/" + message_name
-			if (data[1], data[3]) == (WorldServerMsg.__int__(), WorldServerMsg.Mail) or (data[1], data[3]) == (WorldClientMsg.__int__(), WorldClientMsg.Mail):
+			if (data[1], data[3]) == (WorldServerMsg.header(), WorldServerMsg.Mail) or (data[1], data[3]) == (WorldClientMsg.header(), WorldClientMsg.Mail):
 				packetname = MailID(c_uint.unpack(data[8:12])[0]).name
 				return "Mail/" + packetname
 			return msg_enum[data[1]](data[3]).name
@@ -36,30 +36,30 @@ class Server(pyraknet.server.Server):
 
 	def unknown_packetname(self, data):
 		if data[0] == Message.LUPacket:
-			if data[1] == WorldServerMsg.__int__() and data[3] == WorldServerMsg.Routing:
+			if data[1] == WorldServerMsg.header() and data[3] == WorldServerMsg.Routing:
 				data = b"\x53"+data[12:]
-			if (data[1], data[3]) == (WorldServerMsg.__int__(), WorldServerMsg.GameMessage) or (data[1], data[3]) == (WorldClientMsg.__int__(), WorldClientMsg.GameMessage):
+			if (data[1], data[3]) == (WorldServerMsg.header(), WorldServerMsg.GameMessage) or (data[1], data[3]) == (WorldClientMsg.header(), WorldClientMsg.GameMessage):
 				return "GameMessage/%i" % c_ushort.unpack(data[16:18])[0]
 			return msg_enum[data[1]].__name__ + "/%.2x" % data[3]
 		return super().unknown_packetname(data)
 
 	def packet_id(self, data):
 		if data[0] == Message.LUPacket:
-			if data[1] == WorldServerMsg.__int__() and data[3] == WorldServerMsg.Routing:
+			if data[1] == WorldServerMsg.header() and data[3] == WorldServerMsg.Routing:
 				return data[12], data[14]
 			return data[1], data[3]
 		return super().packet_id(data)
 
 	def handler_data(self, data):
 		if data[0] == Message.LUPacket:
-			if data[1] == WorldServerMsg.__int__() and data[3] == WorldServerMsg.Routing:
+			if data[1] == WorldServerMsg.header() and data[3] == WorldServerMsg.Routing:
 				return data[19:]
 			return data[8:]
 		return super().handler_data(data)
 
 	def register_handler(self, packet_id, callback, origin=None):
 		if isinstance(packet_id, (GeneralMsg, AuthServerMsg, SocialMsg, WorldServerMsg, WorldClientMsg)):
-			header = type(packet_id).__int__()
+			header = type(packet_id).header()
 			subheader = packet_id
 			packet_id = header, subheader
 		return super().register_handler(packet_id, callback, origin)
@@ -101,11 +101,13 @@ class Server(pyraknet.server.Server):
 	def conn_sync(self):
 		self.conn.sync()
 
-	async def address_for_world(self, world_id):
+	async def address_for_world(self, world_id, include_self=False):
 		while True:
 			self.conn_sync()
 			for server_address, server_world in self.db.servers.items():
-				if server_world == world_id and (not hasattr(self, "external_address") or server_address != self.external_address):
+				if server_world == world_id:
+					if not include_self and hasattr(self, "external_address") and server_address == self.external_address:
+						continue
 					return server_address
 			# no server found, spawn a new one
 			# todo: os.system probably isn't the best way to do this

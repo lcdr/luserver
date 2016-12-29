@@ -87,7 +87,6 @@ class SocialHandling(ServerModule):
 		response.write(c_bool(False)) # is FTP
 		self.server.send(response, address)
 
-
 	def on_add_friend_response(self, response, address):
 		assert response.read(c_int64) == 0
 		request_declined = response.read(c_bool)

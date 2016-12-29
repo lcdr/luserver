@@ -4,12 +4,12 @@ from types import SimpleNamespace
 
 import BTrees
 
-import luserver.ldf as ldf
 from luserver.bitstream import BitStream, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from luserver.game_object import GameObject
+from luserver.ldf import LDF
+from luserver.world import BITS_LOCAL, World
 from luserver.math.quaternion import Quaternion
 from luserver.math.vector import Vector3
-from luserver.world import BITS_LOCAL, World
 import scripts
 
 LUZ_PATHS = {}
@@ -133,7 +133,7 @@ def lvl_parse_chunk_type_2001(lvl, conn, world_data, triggers):
 
 		object_id |= BITS_LOCAL
 		if lot in WHITELISTED_SERVERSIDE_LOTS:
-			config = ldf.from_ldf(config_data)
+			config = LDF(config_data)
 
 			spawned_vars = {}
 			spawned_vars["scale"] = scale
@@ -187,6 +187,8 @@ def lvl_parse_chunk_type_2001(lvl, conn, world_data, triggers):
 					spawned_vars["activity_id"] = config["activityID"]
 				if "attached_path" in config:
 					spawned_vars["attached_path"] = config["attached_path"]
+				if "collectible_id" in config:
+					spawned_vars["collectible_id"] = config["collectible_id"]
 				if "rebuild_activators" in config:
 					spawned_vars["rebuild_activator_position"] = Vector3(*(float(i) for i in config["rebuild_activators"].split("\x1f")))
 				if "rail_path" in config:
@@ -331,7 +333,7 @@ def load_world_data(conn, maps_path):
 						config_name = luz.read(str, length_type=c_ubyte)
 						config_type_and_value = luz.read(str, length_type=c_ubyte)
 						try:
-							config[config_name] = ldf.from_ldf_type_value(config_type_and_value)
+							config[config_name] = LDF.from_str_type(config_type_and_value)
 						except ValueError:
 							pass
 
