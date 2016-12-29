@@ -6,7 +6,7 @@ from persistent.mapping import PersistentMapping
 
 from ..bitstream import BitStream, c_bit, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..ldf import LDF, LDFDataType
-from ..messages import WorldClientMsg
+from ..messages import broadcast, single, WorldClientMsg
 from ..world import World
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -65,7 +65,7 @@ class CharacterComponent(Component):
 		self.address = None
 		self._online = False
 		self._world = 0, 0, 0
-		self.currency = 0
+		self.currency = 0 # todo: consider whether a property with set_currency is possible
 		self.friends = PersistentList()
 		self.mails = PersistentList()
 		self.missions = PersistentList()
@@ -323,7 +323,7 @@ class CharacterComponent(Component):
 	def add_mission(self, mission_id):
 		mission_progress = MissionProgress(mission_id, self.object._v_server.db.missions[mission_id])
 		self.missions.append(mission_progress)
-		self.object._v_server.send_game_message(self.notify_mission, mission_id, mission_state=mission_progress.state, sending_rewards=False, address=self.address)
+		self.notify_mission(mission_id, mission_state=mission_progress.state, sending_rewards=False)
 		# obtain item task: update according to items already in inventory
 		for task in mission_progress.tasks:
 			if task.type == TaskType.ObtainItem:
@@ -338,14 +338,16 @@ class CharacterComponent(Component):
 
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
-	def teleport(self, address, ignore_y:c_bit=True, set_rotation:c_bit=False, skip_all_checks:c_bit=False, pos:Vector3=None, use_navmesh:c_bit=False, w:c_float=1, x:c_float=None, y:c_float=None, z:c_float=None):
+	@single
+	def teleport(self, ignore_y:c_bit=True, set_rotation:c_bit=False, skip_all_checks:c_bit=False, pos:Vector3=None, use_navmesh:c_bit=False, w:c_float=1, x:c_float=None, y:c_float=None, z:c_float=None):
 		pass
 
-	def drop_client_loot(self, address, use_position:c_bit=False, final_position:Vector3=Vector3.zero, currency:c_int=None, item_template:c_int=None, loot_id:c_int64=None, owner:c_int64=None, source_obj:c_int64=None, spawn_position:Vector3=Vector3.zero):
+	@single
+	def drop_client_loot(self, use_position:c_bit=False, final_position:Vector3=Vector3.zero, currency:c_int=None, item_template:c_int=None, loot_id:c_int64=None, owner:c_int64=None, source_obj:c_int64=None, spawn_position:Vector3=Vector3.zero):
 		pass
 
-	def play_emote(self, address, emote_id:c_int, target_id:c_int64):
-		self.object._v_server.send_game_message(self.emote_played, emote_id, target_id, broadcast=True)
+	def play_emote(self, emote_id:c_int, target_id:c_int64):
+		self.emote_played(emote_id, target_id)
 		# update missions that have the use of this emote as requirement
 		if target_id:
 			for mission in self.missions:
@@ -354,13 +356,14 @@ class CharacterComponent(Component):
 						if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self.object._v_server.game_objects[target_id].lot:
 							mission.increment_task(task, self.object)
 
-	def set_currency(self, address, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
+	@single
+	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
 		self.currency = currency
 
-	def pickup_currency(self, address, currency:c_uint=None, position:Vector3=None):
-		self.object._v_server.send_game_message(self.set_currency, currency=self.currency + currency, position=Vector3.zero, address=self.address)
+	def pickup_currency(self, currency:c_uint=None, position:Vector3=None):
+		self.set_currency(currency=self.currency + currency, position=Vector3.zero)
 
-	def pickup_item(self, address, loot_object_id:c_int64=None, player_id:c_int64=None):
+	def pickup_item(self, loot_object_id:c_int64=None, player_id:c_int64=None):
 		assert player_id == self.object.object_id
 		lot = self.object._v_server.dropped_loot[player_id][loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
@@ -371,18 +374,20 @@ class CharacterComponent(Component):
 			self.object.inventory.add_item_to_inventory(lot)
 		del self.object._v_server.dropped_loot[player_id][loot_object_id]
 
-	def request_resurrect(self, address):
-		self.object._v_server.send_game_message(self.object.destructible.resurrect, broadcast=True)
+	def request_resurrect(self):
+		self.object.destructible.resurrect()
 		self.object.stats.life = 4
 		self.object.stats.imagination = 6
 
-	def knockback(self, address, caster:c_int64=0, originator:c_int64=0, knock_back_time_ms:c_int=0, vector:Vector3=None):
+	@broadcast
+	def knockback(self, caster:c_int64=0, originator:c_int64=0, knock_back_time_ms:c_int=0, vector:Vector3=None):
 		pass
 
-	def offer_mission(self, address, mission_id:c_int=None, offerer:c_int64=None):
+	@single
+	def offer_mission(self, mission_id:c_int=None, offerer:c_int64=None):
 		pass
 
-	def respond_to_mission(self, address, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=-1):
+	def respond_to_mission(self, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=-1):
 		if reward_item != -1:
 			for mission in self.missions:
 				if mission.id == mission_id:
@@ -391,18 +396,21 @@ class CharacterComponent(Component):
 							self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
 							break
 		obj = self.object._v_server.game_objects[receiver]
-		obj.handle("respond_to_mission", address, mission_id, self.object, reward_item)
+		obj.handle("respond_to_mission", mission_id, self.object, reward_item)
 
-	def notify_mission(self, address, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
+	@single
+	def notify_mission(self, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
 		pass
 
-	def notify_mission_task(self, address, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, c_float)=None):
+	@single
+	def notify_mission_task(self, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, c_float)=None):
 		pass
 
-	def terminate_interaction(self, address, obj_id_terminator:c_int64=None, type:c_int=None):
+	@single
+	def terminate_interaction(self, obj_id_terminator:c_int64=None, type:c_int=None):
 		pass
 
-	def request_use(self, address, is_multi_interact_use:c_bit=None, multi_interact_id:c_uint=None, multi_interact_type:c_int=None, object_id:c_int64=None, secondary:c_bit=False):
+	def request_use(self, is_multi_interact_use:c_bit=None, multi_interact_id:c_uint=None, multi_interact_type:c_int=None, object_id:c_int64=None, secondary:c_bit=False):
 		if not is_multi_interact_use:
 			assert multi_interact_id == 0
 			multi_interact_id = None
@@ -420,10 +428,11 @@ class CharacterComponent(Component):
 					if task.type == TaskType.Interact and task.target == obj.lot:
 						mission.increment_task(task, self.object)
 
-	def emote_played(self, address, emote_id:c_int, target_id:c_int64):
+	@broadcast
+	def emote_played(self, emote_id:c_int, target_id:c_int64):
 		pass
 
-	def client_item_consumed(self, address, item_id:c_int64=None):
+	def client_item_consumed(self, item_id:c_int64=None):
 		for item in self.object.inventory.items:
 			if item is not None and item.object_id == item_id:
 				for mission in self.missions:
@@ -436,7 +445,8 @@ class CharacterComponent(Component):
 	def get_flag(self, flag_id):
 		return bool(self.flags & (1 << flag_id))
 
-	def set_flag(self, address, flag:c_bit=None, flag_id:c_int=None):
+	@single
+	def set_flag(self, flag:c_bit=None, flag_id:c_int=None):
 		if self.get_flag(flag_id) == flag:
 			return
 
@@ -449,22 +459,26 @@ class CharacterComponent(Component):
 						if task.type == TaskType.Flag and flag_id in task.target:
 							mission.increment_task(task, self.object)
 
-	def player_loaded(self, address, player_id:c_int64=None):
+	def player_loaded(self, player_id:c_int64=None):
 		pass
 
-	def player_ready(self, address):
+	@single
+	def player_ready(self):
 		pass
 
-	def display_message_box(self, address, show:c_bit=None, callback_client:c_int64=None, identifier:"wstr"=None, image_id:c_int=None, text:"wstr"=None, user_data:"wstr"=None):
+	@single
+	def display_message_box(self, show:c_bit=None, callback_client:c_int64=None, identifier:"wstr"=None, image_id:c_int=None, text:"wstr"=None, user_data:"wstr"=None):
 		pass
 
-	def set_jet_pack_mode(self, address, bypass_checks:c_bit=True, hover:c_bit=False, enable:c_bit=False, effect_id:c_uint=-1, air_speed:c_float=10, max_air_speed:c_float=15, vertical_velocity:c_float=1, warning_effect_id:c_uint=-1):
+	@broadcast
+	def set_jet_pack_mode(self, bypass_checks:c_bit=True, hover:c_bit=False, enable:c_bit=False, effect_id:c_uint=-1, air_speed:c_float=10, max_air_speed:c_float=15, vertical_velocity:c_float=1, warning_effect_id:c_uint=-1):
 		pass
 
-	def display_tooltip(self, address, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:"wstr"=None, localize_params:LDF=None, str_image_name:"wstr"=None, str_text:"wstr"=None):
+	@single
+	def display_tooltip(self, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:"wstr"=None, localize_params:LDF=None, str_image_name:"wstr"=None, str_text:"wstr"=None):
 		pass
 
-	def use_non_equipment_item(self, address, item_to_use:c_int64=None):
+	def use_non_equipment_item(self, item_to_use:c_int64=None):
 		for item in self.object.inventory.items:
 			if item is not None and item.object_id == item_to_use:
 				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
@@ -474,29 +488,33 @@ class CharacterComponent(Component):
 							self.object.inventory.add_item_to_inventory(lot)
 						return
 
-	def notify_pet_taming_minigame(self, address, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
+	@single
+	def notify_pet_taming_minigame(self, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
 		pass
 
-	def client_exit_taming_minigame(self, address, voluntary_exit:c_bit=True):
-		self.object._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation, address=address)
+	def client_exit_taming_minigame(self, voluntary_exit:c_bit=True):
+		self.notify_pet_taming_minigame(pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
-	def pet_taming_try_build_result(self, address, success:c_bit=True, num_correct:c_int=0):
+	@broadcast
+	def pet_taming_try_build_result(self, success:c_bit=True, num_correct:c_int=0):
 		pass
 
-	def notify_pet_taming_puzzle_selected(self, address, bricks:(c_uint, c_uint)=None):
+	@broadcast
+	def notify_pet_taming_puzzle_selected(self, bricks:(c_uint, c_uint)=None):
 		pass
 
-	def set_emote_lock_state(self, address, lock:c_bit=None, emote_id:c_int=None):
+	@single
+	def set_emote_lock_state(self, lock:c_bit=None, emote_id:c_int=None):
 		if not lock:
 			self.unlocked_emotes.append(emote_id)
 
-	def toggle_ghost_reference_override(self, address, override:c_bit=False):
+	def toggle_ghost_reference_override(self, override:c_bit=False):
 		pass
 
-	def set_ghost_reference_position(self, address, position:Vector3=None):
+	def set_ghost_reference_position(self, position:Vector3=None):
 		pass
 
-	def update_model_from_client(self, address, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
+	def update_model_from_client(self, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = self.object._v_server.new_object_id()
@@ -506,7 +524,7 @@ class CharacterComponent(Component):
 				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
 				break
 
-	def delete_model_from_client(self, address, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
+	def delete_model_from_client(self, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
 		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
 		self.object._v_server.destruct(self.object._v_server.game_objects[model_id])
 		for spawner, model in self.object._v_server.models:
@@ -516,21 +534,21 @@ class CharacterComponent(Component):
 				del prop_spawners[spawner.object_id]
 				item = self.object.inventory.add_item_to_inventory(model.lot)
 				if reason == DeleteReason.PickingModelUp:
-					self.inventory.equip_inventory(None, item_to_equip=item.object_id)
-					self.object._v_server.send_game_message(self.handle_u_g_c_equip_post_delete_based_on_edit_mode, inv_item=item.object_id, items_total=item.amount, address=address)
+					self.inventory.equip_inventory(item_to_equip=item.object_id)
+					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.amount)
 				break
 
-	def parse_chat_message(self, address, client_state:c_int, text:"wstr"):
+	def parse_chat_message(self, client_state:c_int, text:"wstr"):
 		if text[0] == "/":
 			self.object._v_server.chat.parse_command(text[1:], self.object)
 
-	def ready_for_updates(self, address, object_id:c_int64=None):
+	def ready_for_updates(self, object_id:c_int64=None):
 		pass
 
-	def bounce_notification(self, address, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:c_bit=None):
+	def bounce_notification(self, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:c_bit=None):
 		pass
 
-	def b_b_b_save_request(self, address, local_id:c_int64=None, lxfml_data_compressed:BitStream=None, time_taken_in_ms:c_uint=None):
+	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:BitStream=None, time_taken_in_ms:c_uint=None):
 		save_response = BitStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
@@ -539,77 +557,90 @@ class CharacterComponent(Component):
 		save_response.write(c_int64(self.object._v_server.new_object_id()))
 		save_response.write(c_uint(len(lxfml_data_compressed)))
 		save_response.write(lxfml_data_compressed)
-		self.object._v_server.send(save_response, address)
+		self.object._v_server.send(save_response, self.address)
 
-	def start_arranging_with_item(self, address, first_time:c_bit=True, build_area_id:c_int64=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
+	@broadcast
+	def start_arranging_with_item(self, first_time:c_bit=True, build_area_id:c_int64=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		pass
 
+	@broadcast
 	def finish_arranging_with_item(self, build_area_id:c_int64=0, new_source_bag:c_int=None, new_source_id:c_int64=None, new_source_lot:c_int=None, new_source_type:c_int=None, new_target_id:c_int64=None, new_target_lot:c_int=None, new_target_type:c_int=None, new_target_pos:Vector3=None, old_item_bag:c_int=None, old_item_id:c_int64=None, old_item_lot:c_int=None, old_item_type:c_int=None):
 		pass
 
-	def u_i_message_server_to_single_client(self, address, args:"amf"=None, str_message_name:"str"=None):
+	@single
+	def u_i_message_server_to_single_client(self, args:"amf"=None, str_message_name:"str"=None):
 		pass
 
-	def pet_taming_try_build(self, address, selections:(c_uint, c_uint64)=None, client_failed:c_bit=False):
+	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:c_bit=False):
 		if not client_failed:
-			self.object._v_server.send_game_message(self.pet_taming_try_build_result, address=address)
-			self.object._v_server.send_game_message(self.notify_pet_taming_minigame, pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation, address=self.address)
+			self.pet_taming_try_build_result()
+			self.notify_pet_taming_minigame(pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
-	def report_bug(self, address, body:"wstr"=None, client_version:"str"=None, other_player_id:"str"=None, selection:"str"=None):
+	def report_bug(self, body:"wstr"=None, client_version:"str"=None, other_player_id:"str"=None, selection:"str"=None):
 		for account in self.object._v_server.accounts.values():
 			self.object._v_server.mail.send_mail(self.name, "Bug Report: "+selection, body, account.characters.selected())
 
-	def request_smash_player(self, address):
-		self.object.destructible.request_die(None, unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
+	def request_smash_player(self):
+		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
 
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, address, inv_item:c_int64=None, items_total:c_int=0):
+	@single
+	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
 		pass
 
-	def property_contents_from_client(self, address, query_db:c_bit=False):
-		self.object._v_server.send_game_message(self.get_models_on_property, models={model.object_id:spawner.object_id for spawner, model in self.object._v_server.models}, address=address)
+	def property_contents_from_client(self, query_db:c_bit=False):
+		self.get_models_on_property(models={model.object_id:spawner.object_id for spawner, model in self.object._v_server.models})
 
-	def get_models_on_property(self, address, models:(c_uint, c_int64, c_int64)=None):
+	@broadcast
+	def get_models_on_property(self, models:(c_uint, c_int64, c_int64)=None):
 		pass
 
-	def match_request(self, address, activator:c_int64=None, player_choices:LDF=None, type:c_int=None, value:c_int=None):
-		# todo: how does the server know which matchmaking activity the client wants?
-		self.object._v_server.send_game_message(self.match_response, response=0, address=address)
+	def match_request(self, activator:c_int64=None, player_choices:LDF=None, type:c_int=None, value:c_int=None):
+		self.match_response(response=0)
 		if type == MatchRequestType.Join:# and value == MatchRequestValue.Join:
 			update_data = LDF()
 			update_data.ldf_set("time", LDFDataType.FLOAT, 60.0)
-			self.object._v_server.send_game_message(self.match_update, data=update_data, type=MatchUpdateType.Time, address=address)
+			self.match_update(data=update_data, type=MatchUpdateType.Time)
 
-	def match_response(self, address, response:c_int=None):
+	@single
+	def match_response(self, response:c_int=None):
 		pass
 
-	def match_update(self, address, data:LDF=None, type:c_int=None):
+	@single
+	def match_update(self, data:LDF=None, type:c_int=None):
 		pass
 
-	def used_information_plaque(self, address, plaque_object_id:c_int64=None):
+	def used_information_plaque(self, plaque_object_id:c_int64=None):
 		pass
 
-	def activate_brick_mode(self, address, build_object_id:c_int64=0, build_type:c_int=BuildType.BuildOnProperty, enter_build_from_world:c_bit=True, enter_flag:c_bit=True):
+	@single
+	def activate_brick_mode(self, build_object_id:c_int64=0, build_type:c_int=BuildType.BuildOnProperty, enter_build_from_world:c_bit=True, enter_flag:c_bit=True):
 		pass
 
-	def modify_lego_score(self, address, score:c_int64=None, source_type:c_int=0):
+	@single
+	def modify_lego_score(self, score:c_int64=None, source_type:c_int=0):
 		self.universe_score += score
 		if self.universe_score > self.object._v_server.db.level_scores[self.level]:
 			self.level += 1
 
-	def restore_to_post_load_stats(self, address):
+	@single
+	def restore_to_post_load_stats(self):
 		pass
 
-	def set_rail_movement(self, address, path_go_forward:c_bit=None, path_name:"wstr"=None, path_start:c_uint=None, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0):
+	@single
+	def set_rail_movement(self, path_go_forward:c_bit=None, path_name:"wstr"=None, path_start:c_uint=None, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0):
 		pass
 
-	def start_rail_movement(self, address, damage_immune:c_bit=True, no_aggro:c_bit=True, notify_activator:c_bit=False, show_name_billboard:c_bit=True, camera_locked:c_bit=True, collision_enabled:c_bit=True, loop_sound:"wstr"=None, path_go_forward:c_bit=True, path_name:"wstr"=None, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0, start_sound:"wstr"=None, stop_sound:"wstr"=None, use_db:c_bit=True):
+	@single
+	def start_rail_movement(self, damage_immune:c_bit=True, no_aggro:c_bit=True, notify_activator:c_bit=False, show_name_billboard:c_bit=True, camera_locked:c_bit=True, collision_enabled:c_bit=True, loop_sound:"wstr"=None, path_go_forward:c_bit=True, path_name:"wstr"=None, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0, start_sound:"wstr"=None, stop_sound:"wstr"=None, use_db:c_bit=True):
 		pass
 
-	def start_celebration_effect(self, address, animation:"wstr"=None, background_object:c_int=11164, camera_path_lot:c_int=12458, cele_lead_in:c_float=1, cele_lead_out:c_float=0.8, celebration_id:c_int=-1, duration:c_float=None, icon_id:c_uint=None, main_text:"wstr"=None, mixer_program:"str"=None, music_cue:"str"=None, path_node_name:"str"=None, sound_guid:"str"=None, sub_text:"wstr"=None):
+	@single
+	def start_celebration_effect(self, animation:"wstr"=None, background_object:c_int=11164, camera_path_lot:c_int=12458, cele_lead_in:c_float=1, cele_lead_out:c_float=0.8, celebration_id:c_int=-1, duration:c_float=None, icon_id:c_uint=None, main_text:"wstr"=None, mixer_program:"str"=None, music_cue:"str"=None, path_node_name:"str"=None, sound_guid:"str"=None, sub_text:"wstr"=None):
 		pass
 
-	def server_done_loading_all_objects(self, address):
+	@single
+	def server_done_loading_all_objects(self):
 		pass
 
-	def notify_server_level_processing_complete(self, address):
-		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="7074", effect_type="create", effect_id=7074, broadcast=True)
+	def notify_server_level_processing_complete(self):
+		self.object.render.play_f_x_effect(name="7074", effect_type="create", effect_id=7074)

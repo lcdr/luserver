@@ -3,7 +3,7 @@ from .messages import Message
 
 def write_header(self, subheader):
 	self.write(c_ubyte(Message.LUPacket))
-	self.write(c_ushort(type(subheader).header()))
+	self.write(c_ushort(subheader.header()))
 	self.write(c_uint(subheader))
 	self.write(c_ubyte(0x00))
 

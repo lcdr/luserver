@@ -13,7 +13,7 @@ PARADOX_FLAG = 48
 SENTINEL_FLAG = 49
 
 class ScriptComponent(script.ScriptComponent):
-	def respond_to_mission(self, address, mission_id, player, reward_item):
+	def respond_to_mission(self, mission_id, player, reward_item):
 		if mission_id != JOIN_FACTION_MISSION_ID:
 			return
 
@@ -34,8 +34,8 @@ class ScriptComponent(script.ScriptComponent):
 			flag_id = SENTINEL_FLAG
 			celebration_id = 17
 
-		self.object._v_server.send_game_message(player.char.set_flag, True, flag_id, address=player.char.address)
-		self.object._v_server.send_game_message(player.char.start_celebration_effect, animation="", duration=0, icon_id=0, main_text="", mixer_program="", music_cue="", path_node_name="", sound_guid="", sub_text="", celebration_id=celebration_id, address=player.char.address)
+		player.char.set_flag(True, flag_id)
+		player.char.start_celebration_effect(animation="", duration=0, icon_id=0, main_text="", mixer_program="", music_cue="", path_node_name="", sound_guid="", sub_text="", celebration_id=celebration_id)
 
 		achievements.append(778)
 		player.char.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually

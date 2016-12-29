@@ -37,6 +37,7 @@ from persistent.list import PersistentList
 
 from ..bitstream import c_bit, c_int, c_int64, c_uint
 from ..ldf import LDF, LDFDataType
+from ..messages import broadcast, single
 from ..math.vector import Vector3
 from .component import Component
 from .mission import MissionState, TaskType
@@ -82,7 +83,7 @@ class InventoryComponent(Component):
 			for item_lot, equip in self.object._v_server.db.inventory_component[comp_id]:
 				item = self.add_item_to_inventory(item_lot, persistent=False, notify_client=False)
 				if equip:
-					self.equip_inventory(None, item_to_equip=item.object_id)
+					self.equip_inventory(item_to_equip=item.object_id)
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.equipped_items_flag or is_creation))
@@ -127,7 +128,7 @@ class InventoryComponent(Component):
 			return self.mission_objects
 		raise NotImplementedError(inventory_type)
 
-	def move_item_in_inventory(self, address, dest_inventory_type:c_int=0, object_id:c_int64=None, inventory_type:c_int=None, response_code:c_int=None, slot:c_int=None):
+	def move_item_in_inventory(self, dest_inventory_type:c_int=0, object_id:c_int64=None, inventory_type:c_int=None, response_code:c_int=None, slot:c_int=None):
 		assert dest_inventory_type == 0
 		assert object_id != 0
 		assert response_code == 0
@@ -188,9 +189,9 @@ class InventoryComponent(Component):
 							inventory[index] = stack
 							break
 					else:
-						log.error("no space left")
+						log.info("no space left, sending item by mail")
 						self.object._v_server.mail.send_mail("%[MAIL_SYSTEM_NOTIFICATION]", "%[MAIL_ACHIEVEMENT_OVERFLOW_HEADER]", "%[MAIL_ACHIEVEMENT_OVERFLOW_BODY]", self.object, stack)
-						return # should probably throw an exception?
+						return
 
 			if module_lots:
 				stack.module_lots = module_lots
@@ -201,7 +202,7 @@ class InventoryComponent(Component):
 					if hasattr(stack, "module_lots"):
 						extra_info.ldf_set("assemblyPartLOTs", LDFDataType.STRING, [(LDFDataType.INT32, i) for i in stack.module_lots])
 
-					self.object._v_server.send_game_message(self.add_item_to_inventory_client_sync, bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=1, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index, address=self.object.char.address)
+					self.add_item_to_inventory_client_sync(bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
 
 
 				# update missions that have collecting this item as requirement
@@ -213,7 +214,8 @@ class InventoryComponent(Component):
 
 		return stack
 
-	def add_item_to_inventory_client_sync(self, address, bound:c_bit=False, bound_on_equip:c_bit=False,  bound_on_pickup:c_bit=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:c_bit=True, slot_id:c_int=None):
+	@single
+	def add_item_to_inventory_client_sync(self, bound:c_bit=False, bound_on_equip:c_bit=False,  bound_on_pickup:c_bit=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:c_bit=True, slot_id:c_int=None):
 		pass
 
 	def remove_item_from_inv(self, inventory_type, item=None, object_id=0, lot=0, amount=1):
@@ -221,9 +223,10 @@ class InventoryComponent(Component):
 			object_id = item.object_id
 
 		if hasattr(self.object, "char"):
-			self.object._v_server.send_game_message(self.remove_item_from_inventory, inventory_type=inventory_type, extra_info=LDF, force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount, address=self.object.char.address)
+			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount)
 
-	def remove_item_from_inventory(self, address, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
+	@single
+	def remove_item_from_inventory(self, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if confirmed:
 			assert delete_item
 			assert not out_success
@@ -250,7 +253,7 @@ class InventoryComponent(Component):
 			assert item.amount >= 0
 			if item.amount == 0: # delete item
 				if item.equipped:
-					self.un_equip_inventory(address=None, item_to_unequip=item.object_id)
+					self.un_equip_inventory(item_to_unequip=item.object_id)
 
 				if inventory_type in (InventoryType.Bricks, InventoryType.TempItems, InventoryType.TempModels, InventoryType.MissionObjects):
 					inventory.remove(item)
@@ -260,7 +263,7 @@ class InventoryComponent(Component):
 					for module_lot in item.module_lots:
 						self.add_item_to_inventory(module_lot)
 
-	def equip_inventory(self, address, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_equip:c_int64=None):
+	def equip_inventory(self, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_equip:c_int64=None):
 		assert not out_success
 		for inv in (self.items, self.temp_items, self.models):
 			for item in inv:
@@ -269,12 +272,12 @@ class InventoryComponent(Component):
 					for inv in (self.items, self.temp_items, self.models):
 						for other_item in inv:
 							if other_item is not None and other_item.equipped and other_item.item_type == item.item_type:
-								self.un_equip_inventory(address=None, item_to_unequip=other_item.object_id)
+								self.un_equip_inventory(item_to_unequip=other_item.object_id)
 
 					# equip sub-items
 					for sub_item in item.sub_items:
 						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems)
-						self.equip_inventory(None, item_to_equip=sub.object_id)
+						self.equip_inventory(item_to_equip=sub.object_id)
 
 					item.equipped = True
 					self.equipped_items_flag = True
@@ -290,7 +293,7 @@ class InventoryComponent(Component):
 										self.object.skill.add_skill_server(skill)
 					return
 
-	def un_equip_inventory(self, address, even_if_dead:c_bit=False, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
+	def un_equip_inventory(self, even_if_dead:c_bit=False, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
 		assert not out_success
 		assert replacement_object_id == 0
 		for inv in (self.items, self.temp_items, self.models):
@@ -316,13 +319,14 @@ class InventoryComponent(Component):
 					for inv in (self.items, self.temp_items, self.models):
 						for other_item in inv:
 							if other_item is not None and other_item.equipped and item.lot in other_item.sub_items:
-								self.un_equip_inventory(address=None, item_to_unequip=other_item.object_id)
+								self.un_equip_inventory(item_to_unequip=other_item.object_id)
 
-	def set_inventory_size(self, address, inventory_type:c_int=None, size:c_int=None):
+	@broadcast
+	def set_inventory_size(self, inventory_type:c_int=None, size:c_int=None):
 		inv = self.inventory_type_to_inventory(inventory_type)
 		inv.extend([None] * (size - len(inv)))
 
-	def move_item_between_inventory_types(self, address, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:c_bit=True, stack_count:c_uint=1, template_id:c_int=-1):
+	def move_item_between_inventory_types(self, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:c_bit=True, stack_count:c_uint=1, template_id:c_int=-1):
 		source = self.inventory_type_to_inventory(inventory_type_a)
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):

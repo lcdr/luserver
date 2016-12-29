@@ -10,7 +10,7 @@ class CollectibleComponent(Component):
 	def serialize(self, out, is_creation):
 		out.write(c_ushort(self.collectible_id))
 
-	def has_been_collected(self, address, player_id:c_int64=None):
+	def has_been_collected(self, player_id:c_int64=None):
 		player = self.object._v_server.game_objects[player_id]
 		# update missions that have this collectible as requirement
 		for mission in player.char.missions:

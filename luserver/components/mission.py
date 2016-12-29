@@ -3,6 +3,7 @@ import logging
 from persistent import Persistent
 
 from ..bitstream import c_bit, c_int, c_int64
+from ..messages import single
 from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, LootType
@@ -95,7 +96,7 @@ class MissionProgress(Persistent):
 		else:
 			task.value = min(task.value+increment, task.target_value)
 			update = task.value
-		player._v_server.send_game_message(player.char.notify_mission_task, self.id, task_mask=1<<(task_index+1), updates=[update], address=player.char.address)
+		player.char.notify_mission_task(self.id, task_mask=1<<(task_index+1), updates=[update])
 		if not self.is_mission:
 			for task in self.tasks:
 				if task.value < task.target_value:
@@ -111,24 +112,24 @@ class MissionProgress(Persistent):
 		else:
 			source_type = LootType.Achievement
 
-		player._v_server.send_game_message(player.char.notify_mission, self.id, mission_state=MissionState.Unavailable, sending_rewards=True, address=player.char.address)
-		player._v_server.send_game_message(player.char.set_currency, currency=player.char.currency + self.rew_currency, position=Vector3.zero, source_type=source_type, address=player.char.address)
-		player._v_server.send_game_message(player.char.modify_lego_score, self.rew_universe_score, source_type=source_type, address=player.char.address)
+		player.char.notify_mission(self.id, mission_state=MissionState.Unavailable, sending_rewards=True)
+		player.char.set_currency(currency=player.char.currency + self.rew_currency, position=Vector3.zero, source_type=source_type)
+		player.char.modify_lego_score(self.rew_universe_score, source_type=source_type)
 
 		if not self.is_choice_reward:
 			for lot, amount in self.rew_items:
 				player.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
 
 		if self.rew_emote is not None:
-			player._v_server.send_game_message(player.char.set_emote_lock_state, lock=False, emote_id=self.rew_emote, address=player.char.address)
+			player.char.set_emote_lock_state(lock=False, emote_id=self.rew_emote)
 
 		player.stats.max_life += self.rew_max_life
 		player.stats.max_imagination += self.rew_max_imagination
 
 		if self.rew_max_items:
-			player._v_server.send_game_message(player.inventory.set_inventory_size, inventory_type=InventoryType.Items, size=len(player.inventory.items)+self.rew_max_items, address=player.char.address)
+			player.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(player.inventory.items)+self.rew_max_items)
 
-		player._v_server.send_game_message(player.char.notify_mission, self.id, mission_state=MissionState.Completed, sending_rewards=False, address=player.char.address)
+		player.char.notify_mission(self.id, mission_state=MissionState.Completed, sending_rewards=False)
 
 		# No longer required, delete to free memory in db
 
@@ -182,15 +183,16 @@ class MissionNPCComponent(Component):
 
 		if offer is not None:
 			log.debug("offering %i", offer)
-			self.object._v_server.send_game_message(self.offer_mission, offer, offerer=self.object.object_id, address=player.char.address)
-			self.object._v_server.send_game_message(player.char.offer_mission, offer, offerer=self.object.object_id, address=player.char.address)
+			self.offer_mission(offer, offerer=self.object.object_id, player=player)
+			player.char.offer_mission(offer, offerer=self.object.object_id)
 
 		return offer is not None
 
-	def offer_mission(self, address, mission_id:c_int=None, offerer:c_int64=None):
+	@single
+	def offer_mission(self, mission_id:c_int=None, offerer:c_int64=None):
 		pass
 
-	def mission_dialogue_o_k(self, address, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
+	def mission_dialogue_o_k(self, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
 		player = self.object._v_server.game_objects[responder]
 
 		if mission_state == MissionState.Available:
@@ -204,6 +206,6 @@ class MissionNPCComponent(Component):
 					mission_progress.complete(player)
 					break
 
-	def request_linked_mission(self, address, player_id:c_int64=None, mission_id:c_int=None, mission_offered:c_bit=None):
+	def request_linked_mission(self, player_id:c_int64=None, mission_id:c_int=None, mission_offered:c_bit=None):
 		player = self.object._v_server.game_objects[player_id]
 		self.on_use(player, None)

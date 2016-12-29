@@ -1,12 +1,14 @@
 """
 For world server packet handling that is general enough not to be grouped in a specialized handling module.
 """
+import inspect
 import logging
+import re
 import xml.etree.ElementTree as ET
 
 from ..ldf import LDF, LDFDataType
-from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_uint, c_ushort
-from ..messages import WorldClientMsg, WorldServerMsg
+from ..bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
+from ..messages import game_message_deserialize, GameMessage, WorldClientMsg, WorldServerMsg
 from ..world import World
 from ..components.mission import TaskType
 from .module import ServerModule
@@ -162,15 +164,15 @@ class GeneralHandling(ServerModule):
 		self.server.game_objects[player.object_id] = player
 		self.server.add_participant(address) # Add to replica manager sync list
 		self.server.construct(player)
-		self.server.send_game_message(player.char.server_done_loading_all_objects, address=address)
-		self.server.send_game_message(player.char.player_ready, address=address)
-		self.server.send_game_message(player.char.restore_to_post_load_stats, address=address)
+		player.char.server_done_loading_all_objects()
+		player.char.player_ready()
+		player.char.restore_to_post_load_stats()
 		for inv in (player.inventory.items, player.inventory.temp_items, player.inventory.models):
 			for item in inv:
 				if item is not None and item.equipped:
 					player.skill.add_skill_for_item(item, add_buffs=False)
 		if self.server.world_control_object is not None and hasattr(self.server.world_control_object.script, "player_ready"):
-			self.server.send_game_message(self.server.world_control_object.script.player_ready, address=address)
+			self.server.world_control_object.script.player_ready(player=player)
 
 	def on_position_update(self, message, address):
 		player = self.server.accounts[address].characters.selected()
@@ -226,6 +228,48 @@ class GeneralHandling(ServerModule):
 	def on_game_message(self, message, address):
 		object_id = message.read(c_int64)
 		obj = self.server.get_object(object_id)
-		if not obj:
+		if obj is None:
 			return
-		self.server.read_game_message(obj, message, address)
+
+		message_id = message.read(c_ushort)
+		try:
+			message_name = GameMessage(message_id).name
+		except ValueError:
+			return
+		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
+
+		handlers = obj.handlers(handler_name)
+		if not handlers:
+			return
+
+		signature = inspect.signature(handlers[0])
+		kwargs = {}
+		params = list(signature.parameters.values())
+		if params and params[0].name == "player":
+			params.pop(0)
+		for param in params:
+			if param.annotation == c_bit:
+				value = message.read(c_bit)
+				if param.default not in (param.empty, None) and value == param.default:
+					continue
+			else:
+				if param.default not in (param.empty, None):
+					is_not_default = message.read(c_bit)
+					if not is_not_default:
+						continue
+
+				value = game_message_deserialize(message, param.annotation)
+
+			kwargs[param.name] = value
+		assert message.all_read()
+
+		if message_name != "ReadyForUpdates": # todo: don't hardcode this
+			log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
+
+		player = self.server.accounts[address].characters.selected()
+		for handler in handlers:
+			signature = inspect.signature(handler)
+			if "player" in signature.parameters:
+				handler(player, **kwargs)
+			else:
+				handler(**kwargs)

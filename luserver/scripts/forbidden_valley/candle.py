@@ -9,7 +9,7 @@ SMOKE_TIME = 5
 
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
-		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="candle_light", effect_type="create", effect_id=2108, broadcast=True)
+		self.object.render.play_f_x_effect(name="candle_light", effect_type="create", effect_id=2108)
 		self.script_vars["am_hit"] = False
 
 	def on_hit(self, attacker):
@@ -21,11 +21,11 @@ class ScriptComponent(script.ScriptComponent):
 							mission.increment_task(task, attacker)
 
 			self.script_vars["am_hit"] = True
-			self.object._v_server.send_game_message(self.object.render.stop_f_x_effect, name="candle_light", kill_immediate=False, broadcast=True)
-			self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="candle_smoke", effect_type="create", effect_id=2109, broadcast=True)
+			self.object.render.stop_f_x_effect(name="candle_light", kill_immediate=False)
+			self.object.render.play_f_x_effect(name="candle_smoke", effect_type="create", effect_id=2109)
 			asyncio.get_event_loop().call_later(SMOKE_TIME, self.relight)
 
 	def relight(self):
 		self.script_vars["am_hit"] = False
-		self.object._v_server.send_game_message(self.object.render.stop_f_x_effect, name="candle_smoke", kill_immediate=False, broadcast=True)
-		self.object._v_server.send_game_message(self.object.render.play_f_x_effect, name="candle_light", effect_type="create", effect_id=2108, broadcast=True)
+		self.object.render.stop_f_x_effect(name="candle_smoke", kill_immediate=False)
+		self.object.render.play_f_x_effect(name="candle_light", effect_type="create", effect_id=2108)

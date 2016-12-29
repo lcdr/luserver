@@ -4,6 +4,7 @@ import pprint
 import enum
 
 from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..messages import broadcast, single
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
@@ -120,20 +121,21 @@ class SkillComponent(Component):
 	def cast_skill(self, skill_id, target=None):
 		if target is None:
 			target = self.object
-		self.start_skill(None, skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=BitStream())
+		self.start_skill(skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=BitStream())
 		self.last_ui_skill_handle += 1
 
-	def echo_start_skill(self, address, used_mouse:c_bit=False, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	@broadcast
+	def echo_start_skill(self, used_mouse:c_bit=False, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		pass
 
-	def start_skill(self, address, used_mouse:c_bit=False, consumable_item_id:c_int64=0, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def start_skill(self, used_mouse:c_bit=False, consumable_item_id:c_int64=0, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
 		assert optional_originator_id in (0, self.object.object_id)
 		assert originator_rot == Quaternion(0, 0, 0, 0)
 
-		self.object._v_server.send_game_message(self.echo_start_skill, used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, address=address, broadcast=True)
+		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle)
 
 		if hasattr(self.object, "char"):
 			# update missions that have using this skill as requirement
@@ -159,20 +161,23 @@ class SkillComponent(Component):
 					self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
 					break
 
-	def select_skill(self, address, from_skill_set:c_bit=False, skill_id:c_int=None):
+	def select_skill(self, from_skill_set:c_bit=False, skill_id:c_int=None):
 		pass
 
-	def add_skill(self, address, ai_combat_weight:c_int=0, from_skill_set:c_bit=False, cast_type:c_int=0, time_secs:c_float=-1, times_can_cast:c_int=-1, skill_id:c_uint=None, slot_id:c_int=-1, temporary:c_bit=True):
+	@broadcast
+	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:c_bit=False, cast_type:c_int=0, time_secs:c_float=-1, times_can_cast:c_int=-1, skill_id:c_uint=None, slot_id:c_int=-1, temporary:c_bit=True):
 		pass
 
-	def remove_skill(self, address, from_skill_set:c_bit=False, skill_id:c_uint=None):
+	@single
+	def remove_skill(self, from_skill_set:c_bit=False, skill_id:c_uint=None):
 		pass
 
-	def echo_sync_skill(self, address, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	@broadcast
+	def echo_sync_skill(self, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		pass
 
-	def sync_skill(self, address, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
-		self.object._v_server.send_game_message(self.echo_sync_skill, done, bitstream, ui_behavior_handle, ui_skill_handle, address=address, broadcast=True)
+	def sync_skill(self, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+		self.echo_sync_skill(done, bitstream, ui_behavior_handle, ui_skill_handle, player=self.object) # don't send echo to self
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
@@ -194,7 +199,7 @@ class SkillComponent(Component):
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, address, local_id:c_int64=0, target_id:c_int64=0, bitstream:BitStream=None):
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:BitStream=None):
 		if target_id == 0:
 			target = self.object
 		else:
@@ -438,7 +443,7 @@ class SkillComponent(Component):
 						slot_id = SkillSlot.LeftHand
 					elif item.item_type == ItemType.Neck:
 						slot_id = SkillSlot.Neck
-					self.object._v_server.send_game_message(self.add_skill, skill_id=skill_id, slot_id=slot_id, address=self.object.char.address)
+					self.add_skill(skill_id=skill_id, slot_id=slot_id)
 
 	def add_skill_server(self, skill_id):
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
@@ -459,7 +464,7 @@ class SkillComponent(Component):
 				if behavior.template in PASSIVE_BEHAVIORS:
 					self.undo_behavior(behavior)
 				else:
-					self.object._v_server.send_game_message(self.remove_skill, skill_id=skill_id, address=self.object.char.address)
+					self.remove_skill(skill_id=skill_id)
 
 	def remove_skill_server(self, skill_id):
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
