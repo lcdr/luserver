@@ -9,7 +9,7 @@ from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
-from .mission import MissionState, TaskType
+from .mission import TaskType
 
 log = logging.getLogger(__name__)
 
@@ -138,12 +138,7 @@ class SkillComponent(Component):
 		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle)
 
 		if hasattr(self.object, "char"):
-			# update missions that have using this skill as requirement
-			for mission in self.object.char.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.UseSkill and skill_id in task.parameter:
-							mission.increment_task(task, self.object)
+			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
 		target = self.object
 		self.picked_target_id = optional_target_id
@@ -378,7 +373,7 @@ class SkillComponent(Component):
 		elif behavior.template == BehaviorTemplate.ForceMovement:
 			if getattr(behavior, "hit_action", None) is not None or \
 			   getattr(behavior, "hit_action_enemy", None) is not None or \
-				 getattr(behavior, "hit_action_faction", None) is not None:
+			   getattr(behavior, "hit_action_faction", None) is not None:
 				handle = bitstream.read(c_uint)
 				log.debug("move handle %s", handle)
 				self.delayed_behaviors[handle] = None # not known yet
@@ -428,12 +423,8 @@ class SkillComponent(Component):
 				if behavior.template in PASSIVE_BEHAVIORS:
 					if add_buffs:
 						if hasattr(self.object, "char"):
-							# update missions that have using this skill as requirement
-							for mission in self.object.char.missions:
-								if mission.state == MissionState.Active:
-									for task in mission.tasks:
-										if task.type == TaskType.UseSkill and skill_id in task.parameter:
-											mission.increment_task(task, self.object)
+							self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
+
 						self.handle_behavior(behavior, b"", self.object)
 				else:
 					slot_id = SkillSlot.RightHand
@@ -449,12 +440,8 @@ class SkillComponent(Component):
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
 		if behavior.template in PASSIVE_BEHAVIORS:
 			if hasattr(self.object, "char"):
-				# update missions that have using this skill as requirement
-				for mission in self.object.char.missions:
-					if mission.state == MissionState.Active:
-						for task in mission.tasks:
-							if task.type == TaskType.UseSkill and skill_id in task.parameter:
-								mission.increment_task(task, self.object)
+				self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
+
 			self.handle_behavior(behavior, b"", self.object)
 
 	def remove_skill_for_item(self, item):

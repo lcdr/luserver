@@ -98,7 +98,7 @@ class PhysicsHandling(ServerModule):
 				obj.handle("on_enter", player)
 		for obj in self.last_collisions[player]:
 			if obj not in collisions:
-				obj.handle("on_exit", player)
+				obj.handle("on_exit", player, silent=True)
 
 		self.last_collisions[player] = collisions
 

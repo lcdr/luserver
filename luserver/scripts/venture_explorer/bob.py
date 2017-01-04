@@ -7,7 +7,4 @@ class ScriptComponent(script.ScriptComponent):
 		if mission_id == 173 and mission_state == MissionState.ReadyToComplete:
 			player = self.object._v_server.game_objects[responder]
 			player.stats.imagination = 6
-			for mission in player.char.missions:
-				if mission.id == 664:
-					mission.complete(player)
-					break
+			player.char.complete_mission(664)

@@ -19,6 +19,13 @@ class ScriptComponent(Component):
 			if self.script_network_vars:
 				out.write(self.script_network_vars.to_bitstream())
 
+	def set_network_var(self, name, data_type, value):
+		# theoretically this could be buffered to only send one message when multiple variables are set but is that worth it?
+		self.script_network_vars.ldf_set(name, data_type, value)
+		temp_ldf = LDF()
+		temp_ldf.ldf_set(name, data_type, value)
+		self.script_network_var_update(temp_ldf)
+
 	@broadcast
 	def script_network_var_update(self, script_vars:LDF=None):
 		pass

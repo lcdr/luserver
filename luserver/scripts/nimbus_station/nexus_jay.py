@@ -41,7 +41,4 @@ class ScriptComponent(script.ScriptComponent):
 		player.char.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually
 
 		for achievement_id in achievements:
-			for mission in player.char.missions:
-				if mission.id == achievement_id:
-					mission.complete(player)
-					break
+			player.char.complete_mission(achievement_id)

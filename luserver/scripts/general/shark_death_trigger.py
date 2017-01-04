@@ -1,6 +1,6 @@
 import luserver.components.script as script
 from luserver.bitstream import c_int, c_int64
-from luserver.components.mission import MissionState, TaskType
+from luserver.components.mission import TaskType
 
 DEATH_ANIMATION = "big-shark-death"
 EATEN_BY_SHARK_ACHIEVEMENTS = 447, 446, 445
@@ -13,8 +13,4 @@ class ScriptComponent(script.ScriptComponent):
 		if args == "achieve":
 			player = self.object._v_server.game_objects[sender_id]
 			for achievement_id in EATEN_BY_SHARK_ACHIEVEMENTS:
-				for mission in player.char.missions:
-					if mission.state == MissionState.Active and mission.id == achievement_id:
-						for task in mission.tasks:
-							if task.type == TaskType.Script and self.object.lot in task.target:
-								mission.increment_task(task, player)
+				player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=achievement_id)

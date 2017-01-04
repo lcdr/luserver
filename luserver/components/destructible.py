@@ -1,7 +1,7 @@
 from ..bitstream import c_bit, c_float, c_int, c_int64
 from ..messages import broadcast
 from .component import Component
-from .mission import MissionState, TaskType
+from .mission import TaskType
 
 class DestructibleComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -47,17 +47,15 @@ class DestructibleComponent(Component):
 
 		killer = self.object._v_server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
-			# update missions that have the death of this lot as requirement
-			for mission in killer.char.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.KillEnemy and self.object.lot in task.target:
-							mission.increment_task(task, killer)
-
+			killer.char.update_mission_task(TaskType.KillEnemy, self.object.lot)
 			self.object.stats.drop_rewards(*self.death_rewards, killer)
 
-		if not hasattr(self.object, "comp_108") and not hasattr(self.object, "char"):
-			self.object._v_server.destruct(self.object)
+		if hasattr(self.object, "char"):
+			if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_died"):
+				self.object._v_server.world_control_object.script.player_died(player=self.object)
+		else:
+			if not hasattr(self.object, "comp_108"):
+				self.object._v_server.destruct(self.object)
 
 	@broadcast
 	def resurrect(self, resurrect_immediately=False):

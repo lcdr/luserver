@@ -304,19 +304,19 @@ if GENERATE_COMPS:
 		item_ids = [int(i) for i in item_ids.split(",")]
 		skill_set_2 = []
 		if skill_set_with_2 is not None:
-			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_2):
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i " % skill_set_with_2):
 				skill_set_2.append(row[0])
 		skill_set_3 = []
 		if skill_set_with_3 is not None:
-			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_3):
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i " % skill_set_with_3):
 				skill_set_3.append(row[0])
 		skill_set_4 = []
 		if skill_set_with_4 is not None:
-			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_4):
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i " % skill_set_with_4):
 				skill_set_4.append(row[0])
 		skill_set_5 = []
 		if skill_set_with_5 is not None:
-			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i "% skill_set_with_5):
+			for row in cdclient.execute("select SkillID from ItemSetSkills where SkillSetID ==  %i " % skill_set_with_5):
 				skill_set_5.append(row[0])
 		skill_set_6 = []
 		if skill_set_with_6 is not None:

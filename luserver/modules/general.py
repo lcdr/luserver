@@ -1,6 +1,7 @@
 """
 For world server packet handling that is general enough not to be grouped in a specialized handling module.
 """
+import functools
 import inspect
 import logging
 import re
@@ -90,7 +91,7 @@ class GeneralHandling(ServerModule):
 		chardata.write_header(WorldClientMsg.CharacterData)
 
 		root = ET.Element("obj")
-		char_= ET.SubElement(root, "char", cc=str(player.char.currency))
+		char_ = ET.SubElement(root, "char", cc=str(player.char.currency))
 		unlocked_emotes = ET.SubElement(char_, "ue")
 		for emote_id in player.char.unlocked_emotes:
 			ET.SubElement(unlocked_emotes, "e", id=str(emote_id))
@@ -133,9 +134,9 @@ class GeneralHandling(ServerModule):
 		mis = ET.SubElement(root, "mis")
 		done = ET.SubElement(mis, "done")
 		cur = ET.SubElement(mis, "cur")
-		for mission in player.char.missions:
+		for mission_id, mission in player.char.missions.items():
 			if mission.state == 2:
-				m = ET.SubElement(cur, "m", id=str(mission.id))
+				m = ET.SubElement(cur, "m", id=str(mission_id))
 				for task in mission.tasks:
 					if task.value == 0:
 						ET.SubElement(m, "sv")
@@ -145,7 +146,7 @@ class GeneralHandling(ServerModule):
 							for collectible_id in task.parameter:
 								ET.SubElement(m, "sv", v=str(collectible_id))
 			elif mission.state == 8:
-				ET.SubElement(done, "m", id=str(mission.id))
+				ET.SubElement(done, "m", id=str(mission_id))
 
 		import xml.dom.minidom
 		xml = xml.dom.minidom.parseString((ET.tostring(root, encoding="unicode")))
@@ -165,14 +166,6 @@ class GeneralHandling(ServerModule):
 		self.server.add_participant(address) # Add to replica manager sync list
 		self.server.construct(player)
 		player.char.server_done_loading_all_objects()
-		player.char.player_ready()
-		player.char.restore_to_post_load_stats()
-		for inv in (player.inventory.items, player.inventory.temp_items, player.inventory.models):
-			for item in inv:
-				if item is not None and item.equipped:
-					player.skill.add_skill_for_item(item, add_buffs=False)
-		if self.server.world_control_object is not None and hasattr(self.server.world_control_object.script, "player_ready"):
-			self.server.world_control_object.script.player_ready(player=player)
 
 	def on_position_update(self, message, address):
 		player = self.server.accounts[address].characters.selected()
@@ -264,10 +257,13 @@ class GeneralHandling(ServerModule):
 		assert message.all_read()
 
 		if message_name != "ReadyForUpdates": # todo: don't hardcode this
-			log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
+			if kwargs:
+				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
 
 		player = self.server.accounts[address].characters.selected()
 		for handler in handlers:
+			if hasattr(handler, "__wrapped__"):
+				handler = functools.partial(handler.__wrapped__, handler.__self__)
 			signature = inspect.signature(handler)
 			if "player" in signature.parameters:
 				handler(player, **kwargs)

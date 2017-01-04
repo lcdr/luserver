@@ -45,7 +45,7 @@ LUZ_PATHS[World.NinjagoMonastery] = "njhub/nd_nj_monastery.luz"
 LUZ_PATHS[World.BattleAgainstFrakjaw] = "njhub/cave_instance/monastery_cave_instance.luz"
 
 class PathType:
-	Movement  = 0
+	Movement = 0
 	MovingPlatform = 1
 	Property = 2
 	Camera = 3
@@ -293,9 +293,9 @@ def load_world_data(conn, maps_path):
 			elif path_type == PathType.Spawner:
 				spawner_vars = {}
 				spawner_vars["spawntemplate"] = luz.read(c_uint)
-				unknown3 = luz.read(c_uint), luz.read(c_int), luz.read(c_uint)
+				spawner_vars["spawner_unknown"] = luz.read(c_uint), luz.read(c_int), luz.read(c_uint)
 				object_id = luz.read(c_int64)
-				unknown4 = luz.read(c_ubyte)
+				unknown3 = luz.read(c_ubyte)
 
 			waypoints = []
 

@@ -1,26 +1,35 @@
 import asyncio
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
-from ..messages import broadcast
+from ..ldf import LDF
+from ..messages import broadcast, single
 from .component import Component
 
 class ScriptedActivityComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.scripted_activity = self
-		self._flags["players"] = "activity_flag"
-		self.players = []
+		self._flags["activity_values"] = "activity_flag"
+		self.activity_values = {}
 		self.comp_id = comp_id
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.activity_flag))
 		if self.activity_flag:
-			out.write(c_uint(len(self.players)))
-			for object_id in self.players:
+			out.write(c_uint(len(self.activity_values)))
+			for object_id, values in self.activity_values.items():
 				out.write(c_int64(object_id))
-				for _ in range(10):
-					out.write(c_float(0))
+				for value in values:
+					out.write(c_float(value))
 			self.activity_flag = False
+
+	def add_player(self, player):
+		self.activity_values[player.object_id] = [0]*10
+		self.attr_changed("activity_values")
+
+	def remove_player(self, player):
+		del self.activity_values[player.object_id]
+		self.attr_changed("activity_values")
 
 	@broadcast
 	def activity_start(self):
@@ -30,3 +39,11 @@ class ScriptedActivityComponent(Component):
 		if identifier == "LobbyReady" and button == 1:
 			activity = self.object._v_server.db.activities[self.comp_id]
 			asyncio.ensure_future(player.char.transfer_to_world((activity[0], 0, 0)))
+
+	@single
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:c_bit=None, weekly:c_bit=None):
+		pass
+
+	@broadcast
+	def notify_client_zone_object(self, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):
+		pass

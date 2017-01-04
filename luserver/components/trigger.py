@@ -4,7 +4,7 @@ import logging
 from ..bitstream import c_bit
 from ..math.vector import Vector3
 from .component import Component
-from .mission import MissionState, TaskType
+from .mission import TaskType
 from .physics import PhysicsEffect
 
 log = logging.getLogger(__name__)
@@ -45,11 +45,7 @@ class TriggerComponent(Component):
 				assert target == "target", target
 				assert args[0:4] == ["exploretask","1","1","1"], args[0:4]
 				player = eventargs[0]
-				for mission in player.char.missions:
-					if mission.state == MissionState.Active:
-						for task in mission.tasks:
-							if task.type == TaskType.Discover and task.target == args[4]:
-								mission.increment_task(task, player)
+				player.char.update_mission_task(TaskType.Discover, args[4])
 
 			else:
 				log.error("command %s not implemented", command_name)

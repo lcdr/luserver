@@ -6,6 +6,7 @@ class LDFDataType(enum.Enum):
 	STRING = 0
 	INT32 = 1
 	FLOAT = 3
+	DOUBLE = 4 # still not 100% sure
 	UINT32 = 5
 	BOOLEAN = 7
 	INT64_8 = 8
@@ -42,7 +43,7 @@ class LDF(dict):
 			if data_type == LDFDataType.UINT32:
 				if value < 0:
 					raise ValueError
-		elif data_type == LDFDataType.FLOAT:
+		elif data_type in (LDFDataType.FLOAT, LDFDataType.DOUBLE):
 			if not isinstance(value, float):
 				raise TypeError
 		elif data_type == LDFDataType.BOOLEAN:
@@ -71,7 +72,7 @@ class LDF(dict):
 			value = value
 		elif data_type in (LDFDataType.INT32, LDFDataType.UINT32, LDFDataType.INT64_8, LDFDataType.INT64_9):
 			value = int(value)
-		elif data_type == LDFDataType.FLOAT:
+		elif data_type in (LDFDataType.FLOAT, LDFDataType.DOUBLE):
 			value = float(value)
 		elif data_type == LDFDataType.BOOLEAN:
 			value = bool(int(value))
@@ -86,7 +87,7 @@ class LDF(dict):
 		else:
 			if data_type == LDFDataType.STRING:
 				str_value = value
-			elif data_type in (LDFDataType.INT32, LDFDataType.FLOAT, LDFDataType.UINT32, LDFDataType.INT64_8, LDFDataType.INT64_9):
+			elif data_type in (LDFDataType.INT32, LDFDataType.FLOAT, LDFDataType.DOUBLE, LDFDataType.UINT32, LDFDataType.INT64_8, LDFDataType.INT64_9):
 				str_value = str(value)
 			elif data_type == LDFDataType.BOOLEAN:
 				str_value = str(int(value))
@@ -105,6 +106,8 @@ class LDF(dict):
 				value = source.read(c_int)
 			elif data_type == LDFDataType.FLOAT:
 				value = source.read(c_float)
+			elif data_type == LDFDataType.DOUBLE:
+				raise NotImplementedError(data_type)
 			elif data_type == LDFDataType.UINT32:
 				value = source.read(c_uint)
 			elif data_type == LDFDataType.BOOLEAN:
@@ -131,6 +134,8 @@ class LDF(dict):
 				uncompressed.write(c_int(value))
 			elif data_type == LDFDataType.FLOAT:
 				uncompressed.write(c_float(value))
+			elif data_type == LDFDataType.DOUBLE:
+				raise NotImplementedError(data_type)
 			elif data_type == LDFDataType.UINT32:
 				uncompressed.write(c_uint(value))
 			elif data_type == LDFDataType.BOOLEAN:

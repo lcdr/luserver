@@ -221,7 +221,7 @@ class GameObject:
 		for child in self.children:
 			self._v_server.destruct(self._v_server.game_objects[child])
 
-		self.handle("on_destruction")
+		self.handle("on_destruction", silent=True)
 
 		del self._v_server.game_objects[self.object_id]
 
@@ -265,7 +265,7 @@ class GameObject:
 		send_handler = handlers[0]
 		send_handler(*args, **kwargs)
 		for handler in handlers[1:]:
-			handler(*args, send=False, **kwargs)
+			handler.__wrapped__(handler.__self__, *args, **kwargs)
 
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
 	def __init__(self, server, lot, object_id, set_vars={}):
