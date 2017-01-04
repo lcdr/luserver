@@ -74,6 +74,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
+		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.modules = []
 		self.char = CharHandling(self)
 		self.chat = ChatHandling(self)
@@ -140,7 +141,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			world_control_lot = self.db.world_info[self.world_id[0]]
 			if world_control_lot is not None:
 				self.world_control_object = self.spawn_object(world_control_lot, is_world_control=True)
-				self.world_control_object.handle("on_startup")
 			else:
 				self.world_control_object = None
 
@@ -149,7 +149,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			for obj in self.world_data.objects.values():
 				obj.handle("on_startup", silent=True)
 				if hasattr(obj, "spawner"):
-					obj.spawner.spawn()
+					obj.spawner.spawn(all=True)
 			if self.world_id[2] != 0:
 				self.models = []
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
@@ -264,6 +264,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		obj._serialize = False
 		self.game_objects[obj.object_id] = obj
 		self.construct(obj)
+
+		obj.handle("on_startup", silent=True)
 
 		if hasattr(obj, "rebuild"):
 			self.spawn_object(6604, parent=obj, position=obj.rebuild.rebuild_activator_position)

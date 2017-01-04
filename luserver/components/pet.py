@@ -1,8 +1,6 @@
-from ..bitstream import c_bit, c_int64, c_uint
-from ..math.quaternion import Quaternion
-from ..math.vector import Vector3
+from ..bitstream import c_bit, c_uint
 from .component import Component
-from .mission import MissionState, TaskType
+from .mission import TaskType
 
 class PetTamingNotify:
 	Success = 0
@@ -33,10 +31,4 @@ class PetComponent(Component):
 
 	def pet_taming_minigame_result(self, player, success:c_bit=None):
 		if success:
-			# update missions that have taming this pet as requirement
-			for mission in player.char.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.TamePet and self.object.lot in task.target:
-							mission.increment_task(task, player)
-
+			player.char.update_mission_task(TaskType.TamePet, self.object.lot)

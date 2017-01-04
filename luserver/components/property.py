@@ -150,7 +150,7 @@ class PropertyEntranceComponent(Component):
 
 	def enter_property1(self, player, index:c_int=None, return_to_zone:c_bit=True):
 		clone_id = 0
-		if not return_to_zone and	index == -1:
+		if not return_to_zone and index == -1:
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:

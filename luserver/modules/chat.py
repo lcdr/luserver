@@ -12,7 +12,7 @@ from ..world import World
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..components.inventory import InventoryType
-from ..components.mission import MissionProgress
+from ..components.mission import MissionProgress, MissionState
 from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
 from .module import ServerModule
@@ -107,7 +107,7 @@ class ChatHandling(ServerModule):
 		check_for_leaks_cmd.set_defaults(func=self.check_for_leaks_cmd)
 
 		complete_mission_cmd = self.commands.add_parser("completemission")
-		complete_mission_cmd.add_argument("--id", type=int)
+		complete_mission_cmd.add_argument("id", type=int)
 		complete_mission_cmd.set_defaults(func=self.complete_mission_cmd)
 
 		self.commands.add_parser("dance") # client-side
@@ -308,8 +308,7 @@ class ChatHandling(ServerModule):
 	def add_mission_cmd(self, args, sender):
 		if args.mission in MISSIONS:
 			for mission_id in MISSIONS[args.mission]:
-				mission = sender.char.add_mission(mission_id)
-				mission.complete(sender)
+				sender.char.complete_mission(mission_id)
 		else:
 			sender.char.add_mission(int(args.mission))
 
@@ -320,17 +319,14 @@ class ChatHandling(ServerModule):
 		sender.char.check_for_leaks()
 
 	def complete_mission_cmd(self, args, sender):
-		if args.id:
-			for mission in sender.char.missions:
-				if mission.id == args.id:
-					break
-		else:
-			mission = sender.char.missions[-1] # use latest mission
-		if mission.state == 2:
-			for task_index, task_data in enumerate(self.server.db.missions[mission.id][2]):
-				target_value = task_data[2]
-				mission.increment_task(mission.tasks[task_index], sender, target_value)
-				self.server.commit()
+		mission = sender.char.missions[args.id]
+		if mission.state == MissionState.Active:
+			for task in mission.tasks:
+				if isinstance(task.target, tuple):
+					target = task.target[0]
+				else:
+					target = task.target
+				sender.char.update_mission_task(task.type, target, increment=task.target_value, mission_id=args.id)
 
 	def dismount_cmd(self, args, sender):
 		if sender.char.vehicle_id != 0:
@@ -401,11 +397,9 @@ class ChatHandling(ServerModule):
 		sender.stats.imagination = sender.stats.max_imagination
 
 	def remove_mission_cmd(self, args, sender):
-		for mission in sender.char.missions:
-			if mission.id == args.id:
-				sender.char.missions.remove(mission)
-				print("Mission removed")
-				break
+		if args.id in sender.char.missions:
+			del sender.char.missions[args.id]
+			print("Mission removed")
 		else:
 			print("Mission not found")
 
@@ -415,7 +409,7 @@ class ChatHandling(ServerModule):
 		for mission_id, data in self.server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
-				sender.char.missions.append(MissionProgress(mission_id, data))
+				sender.char.missions[mission_id] = MissionProgress(mission_id, data)
 
 	def restart_cmd(self, args, sender):
 		asyncio.ensure_future(self.do_restart(sender))

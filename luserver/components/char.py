@@ -14,7 +14,7 @@ from ..modules.social import FriendUpdateType
 from .component import Component
 from .inventory import InventoryType, LootType
 from .pet import PetTamingNotify
-from .mission import MissionProgress, MissionState, TaskType
+from .mission import check_prereqs, MissionProgress, MissionState, TaskType
 
 log = logging.getLogger(__name__)
 
@@ -68,12 +68,12 @@ class CharacterComponent(Component):
 		self.currency = 0 # todo: consider whether a property with set_currency is possible
 		self.friends = PersistentList()
 		self.mails = PersistentList()
-		self.missions = PersistentList()
+		self.missions = PersistentMapping()
 		# add achievements
 		for mission_id, data in self.object._v_server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
-				self.missions.append(MissionProgress(mission_id, data))
+				self.missions[mission_id] = MissionProgress(mission_id, data)
 
 		self.unlocked_emotes = PersistentList()
 
@@ -322,19 +322,111 @@ class CharacterComponent(Component):
 
 	def add_mission(self, mission_id):
 		mission_progress = MissionProgress(mission_id, self.object._v_server.db.missions[mission_id])
-		self.missions.append(mission_progress)
+		self.missions[mission_id] = mission_progress
 		self.notify_mission(mission_id, mission_state=mission_progress.state, sending_rewards=False)
 		# obtain item task: update according to items already in inventory
 		for task in mission_progress.tasks:
 			if task.type == TaskType.ObtainItem:
 				for item in self.object.inventory.items:
 					if item is not None and item.lot in task.target:
-						mission_progress.increment_task(task, self.object, increment=item.amount)
+						self.update_mission_task(TaskType.ObtainItem, item.lot, increment=item.amount, mission_id=mission_id)
 						if task.value == task.target_value:
 							break
 
 		self.object._v_server.commit()
 		return mission_progress
+
+	def update_mission_task(self, task_type, target, parameter=None, increment=1, mission_id=None):
+		if mission_id is not None:
+			if mission_id not in self.missions:
+				return
+			missions = (mission_id, self.missions[mission_id]),
+		else:
+			missions = self.missions.items()
+		for mission_id, mission in missions:
+			if mission.state == MissionState.Active:
+				for task in mission.tasks:
+					if task.type == task_type:
+						if task.value == task.target_value:
+							continue
+						if task_type in (TaskType.UseEmote, TaskType.UseSkill):
+							if parameter not in task.parameter:
+								continue
+						else:
+							if isinstance(task.target, tuple):
+								if target not in task.target:
+									continue
+							else:
+								if task.target != target:
+									continue
+
+						# don't update achievements whose previous tiers haven't been completed
+						if not mission.is_mission and not check_prereqs(mission_id, self.object):
+							continue
+
+						task_index = mission.tasks.index(task)
+
+						if task.type == TaskType.Collect:
+							task.parameter.add(increment)
+							task.value = len(task.parameter)
+							update = increment
+						else:
+							task.value = min(task.value+increment, task.target_value)
+							update = task.value
+						self.notify_mission_task(mission_id, task_mask=1<<(task_index+1), updates=[update])
+
+						# complete achievements that have all tasks complete
+						if not mission.is_mission:
+							for task in mission.tasks:
+								if task.value < task.target_value:
+									break
+							else:
+								self.complete_mission(mission_id)
+
+	def complete_mission(self, mission_id):
+		mission = self.missions[mission_id]
+		mission.state = MissionState.Completed
+
+		if mission.is_mission:
+			source_type = LootType.Mission
+		else:
+			source_type = LootType.Achievement
+
+		self.notify_mission(mission_id, mission_state=MissionState.Unavailable, sending_rewards=True)
+		self.set_currency(currency=self.currency + mission.rew_currency, position=Vector3.zero, source_type=source_type)
+		self.modify_lego_score(mission.rew_universe_score, source_type=source_type)
+
+		if not mission.is_choice_reward:
+			for lot, amount in mission.rew_items:
+				self.object.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
+
+		if mission.rew_emote is not None:
+			self.set_emote_lock_state(lock=False, emote_id=mission.rew_emote)
+
+		self.object.stats.max_life += mission.rew_max_life
+		self.object.stats.max_imagination += mission.rew_max_imagination
+
+		if mission.rew_max_items:
+			self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+mission.rew_max_items)
+
+		self.notify_mission(mission_id, mission_state=MissionState.Completed, sending_rewards=False)
+
+		# No longer required, delete to free memory in db
+
+		del mission.tasks
+		del mission.rew_currency
+		del mission.rew_universe_score
+		del mission.is_choice_reward
+		del mission.rew_items
+		del mission.rew_emote
+		del mission.rew_max_life
+		del mission.rew_max_imagination
+		del mission.rew_max_items
+		del mission.is_mission
+
+		self.update_mission_task(TaskType.MissionComplete, mission_id)
+
+		self.object._v_server.commit()
 
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
@@ -348,13 +440,8 @@ class CharacterComponent(Component):
 
 	def play_emote(self, emote_id:c_int, target_id:c_int64):
 		self.emote_played(emote_id, target_id)
-		# update missions that have the use of this emote as requirement
 		if target_id:
-			for mission in self.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.UseEmote and emote_id in task.parameter and task.target == self.object._v_server.game_objects[target_id].lot:
-							mission.increment_task(task, self.object)
+			self.update_mission_task(TaskType.UseEmote, self.object._v_server.game_objects[target_id].lot, emote_id)
 
 	@single
 	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
@@ -389,14 +476,13 @@ class CharacterComponent(Component):
 
 	def respond_to_mission(self, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=-1):
 		if reward_item != -1:
-			for mission in self.missions:
-				if mission.id == mission_id:
-					for lot, amount in mission.rew_items:
-						if lot == reward_item:
-							self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
-							break
-		obj = self.object._v_server.game_objects[receiver]
-		obj.handle("respond_to_mission", mission_id, self.object, reward_item)
+			mission = self.missions[mission_id]
+			for lot, amount in mission.rew_items:
+				if lot == reward_item:
+					self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
+					break
+		obj = self.object._v_server.get_object(receiver)
+		obj.handle("respond_to_mission", mission_id, self.object, reward_item, silent=True)
 
 	@single
 	def notify_mission(self, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
@@ -421,12 +507,7 @@ class CharacterComponent(Component):
 			return
 		obj.handle("on_use", self.object, multi_interact_id)
 
-		# update missions that have interacting with this object as requirement
-		for mission in self.missions:
-			if mission.state == MissionState.Active:
-				for task in mission.tasks:
-					if task.type == TaskType.Interact and task.target == obj.lot:
-						mission.increment_task(task, self.object)
+		self.update_mission_task(TaskType.Interact, obj.lot)
 
 	@broadcast
 	def emote_played(self, emote_id:c_int, target_id:c_int64):
@@ -435,11 +516,7 @@ class CharacterComponent(Component):
 	def client_item_consumed(self, item_id:c_int64=None):
 		for item in self.object.inventory.items:
 			if item is not None and item.object_id == item_id:
-				for mission in self.missions:
-					if mission.state == MissionState.Active:
-						for task in mission.tasks:
-							if task.type == TaskType.UseConsumable and task.target == item.lot:
-								mission.increment_task(task, self.object)
+				self.update_mission_task(TaskType.UseConsumable, item.lot)
 				break
 
 	def get_flag(self, flag_id):
@@ -452,15 +529,18 @@ class CharacterComponent(Component):
 
 		self.flags ^= (-flag ^ self.flags) & (1 << flag_id)
 		if flag:
-			# update missions that have this flag as requirement
-			for mission in self.missions:
-				if mission.state == MissionState.Active:
-					for task in mission.tasks:
-						if task.type == TaskType.Flag and flag_id in task.target:
-							mission.increment_task(task, self.object)
+			self.update_mission_task(TaskType.Flag, flag_id)
 
 	def player_loaded(self, player_id:c_int64=None):
-		pass
+		assert player_id == self.object.object_id
+		self.player_ready()
+		self.restore_to_post_load_stats()
+		for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
+			for item in inv:
+				if item is not None and item.equipped:
+					self.object.skill.add_skill_for_item(item, add_buffs=False)
+		if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_ready"):
+			self.object._v_server.world_control_object.script.player_ready(player=self.object)
 
 	@single
 	def player_ready(self):
@@ -487,6 +567,16 @@ class CharacterComponent(Component):
 						for lot in self.random_loot(self.object._v_server.db.package_component[component_id]):
 							self.object.inventory.add_item_to_inventory(lot)
 						return
+
+	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:c_bit=None):
+		leaderboard = LDF()
+		leaderboard.ldf_set("ADO.Result", LDFDataType.BOOLEAN, True)
+		leaderboard.ldf_set("Result.Count", LDFDataType.INT32, 0)
+		self.send_activity_summary_leaderboard_data(game_id, query_type, leaderboard_data=leaderboard, throttled=False, weekly=False)
+
+	@single
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:c_bit=None, weekly:c_bit=None):
+		pass
 
 	@single
 	def notify_pet_taming_minigame(self, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):

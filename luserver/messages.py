@@ -150,6 +150,8 @@ class GameMessage(Enum):
 	SetJetPackMode = 561
 	DisplayTooltip = 569
 	UseNonEquipmentItem = 603
+	RequestActivitySummaryLeaderboardData = 648
+	SendActivitySummaryLeaderboardData = 649
 	NotifyPetTamingMinigame = 661
 	ClientExitTamingMinigame = 663
 	PetTamingMinigameResult = 667
@@ -160,6 +162,7 @@ class GameMessage(Enum):
 	PlayEmbeddedEffectOnAllClientsNearObject = 713
 	DownloadPropertyData = 716
 	QueryPropertyData = 717
+	NotifyClientZoneObject = 737
 	PropertyRentalResponse = 750
 	ToggleGhostReferenceOverride = 767
 	SetGhostReferencePosition = 768
@@ -195,6 +198,7 @@ class GameMessage(Enum):
 	ReportBug = 1198
 	RequestSmashPlayer = 1202
 	FireEventClientSide = 1213
+	LockNodeRotation = 1260
 	HandleUGCEquipPostDeleteBasedOnEditMode = 1300
 	PropertyContentsFromClient = 1305
 	GetModelsOnProperty = 1306
@@ -226,64 +230,63 @@ def send_game_message(mode):
 		Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
 		The serialization type (c_int, c_float, etc) is taken from the argument annotation.
 
-	If there are some cases where you don't want to send a game message but only call the serverside function, specify send=False.
 	If the function has "player" as the first argument, the player that this message will be sent to will be passed to the function as that argument. Note that this only really makes sense to specify in "single" mode.
 	"""
 	def decorator(func):
 		@wraps(func)
-		def wrapper(self, *args, send=True, **kwargs):
-			if send:
-				game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
-				out = BitStream()
-				out.write_header(WorldClientMsg.GameMessage)
-				object_id = self.object.object_id
-				out.write(c_int64(object_id))
-				out.write(c_ushort(game_message_id))
+		def wrapper(self, *args, **kwargs):
+			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
+			out = BitStream()
+			out.write_header(WorldClientMsg.GameMessage)
+			object_id = self.object.object_id
+			out.write(c_int64(object_id))
+			out.write(c_ushort(game_message_id))
 
-				signature = inspect.signature(func)
-				params = list(signature.parameters.values())[1:]
+			signature = inspect.signature(func)
+			params = list(signature.parameters.values())[1:]
 
+			if "player" in kwargs:
+				player = kwargs["player"]
+			else:
+				player = None
+			if params and params[0].name == "player":
+				params.pop(0)
+			else:
 				if "player" in kwargs:
-					player = kwargs["player"]
-				else:
-					player = None
-				if params and params[0].name == "player":
-					params.pop(0)
-				else:
-					if "player" in kwargs:
-						del kwargs["player"]
+					del kwargs["player"]
 
-				bound_args = signature.bind(self, *args, **kwargs)
-				for param in params:
-					if param.annotation == c_bit:
-						if param.name in bound_args.arguments:
-							value = bound_args.arguments[param.name]
-						else:
-							value = param.default
-						assert value in (True, False)
-						out.write(param.annotation(value))
-					else:
-						if param.default not in (param.empty, None):
-							is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
-							out.write(c_bit(is_not_default))
-							if not is_not_default:
-								continue
-
+			bound_args = signature.bind(self, *args, **kwargs)
+			for param in params:
+				if param.annotation == c_bit:
+					if param.name in bound_args.arguments:
 						value = bound_args.arguments[param.name]
-						assert value is not None, "\"%s\" needs to be specified" % param.name
-						game_message_serialize(out, param.annotation, value)
-				if mode == "broadcast":
-					exclude_address = None
-					if player is not None:
-						exclude_address = player.char.address
-					self.object._v_server.send(out, address=exclude_address, broadcast=True)
-				elif mode == "single":
-					if player is None:
-						player = self.object
-					self.object._v_server.send(out, address=player.char.address)
-				if func.__name__ != "drop_client_loot": # todo: don't hardcode this
-					if args or kwargs:
-						log.debug(", ".join(str(i) for i in args)+", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
+					else:
+						value = param.default
+					assert value in (True, False)
+					out.write(param.annotation(value))
+				else:
+					if param.default not in (param.empty, None):
+						is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
+						out.write(c_bit(is_not_default))
+						if not is_not_default:
+							continue
+
+					if param.name not in bound_args.arguments or bound_args.arguments[param.name] is None:
+						raise TypeError("\"%s\" needs to be specified" % param.name)
+					value = bound_args.arguments[param.name]
+					game_message_serialize(out, param.annotation, value)
+			if mode == "broadcast":
+				exclude_address = None
+				if player is not None:
+					exclude_address = player.char.address
+				self.object._v_server.send(out, address=exclude_address, broadcast=True)
+			elif mode == "single":
+				if player is None:
+					player = self.object
+				self.object._v_server.send(out, address=player.char.address)
+			if func.__name__ not in ("drop_client_loot", "script_network_var_update"): # todo: don't hardcode this
+				if len(bound_args.arguments) > 1:
+					log.debug(", ".join("%s=%s" % (key, value) for key, value in list(bound_args.arguments.items())[1:]))
 			return func(self, *args, **kwargs)
 		return wrapper
 	return decorator

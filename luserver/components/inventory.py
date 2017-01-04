@@ -40,7 +40,7 @@ from ..ldf import LDF, LDFDataType
 from ..messages import broadcast, single
 from ..math.vector import Vector3
 from .component import Component
-from .mission import MissionState, TaskType
+from .mission import TaskType
 
 log = logging.getLogger(__name__)
 
@@ -204,13 +204,7 @@ class InventoryComponent(Component):
 
 					self.add_item_to_inventory_client_sync(bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
 
-
-				# update missions that have collecting this item as requirement
-				for mission in self.object.char.missions:
-					if mission.state == MissionState.Active:
-						for task in mission.tasks:
-							if task.type == TaskType.ObtainItem and stack.lot in task.target:
-								mission.increment_task(task, self.object)
+				self.object.char.update_mission_task(TaskType.ObtainItem, stack.lot)
 
 		return stack
 

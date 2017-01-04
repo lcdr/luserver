@@ -1,6 +1,7 @@
 import enum
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
+from ..messages import broadcast
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
@@ -98,6 +99,11 @@ class ControllablePhysicsComponent(Controllable):
 		out.write(c_bit(False))
 		out.write(c_bit(False))
 		super().serialize(out, is_creation)
+
+	# not sure which component this belongs to, putting it here for now
+	@broadcast
+	def lock_node_rotation(self, node_name:"str"=None):
+		pass
 
 class SimplePhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):

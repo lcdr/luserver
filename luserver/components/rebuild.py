@@ -5,7 +5,7 @@ from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
 from ..messages import broadcast
 from ..math.vector import Vector3
 from .char import TerminateType
-from .mission import MissionState, TaskType
+from .mission import TaskType
 from .scripted_activity import ScriptedActivityComponent
 
 class RebuildState:
@@ -56,7 +56,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	@rebuild_state.setter
 	def rebuild_state(self, value):
-		player = self.object._v_server.get_object(self.players[0])
+		player = self.object._v_server.get_object(list(self.activity_values)[0])
 		self.rebuild_notify_state(self.rebuild_state, value, player_id=player.object_id)
 		self._rebuild_state = value
 
@@ -89,8 +89,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		for handle in self.callback_handles:
 			handle.cancel()
 		self.callback_handles.clear()
-		self.players.append(player.object_id)
-		self.attr_changed("players")
+		self.add_player(player)
 		self.rebuild_state = RebuildState.Building
 		player.char.rebuilding = 1
 		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id)
@@ -128,12 +127,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		if hasattr(self, "moving_platform"):
 			self.moving_platform.update_waypoint()
 
-		# update missions that have completing this rebuild as requirement
-		for mission in player.char.missions:
-			if mission.state == MissionState.Active:
-				for task in mission.tasks:
-					if task.type == TaskType.QuickBuild and task.target == self.activity_id:
-						mission.increment_task(task, player)
+		player.char.update_mission_task(TaskType.QuickBuild, self.activity_id)
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0)
@@ -147,8 +141,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.clear()
 			self.last_progress += time.time() - self.rebuild_start_time
 			self.rebuild_state = RebuildState.Incomplete
-			self.players.remove(user_id)
-			self.attr_changed("players")
+			self.remove_player(player)
 			player.char.rebuilding = 0
 			if early_release:
 				fail_reason = FailReason.CanceledEarly
