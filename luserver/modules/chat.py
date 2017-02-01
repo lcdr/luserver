@@ -418,7 +418,6 @@ class ChatHandling(ServerModule):
 		self.server.commit()
 		await sender.char.transfer_to_world(self.server.world_id)
 		await asyncio.sleep(5)
-		self.server.__del__()
 		sys.exit()
 
 	def send_cmd(self, args, sender):

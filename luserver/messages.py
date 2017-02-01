@@ -115,6 +115,7 @@ class GameMessage(Enum):
 	StopFXEffect = 155
 	RequestResurrect = 159
 	Resurrect = 160
+	PopEquippedItemsState = 192
 	Knockback = 202
 	RebuildCancel = 209
 	EnableRebuild = 213

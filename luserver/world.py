@@ -43,6 +43,7 @@ class World(Enum):
 	BattleAgainstFrakjaw = 2001
 	FVSiege = 58001
 
+import atexit
 import logging
 import time
 
@@ -90,6 +91,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.set_world_id(world_id)
 		self.accounts = {}
 		self.dropped_loot = {}
+		atexit.register(self.shutdown)
 
 	async def init_network(self):
 		await super().init_network()
@@ -97,10 +99,13 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.db.servers[self.external_address] = self.world_id
 		self.commit()
 
-	def __del__(self):
+	def shutdown(self):
+		self.conn_sync()
+		for address in self.accounts.copy():
+			self.close_connection(address, server.DisconnectReason.ServerShutdown)
 		del self.db.servers[self.external_address]
 		self.conn.transaction_manager.commit()
-		time.sleep(0.5)
+		log.info("Shutdown complete")
 
 	def log_packet(self, data, address, received):
 		try:

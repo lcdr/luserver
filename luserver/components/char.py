@@ -261,9 +261,16 @@ class CharacterComponent(Component):
 		self.check_for_leaks()
 
 	def check_for_leaks(self):
+		if len(self.object.inventory.equipped) > 1:
+			log.warning("Multiple equipped states")
+			for _ in range(len(self.object.inventory.equipped)-1):
+				self.object.inventory.equipped.pop()
+		elif not self.object.inventory.equipped:
+			log.warning("No equipped state")
+			self.object.inventory.equipped.append(PersistentList())
 		if self.object.inventory.temp_models:
-			print("Temp Models not empty")
-			print(self.object.inventory.temp_models)
+			log.warning("Temp Models not empty")
+			log.warning(self.object.inventory.temp_models)
 
 	def faction_token_lot(self):
 		if self.get_flag(VENTURE_LEAGUE_FLAG):
@@ -537,7 +544,7 @@ class CharacterComponent(Component):
 		self.restore_to_post_load_stats()
 		for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
 			for item in inv:
-				if item is not None and item.equipped:
+				if item is not None and item in self.object.inventory.equipped[-1]:
 					self.object.skill.add_skill_for_item(item, add_buffs=False)
 		if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_ready"):
 			self.object._v_server.world_control_object.script.player_ready(player=self.object)
@@ -651,7 +658,7 @@ class CharacterComponent(Component):
 
 	@broadcast
 	def start_arranging_with_item(self, first_time:c_bit=True, build_area_id:c_int64=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
-		pass
+		self.object.inventory.push_equipped_items_state()
 
 	@broadcast
 	def finish_arranging_with_item(self, build_area_id:c_int64=0, new_source_bag:c_int=None, new_source_id:c_int64=None, new_source_lot:c_int=None, new_source_type:c_int=None, new_target_id:c_int64=None, new_target_lot:c_int=None, new_target_type:c_int=None, new_target_pos:Vector3=None, old_item_bag:c_int=None, old_item_id:c_int64=None, old_item_lot:c_int=None, old_item_type:c_int=None):
@@ -668,7 +675,8 @@ class CharacterComponent(Component):
 
 	def report_bug(self, body:"wstr"=None, client_version:"str"=None, other_player_id:"str"=None, selection:"str"=None):
 		for account in self.object._v_server.accounts.values():
-			self.object._v_server.mail.send_mail(self.name, "Bug Report: "+selection, body, account.characters.selected())
+			for char in account.characters:
+				self.object._v_server.mail.send_mail(self.object.name, "Bug Report: "+selection, body, char)
 
 	def request_smash_player(self):
 		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
