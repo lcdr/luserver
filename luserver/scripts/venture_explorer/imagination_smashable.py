@@ -14,6 +14,8 @@ class ScriptComponent(script.ScriptComponent):
 	@broadcast
 	def die(self, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
 		player = self.object._v_server.get_object(loot_owner_id)
+		if BOB_IMAGINATION_MISSION_ID not in player.char.missions:
+			return
 		mission = player.char.missions[BOB_IMAGINATION_MISSION_ID]
 		if mission.state == MissionState.Completed:
 			for _ in range(random.randint(1, 2)):

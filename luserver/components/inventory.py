@@ -28,7 +28,10 @@ class ItemType:
 class LootType:
 	Mission = 2
 	Achievement = 5
+	# 8 occurs when deleting an item
 	# loot drop = 11 ?
+	# 16 occurs on completing modular build
+	# 21 occurs with modular build temp models
 
 import logging
 
@@ -49,7 +52,6 @@ class Stack(Persistent):
 		self.object_id = object_id
 		self.lot = lot
 		self.amount = 1
-		self.equipped = False
 
 		for component_type, component_id in db.components_registry[self.lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
@@ -72,6 +74,8 @@ class InventoryComponent(Component):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.inventory = self
 		self.equipped_items_flag = False
+		self.equipped = PersistentList()
+		self.equipped.append(PersistentList()) # current equip state
 		self.items = PersistentList([None]*20)
 		self.bricks = PersistentList()
 		self.temp_items = PersistentList()
@@ -88,26 +92,14 @@ class InventoryComponent(Component):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.equipped_items_flag or is_creation))
 		if self.equipped_items_flag or is_creation:
-			# todo: just make a list of equipped things instead of an attribute
-			all_equipped_items = []
-			equipped_items = [i for i in self.items if i is not None and i.equipped]
-			equipped_temp_items = [i for i in self.temp_items if i is not None and i.equipped]
-			equipped_models = [i for i in self.models if i is not None and i.equipped]
-			all_equipped_items.extend(equipped_items)
-			all_equipped_items.extend(equipped_temp_items)
-			all_equipped_items.extend(equipped_models)
-			out.write(c_uint(len(all_equipped_items)))
-			for item in all_equipped_items:
+			out.write(c_uint(len(self.equipped[-1])))
+			for item in self.equipped[-1]:
 				out.write(c_int64(item.object_id))
 				out.write(c_int(item.lot))
 				out.write(c_bit(False))
 				out.write(c_bit(False))
 				out.write(c_bit(False))
-				out.write(c_bit(item not in equipped_items))
-				if item in equipped_temp_items:
-					out.write(c_uint(4))
-				elif item in equipped_models:
-					out.write(c_uint(5))
+				out.write(c_bit(False))
 				out.write(c_bit(False))
 				out.write(c_bit(True))
 			self.equipped_items_flag = False
@@ -127,6 +119,18 @@ class InventoryComponent(Component):
 		if inventory_type == InventoryType.MissionObjects:
 			return self.mission_objects
 		raise NotImplementedError(inventory_type)
+
+	def push_equipped_items_state(self):
+		self.equipped.append(self.equipped[-1].copy())
+		self.equipped_items_flag = True
+
+	def pop_equipped_items_state(self):
+		if len(self.equipped) == 1:
+			return
+		for equipped_item in self.equipped[-1]:
+			self.un_equip_inventory(item_to_unequip=equipped_item.object_id)
+		self.equipped.pop()
+		self.equipped_items_flag = True
 
 	def move_item_in_inventory(self, dest_inventory_type:c_int=0, object_id:c_int64=None, inventory_type:c_int=None, response_code:c_int=None, slot:c_int=None):
 		assert dest_inventory_type == 0
@@ -246,14 +250,14 @@ class InventoryComponent(Component):
 			item.amount -= stack_count
 			assert item.amount >= 0
 			if item.amount == 0: # delete item
-				if item.equipped:
+				if item in self.equipped[-1]:
 					self.un_equip_inventory(item_to_unequip=item.object_id)
 
 				if inventory_type in (InventoryType.Bricks, InventoryType.TempItems, InventoryType.TempModels, InventoryType.MissionObjects):
 					inventory.remove(item)
 				else:
 					inventory[inventory.index(item)] = None
-				if hasattr(item, "module_lots"):
+				if hasattr(item, "module_lots") and not force_deletion: # only give modules if the player removed it
 					for module_lot in item.module_lots:
 						self.add_item_to_inventory(module_lot)
 
@@ -265,7 +269,7 @@ class InventoryComponent(Component):
 					# unequip any items of the same type
 					for inv in (self.items, self.temp_items, self.models):
 						for other_item in inv:
-							if other_item is not None and other_item.equipped and other_item.item_type == item.item_type:
+							if other_item is not None and other_item in self.equipped[-1] and other_item.item_type == item.item_type:
 								self.un_equip_inventory(item_to_unequip=other_item.object_id)
 
 					# equip sub-items
@@ -273,7 +277,7 @@ class InventoryComponent(Component):
 						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems)
 						self.equip_inventory(item_to_equip=sub.object_id)
 
-					item.equipped = True
+					self.equipped[-1].append(item)
 					self.equipped_items_flag = True
 					self.object._serialize = True
 
@@ -290,30 +294,29 @@ class InventoryComponent(Component):
 	def un_equip_inventory(self, even_if_dead:c_bit=False, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
 		assert not out_success
 		assert replacement_object_id == 0
-		for inv in (self.items, self.temp_items, self.models):
-			for item in inv:
-				if item is not None and item.object_id == item_to_unequip:
-					item.equipped = False
-					self.equipped_items_flag = True
-					self.object._serialize = True
+		for item in self.equipped[-1]:
+			if item.object_id == item_to_unequip:
+				self.equipped[-1].remove(item)
+				self.equipped_items_flag = True
+				self.object._serialize = True
 
-					for sub_item in item.sub_items:
-						self.remove_item_from_inv(InventoryType.TempItems, lot=sub_item)
+				for sub_item in item.sub_items:
+					self.remove_item_from_inv(InventoryType.TempItems, lot=sub_item)
 
-					if hasattr(self.object, "char"):
-						self.object.skill.remove_skill_for_item(item)
+				if hasattr(self.object, "char"):
+					self.object.skill.remove_skill_for_item(item)
 
-						for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in self.object._v_server.db.item_sets:
-							if item.lot in set_items:
-								for set in (skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6):
-									for skill in set:
-										self.object.skill.remove_skill_server(skill)
+					for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in self.object._v_server.db.item_sets:
+						if item.lot in set_items:
+							for set in (skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6):
+								for skill in set:
+									self.object.skill.remove_skill_server(skill)
 
-					# if this is a sub-item of another item, unequip the other item (and its sub-items)
-					for inv in (self.items, self.temp_items, self.models):
-						for other_item in inv:
-							if other_item is not None and other_item.equipped and item.lot in other_item.sub_items:
-								self.un_equip_inventory(item_to_unequip=other_item.object_id)
+				# if this is a sub-item of another item, unequip the other item (and its sub-items)
+				for inv in (self.items, self.temp_items, self.models):
+					for other_item in inv:
+						if other_item is not None and other_item in self.equipped[-1] and item.lot in other_item.sub_items:
+							self.un_equip_inventory(item_to_unequip=other_item.object_id)
 
 	@broadcast
 	def set_inventory_size(self, inventory_type:c_int=None, size:c_int=None):

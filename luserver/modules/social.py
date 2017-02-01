@@ -110,7 +110,7 @@ class SocialHandling(ServerModule):
 
 		requester = self.server.accounts[address].characters.selected()
 		requested_friend_ref = [i for i in requester.char.friends if i().name == requested_friend_name][0]
-		requester_ref = [i for i in requested_friend_ref().friends if i().name == requester.name][0]
+		requester_ref = [i for i in requested_friend_ref().char.friends if i().name == requester.name][0]
 
 		players = requester_ref, requested_friend_ref
 
