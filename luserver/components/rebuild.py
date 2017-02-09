@@ -29,7 +29,6 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.smash_time = self.object._v_server.db.rebuild_component[comp_id][1]
 		self.reset_time = self.object._v_server.db.rebuild_component[comp_id][2]
 		self.imagination_cost = self.object._v_server.db.rebuild_component[comp_id][3]
-		self.completion_rewards = self.object._v_server.db.rebuild_component[comp_id][4]
 		self.callback_handles = []
 		self.rebuild_start_time = 0
 		self.last_progress = 0
@@ -43,7 +42,8 @@ class RebuildComponent(ScriptedActivityComponent):
 		if "activity_id" in set_vars:
 			self.activity_id = set_vars["activity_id"]
 		else:
-			self.activity_id = self.object.lot
+			self.activity_id = self.object._v_server.db.rebuild_component[comp_id][4]#self.object.lot
+		self.completion_rewards = self.object._v_server.db.activity_rewards.get(self.activity_id, (None, None, None))
 
 		if "rebuild_activator_position" in set_vars:
 			self.rebuild_activator_position = set_vars["rebuild_activator_position"]
@@ -121,7 +121,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.callback_handles.append(asyncio.get_event_loop().call_later(self.smash_time, self.smash_rebuild))
 
 		# drop rewards
-		self.object.stats.drop_rewards(*self.completion_rewards, player)
+		self.object.physics.drop_rewards(*self.completion_rewards, player)
 
 		# if this is a moving platform, set the waypoint
 		if hasattr(self, "moving_platform"):

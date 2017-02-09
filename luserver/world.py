@@ -74,6 +74,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
+		self.not_console_logged_packets.add("GameMessage/PickupItem")
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.modules = []

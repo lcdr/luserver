@@ -89,12 +89,12 @@ class WorldClientMsg(IntEnum):
 	Moderation = 0x3b
 
 # Sadly no better way to get a mapping from headers to enums
-msg_enum = {}
-msg_enum[0x00] = GeneralMsg
-msg_enum[0x01] = AuthServerMsg
-msg_enum[0x02] = SocialMsg
-msg_enum[0x04] = WorldServerMsg
-msg_enum[0x05] = WorldClientMsg
+msg_enum = {
+	0x00: GeneralMsg,
+	0x01: AuthServerMsg,
+	0x02: SocialMsg,
+	0x04: WorldServerMsg,
+	0x05: WorldClientMsg}
 
 class GameMessage(Enum):
 	Teleport = 19

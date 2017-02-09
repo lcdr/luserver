@@ -12,4 +12,4 @@ class ScriptComponent(script.ScriptComponent):
 		assert multi_interact_id is None
 		self.object.render.play_animation(animation_id="interact", play_immediate=False)
 		for _ in range(3):
-			self.object.stats.drop_loot(IMAGINATION_POWERUP_LOT, player)
+			self.object.physics.drop_loot(IMAGINATION_POWERUP_LOT, player)

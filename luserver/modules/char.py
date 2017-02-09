@@ -38,23 +38,23 @@ class Color:
 	SandBlue = 84
 	SandGreen = 96
 
-pants_lot = {}
-pants_lot[Color.BrightRed] = 2508
-pants_lot[Color.BrightOrange] = 2509
-pants_lot[Color.BrickYellow] = 2511
-pants_lot[Color.MediumBlue] = 2513
-pants_lot[Color.SandGreen] = 2514
-pants_lot[Color.DarkGreen] = 2515
-pants_lot[Color.EarthGreen] = 2516
-pants_lot[Color.EarthBlue] = 2517
-pants_lot[Color.BrightBlue] = 2519
-pants_lot[Color.SandBlue] = 2520
-pants_lot[Color.DarkStoneGrey] = 2521
-pants_lot[Color.MediumStoneGrey] = 2522
-pants_lot[Color.White] = 2523
-pants_lot[Color.Black] = 2524
-pants_lot[Color.ReddishBrown] = 2526
-pants_lot[Color.DarkRed] = 2527
+pants_lot = {
+	Color.BrightRed: 2508,
+	Color.BrightOrange: 2509,
+	Color.BrickYellow: 2511,
+	Color.MediumBlue: 2513,
+	Color.SandGreen: 2514,
+	Color.DarkGreen: 2515,
+	Color.EarthGreen: 2516,
+	Color.EarthBlue: 2517,
+	Color.BrightBlue: 2519,
+	Color.SandBlue: 2520,
+	Color.DarkStoneGrey: 2521,
+	Color.MediumStoneGrey: 2522,
+	Color.White: 2523,
+	Color.Black: 2524,
+	Color.ReddishBrown: 2526,
+	Color.DarkRed: 2527}
 
 class CharHandling(ServerModule):
 	def on_validated(self, address):
