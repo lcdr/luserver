@@ -3,13 +3,14 @@ import logging
 import pprint
 import enum
 
-from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_uint, c_uint64
 from ..messages import broadcast, single
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
 from .mission import TaskType
+from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Chain, ForceMovement, Interrupt, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, ClearTarget
 
 log = logging.getLogger(__name__)
 
@@ -80,14 +81,34 @@ class BehaviorTemplate(enum.IntEnum):
 	Mount = 64
 	SkillSet = 65
 
-class MovementType:
-	Ground = 1
-	Jump = 2
-	Falling = 3
-	DoubleJump = 4
-	FallingAfterDoubleJumpAttack = 5
-	Jetpack = 6
-	Rail = 10
+TEMPLATES = {
+	BehaviorTemplate.BasicAttack: BasicAttack,
+	BehaviorTemplate.TacArc: TacArc,
+	BehaviorTemplate.And: And,
+	BehaviorTemplate.ProjectileAttack: ProjectileAttack,
+	BehaviorTemplate.Heal: Heal,
+	BehaviorTemplate.MovementSwitch: MovementSwitch,
+	BehaviorTemplate.AreaOfEffect: AreaOfEffect,
+	BehaviorTemplate.OverTime: OverTime,
+	BehaviorTemplate.Imagination: Imagination,
+	BehaviorTemplate.TargetCaster: TargetCaster,
+	BehaviorTemplate.Stun: Stun,
+	BehaviorTemplate.Duration: Duration,
+	BehaviorTemplate.Knockback: Knockback,
+	BehaviorTemplate.AttackDelay: AttackDelay,
+	BehaviorTemplate.RepairArmor: RepairArmor,
+	BehaviorTemplate.SpawnObject: SpawnObject,
+	BehaviorTemplate.Switch: Switch,
+	BehaviorTemplate.Buff: Buff,
+	BehaviorTemplate.Chain: Chain,
+	BehaviorTemplate.ForceMovement: ForceMovement,
+	BehaviorTemplate.Interrupt: Interrupt,
+	BehaviorTemplate.SwitchMultiple: SwitchMultiple,
+	BehaviorTemplate.Start: Start,
+	BehaviorTemplate.NPCCombatSkill: NPCCombatSkill,
+	BehaviorTemplate.Verify: Verify,
+	BehaviorTemplate.AirMovement: AirMovement,
+	BehaviorTemplate.ClearTarget: ClearTarget}
 
 class SkillSlot:
 	RightHand = 0
@@ -107,7 +128,9 @@ class SkillComponent(Component):
 		self.object.skill = self
 		self.delayed_behaviors = {}
 		self.projectile_behaviors = {}
-		self.last_ui_skill_handle = 0
+		self.original_target_id = None
+		self.last_ui_handle = 0
+		self.last_ui_skill_handle = self.last_ui_handle
 		self.everlasting = False
 
 	def serialize(self, out, is_creation):
@@ -121,8 +144,36 @@ class SkillComponent(Component):
 	def cast_skill(self, skill_id, target=None):
 		if target is None:
 			target = self.object
-		self.start_skill(skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=BitStream())
-		self.last_ui_skill_handle += 1
+		self.original_target_id = target.object_id
+
+		self.last_ui_skill_handle = self.last_ui_handle
+		self.last_ui_handle += 1
+
+		bitstream = BitStream()
+		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		self.serialize_behavior(behavior, bitstream, target)
+		self.start_skill(skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
+
+	def cast_sync_skill(self, delay, behavior, target):
+		ui_behavior_handle = self.last_ui_handle
+		self.last_ui_handle += 1
+		self.delayed_behaviors[ui_behavior_handle] = behavior
+
+		bitstream = BitStream()
+		self.serialize_behavior(behavior, bitstream, target)
+
+		asyncio.get_event_loop().call_later(delay, lambda: self.sync_skill(bitstream=bitstream, ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
+		return ui_behavior_handle
+
+	def cast_projectile(self, proj_behavs, target):
+		bitstream = BitStream()
+		proj_id = self.object._v_server.new_spawned_id()
+		for behav in proj_behavs:
+			self.original_target_id = target.object_id
+			self.serialize_behavior(behav, bitstream, target)
+		delay = 1
+		asyncio.get_event_loop().call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bitstream))
+		return proj_id
 
 	@broadcast
 	def echo_start_skill(self, used_mouse:c_bit=False, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
@@ -140,11 +191,14 @@ class SkillComponent(Component):
 		if hasattr(self.object, "char"):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
-		target = self.object
+		if optional_target_id != 0:
+			target = self.object._v_server.game_objects[optional_target_id]#self.object
+		else:
+			target = self.object
 		self.picked_target_id = optional_target_id
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
 		self.original_target_id = target.object_id
-		self.handle_behavior(behavior, bitstream, target)
+		self.unserialize_behavior(behavior, bitstream, target)
 
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
@@ -172,7 +226,11 @@ class SkillComponent(Component):
 		pass
 
 	def sync_skill(self, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
-		self.echo_sync_skill(done, bitstream, ui_behavior_handle, ui_skill_handle, player=self.object) # don't send echo to self
+		if hasattr(self.object, "char"):
+			player = self.object
+		else:
+			player = None
+		self.echo_sync_skill(done, bitstream, ui_behavior_handle, ui_skill_handle, player=None) # don't send echo to self
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
@@ -188,7 +246,7 @@ class SkillComponent(Component):
 
 		if behavior is not None: # no, this is not an "else" from above
 			self.original_target_id = target.object_id
-			self.handle_behavior(behavior, bitstream, target)
+			self.unserialize_behavior(behavior, bitstream, target)
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
 		if done:
@@ -205,205 +263,26 @@ class SkillComponent(Component):
 
 		for behav in self.projectile_behaviors[local_id]:
 			self.original_target_id = target.object_id
-			self.handle_behavior(behav, bitstream, target)
+			self.unserialize_behavior(behav, bitstream, target)
 		del self.projectile_behaviors[local_id]
 		# todo: do client projectile impact
 
-	def handle_behavior(self, behavior, bitstream, target, level=0):
+	def serialize_behavior(self, behavior, bitstream, target, level=0):
+		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
+		if behavior.template in TEMPLATES:
+			return TEMPLATES[behavior.template].serialize(self, behavior, bitstream, target, level)
+
+	def unserialize_behavior(self, behavior, bitstream, target, level=0):
 		if behavior is None:
 			return
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
-		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.AirMovement):
+		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.NPCCombatSkill, BehaviorTemplate.AirMovement):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
 
-		if behavior.template == BehaviorTemplate.BasicAttack:
-			bitstream.align_read()
-			bitstream.read(c_ushort) # "padding", unused
-			assert not bitstream.read(c_bit)
-			assert not bitstream.read(c_bit)
-			assert bitstream.read(c_bit)
-			log.debug(bitstream.read(c_uint))
-			damage = bitstream.read(c_uint)
-			log.debug(damage)
-			log.debug("AoE? %s", bitstream.read(c_bit))
-			enemy_type = bitstream.read(c_ubyte) # ?
-			if enemy_type != 1:
-				log.debug(enemy_type)
-			target.destructible.deal_damage(damage, self.object)
-			if hasattr(behavior, "on_success"):
-				self.handle_behavior(behavior.on_success, bitstream, target, level+1)
+		print("  "*level+"target",target)
 
-		elif behavior.template == BehaviorTemplate.TacArc:
-			if behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in self.object._v_server.game_objects:
-				target = self.object._v_server.game_objects[self.picked_target_id]
-				# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
-				log.debug("using picked target, not completely working")
-				self.handle_behavior(behavior.action, bitstream, target, level+1)
-				return
-				# end of lines
-			if bitstream.read(c_bit): # is hit
-				if behavior.check_env:
-					if bitstream.read(c_bit): # is blocked
-						log.debug("hit but blocked")
-						self.handle_behavior(behavior.blocked_action, bitstream, target, level+1)
-						return
-				targets = []
-				for _ in range(bitstream.read(c_uint)): # number of targets
-					target_id = bitstream.read(c_int64)
-					targets.append(self.object._v_server.game_objects[target_id])
-				for target in targets:
-					log.debug("Target %s", target)
-					self.handle_behavior(behavior.action, bitstream, target, level+1)
-
-			else:
-				if hasattr(behavior, "blocked_action"):
-					if bitstream.read(c_bit): # is blocked
-						log.debug("blocked")
-						self.handle_behavior(behavior.blocked_action, bitstream, target, level+1)
-						return
-				if hasattr(behavior, "miss_action"):
-					log.debug("miss")
-					self.handle_behavior(behavior.miss_action, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.And:
-			for behav in behavior.behaviors:
-				self.handle_behavior(behav, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.ProjectileAttack:
-			target_id = bitstream.read(c_int64)
-			if target_id != 0:
-				target = self.object._v_server.game_objects[target_id]
-				log.debug("target %s", target)
-
-			proj_behavs = []
-			for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
-				proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id])
-
-			projectile_count = 1
-			if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
-				projectile_count = behavior.spread_count
-			for _ in range(projectile_count):
-				local_id = bitstream.read(c_int64)
-				self.projectile_behaviors[local_id] = proj_behavs
-
-		elif behavior.template == BehaviorTemplate.Heal:
-			target.stats.life += behavior.life
-
-		elif behavior.template == BehaviorTemplate.MovementSwitch:
-			movement_type = bitstream.read(c_uint)
-			if movement_type in (MovementType.Ground, MovementType.Rail):
-				action = behavior.ground_action
-			elif movement_type == MovementType.Jump:
-				action = behavior.jump_action
-			elif movement_type == MovementType.Falling:
-				action = behavior.falling_action
-			elif movement_type == MovementType.DoubleJump:
-				action = behavior.double_jump_action
-			elif movement_type == MovementType.Jetpack:
-				action = behavior.jetpack_action
-			else:
-				raise NotImplementedError("Movement type", movement_type)
-			if action is not None:
-				self.handle_behavior(action, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.AreaOfEffect:
-			targets = []
-			for _ in range(bitstream.read(c_uint)): # number of targets
-				target_id = bitstream.read(c_int64)
-				targets.append(self.object._v_server.game_objects[target_id])
-			for target in targets:
-				self.handle_behavior(behavior.action, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.OverTime:
-			for interval in range(behavior.num_intervals):
-				asyncio.get_event_loop().call_later(interval * behavior.delay, self.handle_behavior, behavior.action, b"", target)
-
-		elif behavior.template == BehaviorTemplate.Imagination:
-			target.stats.imagination += behavior.imagination
-
-		elif behavior.template == BehaviorTemplate.TargetCaster:
-			casted_behavior = behavior.action
-			self.handle_behavior(casted_behavior, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.Stun:
-			if target.object_id != self.original_target_id:
-				log.debug("Stun reading bit")
-				assert not bitstream.read(c_bit)
-
-		elif behavior.template == BehaviorTemplate.Duration:
-			params = self.handle_behavior(behavior.action, bitstream, target, level+1)
-			asyncio.get_event_loop().call_later(behavior.duration, self.undo_behavior, behavior.action, params)
-
-		elif behavior.template == BehaviorTemplate.Knockback:
-			assert not bitstream.read(c_bit)
-
-		elif behavior.template in (BehaviorTemplate.AttackDelay, BehaviorTemplate.ChargeUp):
-			handle = bitstream.read(c_uint)
-			log.debug("handle %s", handle)
-			self.delayed_behaviors[handle] = behavior.action
-
-		elif behavior.template == BehaviorTemplate.RepairArmor:
-			target.stats.armor += behavior.armor
-
-		elif behavior.template in (BehaviorTemplate.SpawnObject, BehaviorTemplate.SpawnQuickbuild):
-			return self.object._v_server.spawn_object(behavior.lot, parent=self.object)
-
-		elif behavior.template == BehaviorTemplate.Switch:
-			switch = True
-			if getattr(behavior, "imagination", 0) > 0 or not getattr(behavior, "is_enemy_faction", False):
-				log.debug("Switch reading bit")
-				switch = bitstream.read(c_bit)
-			if switch:
-				self.handle_behavior(behavior.action_true, bitstream, target, level+1)
-			else:
-				self.handle_behavior(behavior.action_false, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.Buff:
-			if hasattr(behavior, "life"):
-				self.object.stats.max_life += behavior.life
-			if hasattr(behavior, "armor"):
-				self.object.stats.max_armor += behavior.armor
-			if hasattr(behavior, "imagination"):
-				self.object.stats.max_imagination += behavior.imagination
-
-		elif behavior.template == BehaviorTemplate.Chain:
-			chain_index = bitstream.read(c_uint)
-			self.handle_behavior(behavior.behaviors[chain_index-1], bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.ForceMovement:
-			if getattr(behavior, "hit_action", None) is not None or \
-			   getattr(behavior, "hit_action_enemy", None) is not None or \
-			   getattr(behavior, "hit_action_faction", None) is not None:
-				handle = bitstream.read(c_uint)
-				log.debug("move handle %s", handle)
-				self.delayed_behaviors[handle] = None # not known yet
-
-		elif behavior.template == BehaviorTemplate.Interrupt:
-			if target != self.object:
-				log.debug("Interrupt: target != self, reading bit")
-				assert not bitstream.read(c_bit)
-			if not getattr(behavior, "interrupt_block", False):
-				log.debug("Interrupt: not block, reading bit")
-				assert not bitstream.read(c_bit)
-			assert not bitstream.read(c_bit)
-
-		elif behavior.template == BehaviorTemplate.SwitchMultiple:
-			charge_time = bitstream.read(c_float)
-			for behav, value in behavior.behaviors:
-				if charge_time <= value:
-					self.handle_behavior(behav, bitstream, target, level+1)
-					break
-
-		elif behavior.template == BehaviorTemplate.Start:
-			self.handle_behavior(behavior.action, bitstream, target, level+1)
-
-		elif behavior.template == BehaviorTemplate.AirMovement:
-			handle = bitstream.read(c_uint)
-			log.debug("move handle %s", handle)
-			self.delayed_behaviors[handle] = None # not known yet
-
-		elif behavior.template == BehaviorTemplate.ClearTarget:
-			self.handle_behavior(behavior.action, bitstream, target, level+1)
+		if behavior.template in TEMPLATES:
+			return TEMPLATES[behavior.template].unserialize(self, behavior, bitstream, target, level)
 
 	def undo_behavior(self, behavior, params=None):
 		if behavior.template == BehaviorTemplate.SpawnObject:
@@ -425,7 +304,7 @@ class SkillComponent(Component):
 						if hasattr(self.object, "char"):
 							self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
-						self.handle_behavior(behavior, b"", self.object)
+						self.unserialize_behavior(behavior, b"", self.object)
 				else:
 					slot_id = SkillSlot.RightHand
 					if item.item_type == ItemType.Hat:
@@ -442,7 +321,7 @@ class SkillComponent(Component):
 			if hasattr(self.object, "char"):
 				self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
-			self.handle_behavior(behavior, b"", self.object)
+			self.unserialize_behavior(behavior, b"", self.object)
 
 	def remove_skill_for_item(self, item):
 		if item.lot in self.object._v_server.db.object_skills:

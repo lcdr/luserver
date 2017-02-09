@@ -1,4 +1,5 @@
 import enum
+import random
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
 from ..messages import broadcast
@@ -18,6 +19,22 @@ class PhysicsComponent(Component):
 			self.position.update(set_vars["position"])
 		if "rotation" in set_vars:
 			self.rotation.update(set_vars["rotation"])
+
+	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner):
+		if currency_min is not None and currency_max is not None:
+			currency = random.randint(currency_min, currency_max)
+			owner.char.drop_client_loot(currency=currency, item_template=-1, loot_id=0, owner=owner.object_id, source_obj=self.object.object_id)
+
+		if loot_matrix is not None:
+			loot = owner.char.random_loot(loot_matrix)
+			for lot in loot:
+				self.drop_loot(lot, owner)
+
+	def drop_loot(self, lot, owner):
+		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
+		object_id = self.object._v_server.new_spawned_id()
+		self.object._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
+		owner.char.drop_client_loot(use_position=True, spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object.object_id)
 
 class Controllable(PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):

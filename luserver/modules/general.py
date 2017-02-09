@@ -18,37 +18,37 @@ log = logging.getLogger(__name__)
 
 # Constant checksums that the client expects to verify map version
 # (likely value of the last map revision)
-checksum = {}
-checksum[World.VentureExplorer.value] = 0x20b8087c
-checksum[World.ReturnToTheVentureExplorer.value] = 0x26680a3c
-checksum[World.AvantGardens.value] = 0x49525511
-checksum[World.AvantGardensSurvival.value] = 0x538214e2
-checksum[World.SpiderQueenBattle.value] = 0xfd403da
-checksum[World.BlockYard.value] = 0xfd403da
-checksum[World.AvantGrove.value] = 0xa890303
-checksum[World.NimbusStation.value] = 0xda1e6b30
-checksum[World.PetCove.value] = 0x476e1330
-checksum[World.VertigoLoop.value] = 0x10fc0502
-checksum[World.TheBattleOfNimbusStation.value] = 0x7d40258
-checksum[World.NimbusRock.value] = 0x58d0191
-checksum[World.NimbusIsle.value] = 0x94f045d
-checksum[World.GnarledForest.value] = 0x12eac290
-checksum[World.CannonCoveShootingGallery.value] = 0xb7702ef
-checksum[World.ChanteyShanty.value] = 0x4b6015c
-checksum[World.ForbiddenValley.value] = 0x8519760d
-checksum[World.ForbiddenValleyDragonBattle.value] = 0x2f50187
-checksum[World.DragonmawChasm.value] = 0x81850f4e
-checksum[World.RavenBluff.value] = 0x3f00126
-checksum[World.Starbase3001.value] = 0x7c202ee
-checksum[World.DeepFreeze.value] = 0x2320106
-checksum[World.RobotCity.value] = 0x793037f
-checksum[World.MoonBase.value] = 0x43b01ad
-checksum[World.Portabello.value] = 0x181507dd
-checksum[World.LEGOClub.value] = 0x2040138
-checksum[World.CruxPrime.value] = 0x4b17a399
-checksum[World.NexusTower.value] = 0x9e4af43c
-checksum[World.NinjagoMonastery.value] = 0x4d692c74
-checksum[World.BattleAgainstFrakjaw.value] = 0x9eb00ef
+checksum = {
+	World.VentureExplorer: 0x20b8087c,
+	World.ReturnToTheVentureExplorer: 0x26680a3c,
+	World.AvantGardens: 0x49525511,
+	World.AvantGardensSurvival: 0x538214e2,
+	World.SpiderQueenBattle: 0xfd403da,
+	World.BlockYard: 0xfd403da,
+	World.AvantGrove: 0xa890303,
+	World.NimbusStation: 0xda1e6b30,
+	World.PetCove: 0x476e1330,
+	World.VertigoLoop: 0x10fc0502,
+	World.TheBattleOfNimbusStation: 0x7d40258,
+	World.NimbusRock: 0x58d0191,
+	World.NimbusIsle: 0x94f045d,
+	World.GnarledForest: 0x12eac290,
+	World.CannonCoveShootingGallery: 0xb7702ef,
+	World.ChanteyShanty: 0x4b6015c,
+	World.ForbiddenValley: 0x8519760d,
+	World.ForbiddenValleyDragonBattle: 0x2f50187,
+	World.DragonmawChasm: 0x81850f4e,
+	World.RavenBluff: 0x3f00126,
+	World.Starbase3001: 0x7c202ee,
+	World.DeepFreeze: 0x2320106,
+	World.RobotCity: 0x793037f,
+	World.MoonBase: 0x43b01ad,
+	World.Portabello: 0x181507dd,
+	World.LEGOClub: 0x2040138,
+	World.CruxPrime: 0x4b17a399,
+	World.NexusTower: 0x9e4af43c,
+	World.NinjagoMonastery: 0x4d692c74,
+	World.BattleAgainstFrakjaw: 0x9eb00ef}
 
 class GeneralHandling(ServerModule):
 	def on_validated(self, address):
@@ -74,7 +74,7 @@ class GeneralHandling(ServerModule):
 		load_world.write(c_ushort(world_id))
 		load_world.write(c_ushort(world_instance))
 		load_world.write(c_uint(world_clone))
-		load_world.write(c_uint(checksum[world_id]))
+		load_world.write(c_uint(checksum[World(world_id)]))
 		load_world.write(bytes(2))
 		load_world.write(c_float(player.physics.position.x))
 		load_world.write(c_float(player.physics.position.y))

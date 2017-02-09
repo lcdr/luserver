@@ -48,7 +48,7 @@ class DestructibleComponent(Component):
 		killer = self.object._v_server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
 			killer.char.update_mission_task(TaskType.KillEnemy, self.object.lot)
-			self.object.stats.drop_rewards(*self.death_rewards, killer)
+			self.object.physics.drop_rewards(*self.death_rewards, killer)
 
 		if hasattr(self.object, "char"):
 			if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_died"):

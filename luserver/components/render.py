@@ -37,5 +37,5 @@ class RenderComponent(Component):
 		pass
 
 	@broadcast
-	def play_n_d_audio_emitte(self, callback_message_data:c_int64=0, emitter_id:c_int=0, event_guid:"str"=None, meta_event_name:"str"=None, result:c_bit=False, target_object_id_for_ndaudio_callback_messages:c_int64=0):
+	def play_n_d_audio_emitter(self, callback_message_data:c_int64=0, emitter_id:c_int=0, event_guid:"str"=None, meta_event_name:"str"=None, result:c_bit=False, target_object_id_for_ndaudio_callback_messages:c_int64=0):
 		pass

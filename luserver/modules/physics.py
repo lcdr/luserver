@@ -4,18 +4,19 @@ from ..ldf import LDF, LDFDataType
 from ..math.vector import Vector3
 from .module import ServerModule
 
-MODEL_DIMENSIONS = {}
-MODEL_DIMENSIONS[1656] = Vector3(-1, -1, -1), Vector3(1, 2, 1) # imagination powerup
-MODEL_DIMENSIONS[4734] = Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989) # wall
-MODEL_DIMENSIONS[4956] = Vector3(-2, 0, -2), Vector3(2, 4, 2) # AG monument switch
-MODEL_DIMENSIONS[5633] = Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2) # death plane
+MODEL_DIMENSIONS = {
+	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
+	4734: (Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)), # wall
+	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
+	5633: (Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)), # death plane
+	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
+	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225)), # POI wall
+	10042: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)), # primitive model
+	14510: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)), # primitive model phantom (humans only)
+	16506: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))} # primitive model phantom with skill component
+
 MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
-MODEL_DIMENSIONS[5652] = Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5) # cube
 MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
-MODEL_DIMENSIONS[12384] = Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225) # POI wall
-MODEL_DIMENSIONS[10042] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model
-MODEL_DIMENSIONS[14510] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model phantom (humans only)
-MODEL_DIMENSIONS[16506] = Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5) # primitive model phantom with skill component
 
 log = logging.getLogger(__file__)
 

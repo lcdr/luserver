@@ -463,7 +463,7 @@ class CharacterComponent(Component):
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id in self.object._v_server.db.object_skills[lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
-				self.object.skill.handle_behavior(behavior, b"", self.object)
+				self.object.skill.unserialize_behavior(behavior, b"", self.object)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
 		del self.object._v_server.dropped_loot[player_id][loot_object_id]
@@ -512,6 +512,7 @@ class CharacterComponent(Component):
 		obj = self.object._v_server.get_object(object_id)
 		if not obj:
 			return
+		log.debug("Interacting with %s", obj)
 		obj.handle("on_use", self.object, multi_interact_id)
 
 		self.update_mission_task(TaskType.Interact, obj.lot)
@@ -534,7 +535,7 @@ class CharacterComponent(Component):
 		if self.get_flag(flag_id) == flag:
 			return
 
-		self.flags ^= (-flag ^ self.flags) & (1 << flag_id)
+		self.flags ^= (-int(flag) ^ self.flags) & (1 << flag_id)
 		if flag:
 			self.update_mission_task(TaskType.Flag, flag_id)
 
@@ -631,7 +632,7 @@ class CharacterComponent(Component):
 				del prop_spawners[spawner.object_id]
 				item = self.object.inventory.add_item_to_inventory(model.lot)
 				if reason == DeleteReason.PickingModelUp:
-					self.inventory.equip_inventory(item_to_equip=item.object_id)
+					self.object.inventory.equip_inventory(item_to_equip=item.object_id)
 					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.amount)
 				break
 
