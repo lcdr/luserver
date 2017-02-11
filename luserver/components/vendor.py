@@ -10,6 +10,7 @@ log = logging.getLogger(__name__)
 class VendorComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		self.object.vendor = self
 		self.items_for_sale = []
 		for row in self.object._v_server.db.vendor_component[comp_id]:
 			self.items_for_sale.extend(row[0])

@@ -1,5 +1,3 @@
-import asyncio
-
 from ..bitstream import c_bit
 from .component import Component
 
@@ -31,7 +29,7 @@ class SwitchComponent(Component):
 
 	def on_enter(self, player):
 		self.activated = True
-		asyncio.get_event_loop().call_later(DEACTIVATE_INTERVAL, self.deactivate)
+		self.object.call_later(DEACTIVATE_INTERVAL, self.deactivate)
 
 	def deactivate(self):
 		self.activated = False

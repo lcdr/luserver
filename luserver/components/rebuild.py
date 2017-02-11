@@ -1,4 +1,3 @@
-import asyncio
 import time
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
@@ -77,17 +76,12 @@ class RebuildComponent(ScriptedActivityComponent):
 				out.write(c_bit(True))
 			self.rebuild_flag = False
 
-	def on_destruction(self):
-		for handle in self.callback_handles:
-			handle.cancel()
-		self.callback_handles.clear()
-
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		if self.rebuild_state not in (RebuildState.Open, RebuildState.Incomplete):
 			return
 		for handle in self.callback_handles:
-			handle.cancel()
+			self.object.cancel_callback(handle)
 		self.callback_handles.clear()
 		self.add_player(player)
 		self.rebuild_state = RebuildState.Building
@@ -97,9 +91,9 @@ class RebuildComponent(ScriptedActivityComponent):
 		drain_interval = self.complete_time/self.imagination_cost
 		remaining_cost = int((self.complete_time - self.last_progress) // drain_interval)
 		for i in range(remaining_cost):
-			self.callback_handles.append(asyncio.get_event_loop().call_later(self.last_progress%drain_interval + drain_interval*i, self.drain_imagination, player))
+			self.callback_handles.append(self.object.call_later(self.last_progress%drain_interval + drain_interval*i, self.drain_imagination, player))
 		for handler in self.object.handlers("complete_rebuild"):
-			self.callback_handles.append(asyncio.get_event_loop().call_later(self.complete_time-self.last_progress, handler, player))
+			self.callback_handles.append(self.object.call_later(self.complete_time-self.last_progress, handler, player))
 		return True
 
 	def drain_imagination(self, player):
@@ -118,7 +112,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 		assert len(self.object.children) == 1
 		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])
-		self.callback_handles.append(asyncio.get_event_loop().call_later(self.smash_time, self.smash_rebuild))
+		self.callback_handles.append(self.object.call_later(self.smash_time, self.smash_rebuild))
 
 		# drop rewards
 		self.object.physics.drop_rewards(*self.completion_rewards, player)
@@ -137,7 +131,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		player = self.object._v_server.get_object(user_id)
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
-				handle.cancel()
+				self.object.cancel_callback(handle)
 			self.callback_handles.clear()
 			self.last_progress += time.time() - self.rebuild_start_time
 			self.rebuild_state = RebuildState.Incomplete
@@ -148,7 +142,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			else:
 				fail_reason = FailReason.OutOfImagination
 			self.enable_rebuild(enable=False, fail=True, success=self.success, fail_reason=fail_reason, duration=self.last_progress, user=player.object_id)
-			self.callback_handles.append(asyncio.get_event_loop().call_later(self.reset_time, self.smash_rebuild))
+			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
 		player.char.terminate_interaction(obj_id_terminator=self.object.object_id, type=TerminateType.FromInteraction)
 
 	@broadcast

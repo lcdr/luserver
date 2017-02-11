@@ -40,7 +40,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def start(self):
 		self.start_time = time.time()
-		self.tick_handle = asyncio.get_event_loop().call_later(1, self.tick)
+		self.tick_handle = self.object.call_later(1, self.tick)
 		self.object.scripted_activity.activity_start()
 		self.set_network_var("Clear_Scoreboard", LDFDataType.BOOLEAN, True)
 		self.set_network_var("Start_Wave_Message", LDFDataType.STRING, "Start!")
@@ -58,7 +58,7 @@ class ScriptComponent(script.ScriptComponent):
 	def game_over(self, player):
 		if not self.are_all_players_dead():
 			return
-		self.tick_handle.cancel()
+		self.object.cancel_callback(self.tick_handle)
 		self.script_network_vars.clear()
 
 		for player_id, values in self.object.scripted_activity.activity_values.items():
@@ -76,7 +76,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def tick(self):
 		self.set_network_var("Update_Timer", LDFDataType.DOUBLE, time.time()-self.start_time)
-		self.tick_handle = asyncio.get_event_loop().call_later(1, self.tick)
+		self.tick_handle = self.object.call_later(1, self.tick)
 
 	def are_all_players_dead(self):
 		for player_id in self.object.scripted_activity.activity_values:

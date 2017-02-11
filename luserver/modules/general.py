@@ -99,26 +99,44 @@ class GeneralHandling(ServerModule):
 		bag = ET.SubElement(inv, "bag")
 		ET.SubElement(bag, "b", t="0", m=str(len(player.inventory.items)))
 		ET.SubElement(bag, "b", t="5", m=str(len(player.inventory.models)))
+		ET.SubElement(bag, "b", t="7", m=str(len(player.inventory.behaviors)))
 
 		items = ET.SubElement(inv, "items")
 
 		in_0 = ET.SubElement(items, "in", t="0")
-		items_ = [i for i in player.inventory.items if i is not None]
-		for item in items_:
-			ET.SubElement(in_0, "i", l=str(item.lot), c=str(item.amount), id=str(item.object_id), s=str(player.inventory.items.index(item)))
+		for index, item in enumerate(player.inventory.items):
+			if item is not None:
+				optional = {}
+				if item.amount != 1:
+					optional["c"] = str(item.amount)
+				ET.SubElement(in_0, "i", l=str(item.lot), id=str(item.object_id), s=str(index), **optional)
 
 		in_2 = ET.SubElement(items, "in", t="2")
-		for brick in player.inventory.bricks:
-			ET.SubElement(in_2, "i", l=str(brick.lot), c=str(brick.amount), id=str(brick.object_id), s=str(player.inventory.bricks.index(brick)))
+		for index, brick in enumerate(player.inventory.bricks):
+			optional = {}
+			if brick.amount != 1:
+				optional["c"] = str(brick.amount)
+			ET.SubElement(in_2, "i", l=str(brick.lot), id=str(brick.object_id), s=str(index), **optional)
 
 		in_5 = ET.SubElement(items, "in", t="5")
-		models = [i for i in player.inventory.models if i is not None]
-		for model in models:
-			i = ET.SubElement(in_5, "i", l=str(model.lot), c=str(model.amount), id=str(model.object_id), s=str(player.inventory.models.index(model)))
-			if hasattr(model, "module_lots"):
-				module_lots = [(LDFDataType.INT32, i) for i in model.module_lots]
-				module_lots = LDF().to_str_type(LDFDataType.STRING, module_lots)
-				ET.SubElement(i, "x", ma=module_lots)
+		for index, model in enumerate(player.inventory.models):
+			if model is not None:
+				optional = {}
+				if model.amount != 1:
+					optional["c"] = str(model.amount)
+				i = ET.SubElement(in_5, "i", l=str(model.lot), id=str(model.object_id), s=str(index), **optional)
+				if hasattr(model, "module_lots"):
+					module_lots = [(LDFDataType.INT32, i) for i in model.module_lots]
+					module_lots = LDF().to_str_type(LDFDataType.STRING, module_lots)
+					ET.SubElement(i, "x", ma=module_lots)
+
+		in_7 = ET.SubElement(items, "in", t="7")
+		for index, behavior in enumerate(player.inventory.behaviors):
+			if behavior is not None:
+				optional = {}
+				if behavior.amount != 1:
+					optional["c"] = str(behavior.amount)
+				ET.SubElement(in_7, "i", l=str(behavior.lot), id=str(behavior.object_id), s=str(index), **optional)
 
 		flag = ET.SubElement(root, "flag")
 		i = 0

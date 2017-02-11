@@ -91,7 +91,7 @@ class Init:
 			# tasks
 			tasks = []
 			for task_type, target, target_group, target_value, parameter in self.cdclient.execute("select taskType, target, targetGroup, targetValue, taskParam1 from MissionTasks where id = "+str(id)):
-				if task_type in (TaskType.KillEnemy, TaskType.Script, TaskType.ObtainItem, TaskType.MissionComplete, TaskType.TamePet):
+				if task_type in (TaskType.KillEnemy, TaskType.Script, TaskType.QuickBuild, TaskType.ObtainItem, TaskType.MissionComplete, TaskType.TamePet):
 					target = target,
 					if target_group:
 						target += tuple(int(target_id) for target_id in target_group.split(","))
@@ -115,6 +115,12 @@ class Init:
 				reward_emote = None
 
 			self.root.missions[id] = (currency, universe_score, bool(is_choice_reward), tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission)
+
+		self.root.mission_mail = BTrees.IOBTree.BTree()
+		for id, mission_id, attachment_lot in self.cdclient.execute("select ID, missionID, attachmentLOT from MissionEmail where attachmentLOT is not null"):
+			if attachment_lot == 0:
+				attachment_lot = None
+			self.root.mission_mail.setdefault(mission_id, []).append((id, attachment_lot))
 
 	def gen_comps(self):
 		# temporary, not actually needed for the server (therefore dict instead of root assignment)

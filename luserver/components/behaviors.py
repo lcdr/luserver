@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort
@@ -45,7 +44,7 @@ class BasicAttack(Behavior):
 		enemy_type = bitstream.read(c_ubyte) # ?
 		if enemy_type != 1:
 			log.debug(enemy_type)
-		print(target)
+		log.debug(target)
 		target.destructible.deal_damage(damage, self.object)
 		if hasattr(behavior, "on_success"):
 			self.unserialize_behavior(behavior.on_success, bitstream, target, level+1)
@@ -194,7 +193,7 @@ class OverTime(Behavior):
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
 		for interval in range(behavior.num_intervals):
-			asyncio.get_event_loop().call_later(interval * behavior.delay, self.unserialize_behavior, behavior.action, b"", target)
+			self.object.call_later(interval * behavior.delay, self.unserialize_behavior, behavior.action, b"", target)
 
 class Imagination(Behavior):
 	@staticmethod
@@ -228,7 +227,7 @@ class Duration(Behavior):
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
 		params = self.unserialize_behavior(behavior.action, bitstream, target, level+1)
-		asyncio.get_event_loop().call_later(behavior.duration, self.undo_behavior, behavior.action, params)
+		self.object.call_later(behavior.duration, self.undo_behavior, behavior.action, params)
 
 class Knockback(Behavior):
 	@staticmethod

@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import logging
 from collections import OrderedDict
@@ -88,7 +89,7 @@ class GameObject:
 		self._serialize = False
 		self.lot = lot
 		self.object_id = object_id
-		self.name = ""
+		self.name = set_vars.get("name", "")
 		self.config = set_vars.get("config", LDF())
 		self.spawner_object = None
 		self.spawner_waypoint_index = 0
@@ -126,13 +127,10 @@ class GameObject:
 
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
-				if component_id is None:
-					if "custom_script" in set_vars and set_vars["custom_script"] != "":
-						script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
-						comp = script.ScriptComponent,
-					else:
-						comp = ScriptComponent,
-				elif component_id in self._v_server.db.script_component:
+				if "custom_script" in set_vars and set_vars["custom_script"] != "":
+					script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
+					comp = script.ScriptComponent,
+				elif component_id is not None and component_id in self._v_server.db.script_component:
 					script = importlib.import_module("luserver.scripts."+self._v_server.db.script_component[component_id])
 					comp = script.ScriptComponent,
 				else:
@@ -221,6 +219,11 @@ class GameObject:
 		for child in self.children:
 			self._v_server.destruct(self._v_server.game_objects[child])
 
+		if self.object_id in self._v_server.callback_handles:
+			for handle in self._v_server.callback_handles[self.object_id].values():
+				handle.cancel()
+			del self._v_server.callback_handles[self.object_id]
+
 		self.handle("on_destruction", silent=True)
 
 		del self._v_server.game_objects[self.object_id]
@@ -266,6 +269,27 @@ class GameObject:
 		send_handler(*args, **kwargs)
 		for handler in handlers[1:]:
 			handler.__wrapped__(handler.__self__, *args, **kwargs)
+
+	def call_later(self, delay, callback, *args):
+		"""
+		Call a callback in delay seconds. The callback's handle is recorded so that when the object is destructed all pending callbacks are automatically cancelled.
+		Return the callback id to be used for cancel_callback.
+		"""
+		callback_id = self._v_server.last_callback_id
+		self._v_server.callback_handles.setdefault(self.object_id, {})[callback_id] = asyncio.get_event_loop().call_later(delay, self._callback, callback_id, callback, *args)
+		self._v_server.last_callback_id += 1
+		return callback_id
+
+	def _callback(self, callback_id, callback, *args):
+		"""Execute a callback and delete the handle from the list because it won't be cancelled."""
+		del self._v_server.callback_handles[self.object_id][callback_id]
+		callback(*args)
+
+	def cancel_callback(self, callback_id):
+		"""Cancel a callback and delete the handle from the list."""
+		if callback_id in self._v_server.callback_handles[self.object_id]:
+			self._v_server.callback_handles[self.object_id][callback_id].cancel()
+			del self._v_server.callback_handles[self.object_id][callback_id]
 
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
 	def __init__(self, server, lot, object_id, set_vars={}):

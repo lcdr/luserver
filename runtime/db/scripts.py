@@ -9,6 +9,7 @@ SCRIPTS = {
 	791: "venture_explorer.imagination_smashable",
 	815: "avant_gardens.stromling_mech",
 	816: "avant_gardens.turret",
+	867: "avant_gardens.survival.buff_station",
 	882: "avant_gardens.survival.world_control",
 	946: "gnarled_forest.torch",
 	947: "gnarled_forest.banana_tree",
@@ -64,5 +65,6 @@ SCRIPTS = {
 	r"ai\GF\L_GF_JAIL_WALLS.lua": "gnarled_forest.jail_walls",
 	r"ai\GENERAL\L_INSTANCE_EXIT_TRANSFER_PLAYER_TO_LAST_NON_INSTANCE.lua": "general.transfer_to_last_non_instance",
 	r"ai\NS\L_NS_JONNY_FLAG_MISSION_SERVER.lua": "nimbus_station.johnny_thunder",
+	r"ai\NS\L_NS_MODULAR_BUILD.lua": "nimbus_station.modular_build",
 	r"ai\NS\L_NS_QB_IMAGINATION_STATUE.lua": "nimbus_station.imagination_statue",
 	r"ai\NS\NS_PP_01\L_NS_PP_01_TELEPORT.lua": "property.teleport"}

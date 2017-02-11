@@ -1,4 +1,3 @@
-import asyncio
 import random
 
 from ..bitstream import c_bit, c_int
@@ -15,7 +14,7 @@ class ExhibitComponent(Component):
 
 	def random_exhibit(self):
 		self.exhibited_lot = random.choice(ALL_MODELS)
-		asyncio.get_event_loop().call_later(CYCLE_INTERVAL, self.random_exhibit)
+		self.object.call_later(CYCLE_INTERVAL, self.random_exhibit)
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.exhibit_flag or is_creation))
