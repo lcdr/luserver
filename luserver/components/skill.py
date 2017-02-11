@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import pprint
 import enum
@@ -162,7 +161,7 @@ class SkillComponent(Component):
 		bitstream = BitStream()
 		self.serialize_behavior(behavior, bitstream, target)
 
-		asyncio.get_event_loop().call_later(delay, lambda: self.sync_skill(bitstream=bitstream, ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
+		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bitstream, ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
 	def cast_projectile(self, proj_behavs, target):
@@ -172,7 +171,7 @@ class SkillComponent(Component):
 			self.original_target_id = target.object_id
 			self.serialize_behavior(behav, bitstream, target)
 		delay = 1
-		asyncio.get_event_loop().call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bitstream))
+		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bitstream))
 		return proj_id
 
 	@broadcast
@@ -192,6 +191,8 @@ class SkillComponent(Component):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
 		if optional_target_id != 0:
+			if optional_target_id not in self.object._v_server.game_objects:
+				return
 			target = self.object._v_server.game_objects[optional_target_id]#self.object
 		else:
 			target = self.object
@@ -279,7 +280,7 @@ class SkillComponent(Component):
 		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.NPCCombatSkill, BehaviorTemplate.AirMovement):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
 
-		print("  "*level+"target",target)
+		log.debug("  "*level+"target",target)
 
 		if behavior.template in TEMPLATES:
 			return TEMPLATES[behavior.template].unserialize(self, behavior, bitstream, target, level)

@@ -51,6 +51,10 @@ class DestructibleComponent(Component):
 			self.object.physics.drop_rewards(*self.death_rewards, killer)
 
 		if hasattr(self.object, "char"):
+			if self.object.char.vehicle_id != 0:
+				self.object._v_server.game_objects[self.object.char.vehicle_id].comp_108.driver_id = 0
+				self.object.char.vehicle_id = 0
+
 			if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_died"):
 				self.object._v_server.world_control_object.script.player_died(player=self.object)
 		else:

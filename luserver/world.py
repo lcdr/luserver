@@ -89,6 +89,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.world_data = None
 		self.game_objects = {}
 		self.models = []
+		self.last_callback_id = 0
+		self.callback_handles = {}
 		self.set_world_id(world_id)
 		self.accounts = {}
 		self.dropped_loot = {}

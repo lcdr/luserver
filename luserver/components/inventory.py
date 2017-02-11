@@ -4,6 +4,7 @@ class InventoryType:
 	TempItems = 4
 	Models = 5
 	TempModels = 6
+	Behaviors = 7
 	# Properties = 8 ?
 	# VendorSellSpace = 11
 	MissionObjects = 12
@@ -16,6 +17,7 @@ class ItemType:
 	LeftHand = 5
 	RightHand = 6
 	Pants = 7
+	Behavior = 10
 	SomeOtherKindOfMissionObject = 13
 	Consumable = 14
 	Chest = 15
@@ -80,6 +82,7 @@ class InventoryComponent(Component):
 		self.bricks = PersistentList()
 		self.temp_items = PersistentList()
 		self.models = PersistentList([None]*200)
+		self.behaviors = PersistentList([None]*200)
 		self.temp_models = PersistentList()
 		self.mission_objects = PersistentList()
 
@@ -116,6 +119,8 @@ class InventoryComponent(Component):
 			return self.models
 		if inventory_type == InventoryType.TempModels:
 			return self.temp_models
+		if inventory_type == InventoryType.Behaviors:
+			return self.behaviors
 		if inventory_type == InventoryType.MissionObjects:
 			return self.mission_objects
 		raise NotImplementedError(inventory_type)
@@ -158,6 +163,8 @@ class InventoryComponent(Component):
 				inventory_type = InventoryType.Bricks
 			elif item_type in (ItemType.Hat, ItemType.Hair, ItemType.Neck, ItemType.LeftHand, ItemType.RightHand, ItemType.Pants, ItemType.SomeOtherKindOfMissionObject, ItemType.Consumable, ItemType.Chest, ItemType.Package, ItemType.Mount):
 				inventory_type = InventoryType.Items
+			elif item_type == ItemType.Behavior:
+				inventory_type = InventoryType.Behaviors
 			elif item_type == ItemType.MissionObject:
 				inventory_type = InventoryType.MissionObjects
 			elif item_type in (ItemType.Model, ItemType.Vehicle):

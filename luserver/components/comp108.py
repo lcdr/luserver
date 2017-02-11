@@ -1,4 +1,3 @@
-import asyncio
 from ..bitstream import c_bit, c_float, c_int, c_int64
 from ..ldf import LDF
 from .component import Component
@@ -30,4 +29,4 @@ class Comp108Component(Component):
 
 	def request_die(self, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash
-		asyncio.get_event_loop().call_later(3, self.object.destructible.resurrect)
+		self.object.call_later(3, self.object.destructible.resurrect)

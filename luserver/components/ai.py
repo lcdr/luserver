@@ -1,5 +1,3 @@
-import asyncio
-
 from ..bitstream import c_bit
 from ..math.quaternion import Quaternion
 from .component import Component
@@ -12,14 +10,9 @@ class BaseCombatAIComponent(Component):
 		self.object.ai = self
 		self._flags["target"] = "ai_flag"
 		self.target = None
-		self.callback = None
-
-	def on_destruction(self):
-		if self.callback is not None:
-			self.callback.cancel()
 
 	def enable(self):
-		self.callback = asyncio.get_event_loop().call_later(UPDATE_INTERVAL, self.update)
+		self.object.call_later(UPDATE_INTERVAL, self.update)
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))
@@ -46,4 +39,4 @@ class BaseCombatAIComponent(Component):
 			self.object.physics.rotation = Quaternion.look_rotation(pos_diff)
 			self.object.skill.cast_skill(216, self.target)
 
-		self.callback = asyncio.get_event_loop().call_later(UPDATE_INTERVAL, self.update)
+		self.object.call_later(UPDATE_INTERVAL, self.update)

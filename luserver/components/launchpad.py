@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from ..bitstream import c_int, c_int64
+from ..ldf import LDF
 from ..messages import broadcast
 from .component import Component
 
@@ -23,7 +24,7 @@ class LaunchpadComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id)
 				break
 		else:
-			log.warning("Player has no rocket!")
+			player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="You don't have a rocket!")
 
 	def fire_event_server_side(self, player, args:"wstr"=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender_id:c_int64=None):
 		if args == "ZonePlayer":

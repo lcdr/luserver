@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 
@@ -12,7 +13,7 @@ from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from ..modules.social import FriendUpdateType
 from .component import Component
-from .inventory import InventoryType, LootType
+from .inventory import InventoryType, LootType, Stack
 from .pet import PetTamingNotify
 from .mission import check_prereqs, MissionProgress, MissionState, TaskType
 
@@ -283,16 +284,17 @@ class CharacterComponent(Component):
 			return SENTINEL_TOKEN
 
 	def random_loot(self, loot_matrix):
-		# ridiculously bad and biased temporary implementation, please fix
 		loot = []
+		roll = random.random()
 		for loot_table, percent, min_to_drop, max_to_drop in loot_matrix:
-			for _ in range(random.randint(min_to_drop, max_to_drop)):
-				lot, _ = random.choice(loot_table)
-				if lot == FACTION_TOKEN_PROXY:
-					lot = self.faction_token_lot()
-					if lot is None:
-						continue
-				loot.append(lot)
+			if roll < percent:
+				for _ in range(random.randint(min_to_drop, max_to_drop)):
+					lot, _ = random.choice(loot_table)
+					if lot == FACTION_TOKEN_PROXY:
+						lot = self.faction_token_lot()
+						if lot is None:
+							continue
+					loot.append(lot)
 		return loot
 
 	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
@@ -392,6 +394,8 @@ class CharacterComponent(Component):
 
 	def complete_mission(self, mission_id):
 		mission = self.missions[mission_id]
+		if mission.state != MissionState.Active:
+			raise RuntimeError("Mission not active")
 		mission.state = MissionState.Completed
 
 		if mission.is_mission:
@@ -432,6 +436,15 @@ class CharacterComponent(Component):
 		del mission.is_mission
 
 		self.update_mission_task(TaskType.MissionComplete, mission_id)
+
+		if mission_id in self.object._v_server.db.mission_mail:
+			for id, attachment_lot in self.object._v_server.db.mission_mail[mission_id]:
+				if attachment_lot is not None:
+					object_id = self.object._v_server.new_object_id()
+					attachment = Stack(self.object._v_server.db, object_id, attachment_lot)
+				else:
+					attachment = None
+				self.object._v_server.mail.send_mail("%[MissionEmail_{id}_senderName]".format(id=id), "%[MissionEmail_{id}_subjectText]".format(id=id), "%[MissionEmail_{id}_bodyText]".format(id=id), self.object, attachment)
 
 		self.object._v_server.commit()
 
@@ -573,7 +586,7 @@ class CharacterComponent(Component):
 					if component_type == 53: # PackageComponent, make an enum for this somewhen
 						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
 						for lot in self.random_loot(self.object._v_server.db.package_component[component_id]):
-							self.object.inventory.add_item_to_inventory(lot)
+							asyncio.get_event_loop.call_soon(self.object.inventory.add_item_to_inventory, lot)
 						return
 
 	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:c_bit=None):

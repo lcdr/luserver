@@ -1,4 +1,3 @@
-import asyncio
 import itertools
 
 from ..bitstream import c_bit, c_float, c_int, c_uint
@@ -50,8 +49,8 @@ class MovingPlatformComponent(Component):
 		self.target_position.update(*position)
 		self.current_waypoint_index = self.next_waypoint_index
 		self.next_waypoint_index = index
-		asyncio.get_event_loop().call_later(speed, self.update_moving_platform_unknown) # i have no idea what the right time interval is
-		asyncio.get_event_loop().call_later(speed+wait_time, self.update_waypoint) # i have no idea what the right time interval is
+		self.object.call_later(speed, self.update_moving_platform_unknown) # i have no idea what the right time interval is
+		self.object.call_later(speed+wait_time, self.update_waypoint) # i have no idea what the right time interval is
 
 	def update_moving_platform_unknown(self):
 		if self.moving_platform_unknown == 2:

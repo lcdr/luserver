@@ -20,6 +20,8 @@ class PhysicsComponent(Component):
 		if "rotation" in set_vars:
 			self.rotation.update(set_vars["rotation"])
 
+	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
+
 	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner):
 		if currency_min is not None and currency_max is not None:
 			currency = random.randint(currency_min, currency_max)

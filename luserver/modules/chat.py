@@ -17,6 +17,8 @@ from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
 from .module import ServerModule
 
+log = logging.getLogger(__file__)
+
 class ChatCommandError(Exception):
 	pass
 
@@ -47,13 +49,14 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=True, **kwargs):
+	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=True, chat=None, **kwargs):
+		self.chat = chat
 		super().__init__(*args, usage=usage, formatter_class=formatter_class, add_help=False, **kwargs)
 		if add_help:
 			self.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
 
 	def _print_message(self, message, *args, **kwargs):
-		print(message)
+		self.chat.sys_msg_sender(message)
 
 	def exit(self, *args, **kwargs):
 		"""Modified to raise exception instead of exiting."""
@@ -86,13 +89,12 @@ def toggle_bool(str_):
 class ChatHandling(ServerModule):
 	def __init__(self, server):
 		super().__init__(server)
-		self.chat_parser = CustomArgumentParser(prog="server command line")
+		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands")
 
 		add_item_cmd = self.commands.add_parser("additem")
 		add_item_cmd.add_argument("lot", type=int)
 		add_item_cmd.add_argument("--amount", type=int, default=1)
-		add_item_cmd.add_argument("--all")
 		add_item_cmd.set_defaults(func=self.add_item_cmd)
 
 		add_mission_cmd = self.commands.add_parser("addmission")
@@ -107,7 +109,8 @@ class ChatHandling(ServerModule):
 		check_for_leaks_cmd.set_defaults(func=self.check_for_leaks_cmd)
 
 		complete_mission_cmd = self.commands.add_parser("completemission")
-		complete_mission_cmd.add_argument("id", type=int)
+		complete_mission_cmd.add_argument("mission")
+		complete_mission_cmd.add_argument("--fully", action="store_true")
 		complete_mission_cmd.set_defaults(func=self.complete_mission_cmd)
 
 		self.commands.add_parser("dance") # client-side
@@ -209,6 +212,10 @@ class ChatHandling(ServerModule):
 		teleport_cmd.add_argument("--y", action="store_false")
 		teleport_cmd.set_defaults(func=self.teleport_cmd)
 
+		vendor_cmd = self.commands.add_parser("vendor")
+		vendor_cmd.add_argument("--items", choices=("items", "models"), default="items")
+		vendor_cmd.set_defaults(func=self.vendor_cmd)
+
 		whisper_cmd = self.commands.add_parser("whisper", aliases=("w", "tell"), description="Private message") # client-side
 		whisper_cmd.add_argument("name")
 		whisper_cmd.add_argument("text", nargs="+")
@@ -216,6 +223,8 @@ class ChatHandling(ServerModule):
 		world_cmd = self.commands.add_parser("world", description="Go to world")
 		world_cmd.add_argument("name")
 		world_cmd.set_defaults(func=self.world_cmd)
+
+
 
 	def on_validated(self, address):
 		self.server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message, address)
@@ -252,8 +261,13 @@ class ChatHandling(ServerModule):
 
 		self.server.send(message, address, broadcast)
 
+	def system_message(self, message, address=None, broadcast=True, log_level=logging.INFO):
+		if message:
+			log.log(log_level, message)
+			self.send_general_chat_message("", message, address, broadcast=False)
+
 	def on_private_chat_message(self, message, address):
-		print("TODO: urgently needs refactoring")
+		log.warn("TODO: urgently needs refactoring")
 		message.skip_read(90)
 		recipient_name = message.read(str, allocated_length=66)
 
@@ -276,9 +290,7 @@ class ChatHandling(ServerModule):
 	# Command parsing
 
 	def parse_command(self, command, sender):
-		out = io.StringIO()
-		global print
-		print = functools.partial(builtins.print, file=out)
+		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)
 		try:
 			# todo: sender privilege level check (if possible in argparse)
 			args = self.chat_parser.parse_args(command.split())
@@ -286,31 +298,18 @@ class ChatHandling(ServerModule):
 				args.func(args, sender)
 		except Exception as e:
 			import traceback
-			traceback.print_exc(e)
-			print(e)
-		print = builtins.print
-		if out.getvalue():
-			print(out.getvalue().rstrip("\n"))
-			self.send_general_chat_message("", out.getvalue().rstrip("\n"), sender.char.address, broadcast=False)
+			traceback.print_exc()
+			self.sys_msg_sender("%s: %s" % (type(e).__name__, e))
 
 	# Commands
 
 	def add_item_cmd(self, args, sender):
-		if args.all == "items":
-			sender.inventory.items.extend([None] * (len(ALL_ITEMS)+100))
-			for item_lot in ALL_ITEMS:
-				sender.inventory.add_item_to_inventory(item_lot, notify_client=False)
-		elif args.all == "models":
-			sender.inventory.models.extend([None] * (len(ALL_MODELS)+100))
-			for model_lot in ALL_MODELS:
-				sender.inventory.add_item_to_inventory(model_lot, notify_client=False)
-		else:
-			sender.inventory.add_item_to_inventory(args.lot, args.amount)
+		sender.inventory.add_item_to_inventory(args.lot, args.amount)
 
 	def add_mission_cmd(self, args, sender):
 		if args.mission in MISSIONS:
 			for mission_id in MISSIONS[args.mission]:
-				sender.char.complete_mission(mission_id)
+				sender.char.add_mission(mission_id)
 		else:
 			sender.char.add_mission(int(args.mission))
 
@@ -321,14 +320,28 @@ class ChatHandling(ServerModule):
 		sender.char.check_for_leaks()
 
 	def complete_mission_cmd(self, args, sender):
-		mission = sender.char.missions[args.id]
-		if mission.state == MissionState.Active:
-			for task in mission.tasks:
-				if isinstance(task.target, tuple):
-					target = task.target[0]
-				else:
-					target = task.target
-				sender.char.update_mission_task(task.type, target, increment=task.target_value, mission_id=args.id)
+		if args.mission in MISSIONS:
+			missions = MISSIONS[args.mission]
+		else:
+			missions = [int(args.mission)]
+		for mission_id in missions:
+			asyncio.get_event_loop().call_soon(self.async_complete_mission, mission_id, args.fully, sender)
+
+	def async_complete_mission(self, mission_id, fully, sender):
+		if mission_id not in sender.char.missions:
+			sender.char.add_mission(mission_id)
+
+		if fully:
+			sender.char.complete_mission(mission_id)
+		else:
+			mission = sender.char.missions[mission_id]
+			if mission.state == MissionState.Active:
+				for task in mission.tasks:
+					if isinstance(task.target, tuple):
+						target = task.target[0]
+					else:
+						target = task.target
+					sender.char.update_mission_task(task.type, target, increment=task.target_value, mission_id=mission_id)
 
 	def dismount_cmd(self, args, sender):
 		if sender.char.vehicle_id != 0:
@@ -354,7 +367,7 @@ class ChatHandling(ServerModule):
 		elif args.action == "remove":
 			self.server.file_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			print(self.server.file_logged_packets)
+			self.sys_msg_sender(self.server.file_logged_packets)
 
 	def glow_cmd(self, args, sender):
 		if sender.char.rebuilding == 0:
@@ -363,27 +376,27 @@ class ChatHandling(ServerModule):
 			sender.char.rebuilding = 0
 
 	def help_cmd(self, args, sender):
-		print("Please use -h / --help for help.")
+		self.sys_msg_sender("Please use -h / --help for help.")
 
 	def jetpack_cmd(self, args, sender):
 		sender.char.set_jet_pack_mode(args.enable, args.hover, args.bypass_checks, args.effect_id, args.air_speed, args.max_air_speed, args.vertical_velocity)
 
 	def level_cmd(self, args, sender):
 		sender.char.level = args.level
-		print("Level will appear set on next login.")
+		self.sys_msg_sender("Level will appear set on next login.")
 
 	def location_cmd(self, args, sender):
 		if args.player:
 			for obj in self.server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.startswith(args.player):
-					print(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
+					self.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
 					if obj.char._world[0] != self.server.world_id[0]:
-						print(World(obj.char._world[0]))
+						self.sys_msg_sender(World(obj.char._world[0]))
 					break
 
 	def log_cmd(self, args, sender):
 		logging.getLogger(args.logger).setLevel(args.level.upper())
-		print("%s set to %s." % (args.logger, args.level))
+		self.sys_msg_sender("%s set to %s." % (args.logger, args.level))
 
 	def noconsolelog_cmd(self, args, sender):
 		if args.action == "add":
@@ -391,7 +404,7 @@ class ChatHandling(ServerModule):
 		elif args.action == "remove":
 			self.server.not_console_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			print(self.server.not_console_logged_packets)
+			self.sys_msg_sender(self.server.not_console_logged_packets)
 
 	def refill_stats_cmd(self, args, sender):
 		sender.stats.life = sender.stats.max_life
@@ -401,9 +414,9 @@ class ChatHandling(ServerModule):
 	def remove_mission_cmd(self, args, sender):
 		if args.id in sender.char.missions:
 			del sender.char.missions[args.id]
-			print("Mission removed")
+			self.sys_msg_sender("Mission removed")
 		else:
-			print("Mission not found")
+			self.sys_msg_sender("Mission not found")
 
 	def reset_missions_cmd(self, args, sender):
 		sender.char.missions.clear()
@@ -431,7 +444,7 @@ class ChatHandling(ServerModule):
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:
 			with open(path+"/"+file, "rb") as content:
-				print("sending", file)
+				self.sys_msg_sender("sending", file)
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
@@ -471,12 +484,20 @@ class ChatHandling(ServerModule):
 					pos = obj.physics.position
 					break
 			else:
-				print("no player found")
+				self.sys_msg_sender("no player found")
 				return
 		else:
 			pos = Vector3(sender.physics.position.x, 100000, sender.physics.position.z)
 
 		sender.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
+
+	def vendor_cmd(self, args, sender):
+		if args.items == "items":
+			items = ALL_ITEMS
+		elif args.items == "models":
+			items = ALL_MODELS
+		vendor = self.server.spawn_object(6875, parent=sender, set_vars={"name": "Vendor of Everything"})
+		vendor.vendor.items_for_sale = [(lot, 0) for lot in items]
 
 	def world_cmd(self, args, sender):
 		asyncio.ensure_future(sender.char.transfer_to_world((World[args.name].value, 0, 0), respawn_point_name=""))
