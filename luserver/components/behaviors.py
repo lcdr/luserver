@@ -14,6 +14,7 @@ class Behavior:
 		raise NotImplementedError
 
 class BasicAttack(Behavior):
+	@staticmethod
 	def serialize(self, behavior, bitstream, target, level):
 		bitstream.align_write()
 		bitstream.write(c_ushort(0))
@@ -45,7 +46,8 @@ class BasicAttack(Behavior):
 		if enemy_type != 1:
 			log.debug(enemy_type)
 		log.debug(target)
-		target.destructible.deal_damage(damage, self.object)
+		if target is not None:
+			target.destructible.deal_damage(damage, self.object)
 		if hasattr(behavior, "on_success"):
 			self.unserialize_behavior(behavior.on_success, bitstream, target, level+1)
 
@@ -181,6 +183,10 @@ class MovementSwitch(Behavior):
 
 class AreaOfEffect(Behavior):
 	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		bitstream.write(c_uint(0)) # number of targets
+
+	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
 		targets = []
 		for _ in range(bitstream.read(c_uint)): # number of targets
@@ -196,6 +202,10 @@ class OverTime(Behavior):
 			self.object.call_later(interval * behavior.delay, self.unserialize_behavior, behavior.action, b"", target)
 
 class Imagination(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		pass
+
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
 		target.stats.imagination += behavior.imagination
@@ -259,7 +269,7 @@ class RepairArmor(Behavior):
 class SpawnObject(Behavior):
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
-		return self.object._v_server.spawn_object(behavior.lot, parent=self.object)
+		return self.object._v_server.spawn_object(behavior.lot, {"parent": self.object})
 
 SpawnQuickbuild = SpawnObject # works the same
 
@@ -313,6 +323,15 @@ class ForceMovement(Behavior):
 			self.delayed_behaviors[handle] = None # not known yet
 
 class Interrupt(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		if target != self.object:
+			log.debug("Interrupt: target != self, reading bit")
+			bitstream.write(c_bit(False))
+		if not getattr(behavior, "interrupt_block", False):
+			bitstream.write(c_bit(False))
+		bitstream.write(c_bit(False))
+
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
 		if target != self.object:

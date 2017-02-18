@@ -9,18 +9,20 @@ class SpawnerComponent(Component):
 		self.spawntemplate = set_vars["spawntemplate"]
 		self.unknown = set_vars.get("spawner_unknown", (0, 0, 1))
 		self.waypoints = set_vars["spawner_waypoints"]
+		self.spawned_on_smash = set_vars.get("spawned_on_smash", False)
 		self.last_waypoint_index = 0
 
 	def serialize(self, out, is_creation):
 		pass
 
-	def spawn(self, all=False):
-		if all:
-			spawns = self.unknown[2]
-		else:
-			spawns = 1
-		for _ in range(spawns):
-			self.last_waypoint_index = random.randrange(len(self.waypoints))
-			spawned_vars = self.waypoints[self.last_waypoint_index]
-			spawned = self.object._v_server.spawn_object(self.spawntemplate, spawner=self.object, set_vars=spawned_vars)
+	def on_startup(self):
+		if not self.spawned_on_smash:
+			for _ in range(self.unknown[2]):
+				self.spawn()
+
+	def spawn(self):
+		self.last_waypoint_index = random.randrange(len(self.waypoints))
+		spawned_vars = self.waypoints[self.last_waypoint_index].copy()
+		spawned_vars["spawner"] = self.object
+		spawned = self.object._v_server.spawn_object(self.spawntemplate, spawned_vars)
 		return spawned

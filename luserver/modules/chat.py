@@ -141,6 +141,9 @@ class ChatHandling(ServerModule):
 		help_cmd = self.commands.add_parser("help")
 		help_cmd.set_defaults(func=self.help_cmd)
 
+		high_stats_cmd = self.commands.add_parser("highstats")
+		high_stats_cmd.set_defaults(func=self.high_stats_cmd)
+
 		jetpack_cmd = self.commands.add_parser("jetpack", description="Jetpacks!")
 		jetpack_cmd.add_argument("enable", type=normal_bool)
 		jetpack_cmd.add_argument("--hover", action="store_true")
@@ -267,7 +270,7 @@ class ChatHandling(ServerModule):
 			self.send_general_chat_message("", message, address, broadcast=False)
 
 	def on_private_chat_message(self, message, address):
-		log.warn("TODO: urgently needs refactoring")
+		log.warning("TODO: urgently needs refactoring")
 		message.skip_read(90)
 		recipient_name = message.read(str, allocated_length=66)
 
@@ -378,6 +381,12 @@ class ChatHandling(ServerModule):
 	def help_cmd(self, args, sender):
 		self.sys_msg_sender("Please use -h / --help for help.")
 
+	def high_stats_cmd(self, args, sender):
+		sender.stats.max_life = 99
+		sender.stats.max_armor = 99
+		sender.stats.max_imagination = 99
+		self.refill_stats_cmd(args, sender)
+
 	def jetpack_cmd(self, args, sender):
 		sender.char.set_jet_pack_mode(args.enable, args.hover, args.bypass_checks, args.effect_id, args.air_speed, args.max_air_speed, args.vertical_velocity)
 
@@ -454,7 +463,10 @@ class ChatHandling(ServerModule):
 		sender.char.set_flag(args.value, args.flag_id)
 
 	def spawn_cmd(self, args, sender):
-		self.server.spawn_object(args.lot, parent=sender, position=args.position)
+		set_vars = {"parent": sender}
+		if args.position is not None:
+			set_vars["position"] = args.position
+		self.server.spawn_object(args.lot, set_vars)
 
 	def spawn_phantom_cmd(self, args, sender):
 		if args.type == "wall":
@@ -465,9 +477,11 @@ class ChatHandling(ServerModule):
 			displacement = Vector3(0, 2.5, 0)
 		if not isinstance(args.direction, Vector3):
 			args.direction = Vector3(args.direction)
-		set_vars = {}
-		set_vars["scale"] = args.scale
-		obj = self.server.spawn_object(lot, parent=sender, position=sender.physics.position+displacement, set_vars=set_vars)
+		set_vars = {
+			"scale": args.scale,
+			"parent": sender,
+			"position": sender.physics.position+displacement}
+		obj = self.server.spawn_object(lot, set_vars)
 		obj.physics.physics_effect_active = True
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
 		obj.physics.physics_effect_amount = args.amount
@@ -496,7 +510,7 @@ class ChatHandling(ServerModule):
 			items = ALL_ITEMS
 		elif args.items == "models":
 			items = ALL_MODELS
-		vendor = self.server.spawn_object(6875, parent=sender, set_vars={"name": "Vendor of Everything"})
+		vendor = self.server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
 		vendor.vendor.items_for_sale = [(lot, 0) for lot in items]
 
 	def world_cmd(self, args, sender):

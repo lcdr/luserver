@@ -8,6 +8,19 @@ class Init:
 	def __init__(self, root, cdclient):
 		self.root = root
 		self.cdclient = cdclient
+
+		root.factions = BTrees.IOBTree.BTree()
+		for faction, enemyList in self.cdclient.execute("select faction, enemyList from Factions"):
+			if not enemyList:
+				enemies = ()
+			else:
+				enemies = tuple(int(i) for i in enemyList.split(","))
+			root.factions[faction] = enemies
+
+		root.object_skills = BTrees.IOBTree.BTree()
+		for lot, skill_id in self.cdclient.execute("select objectTemplate, skillID from ObjectSkills"):
+			root.object_skills.setdefault(lot, []).append(skill_id)
+
 		self.behavs_accessed = 0
 		self.templates = {b: t for b, t in self.cdclient.execute("select behaviorID, templateID from BehaviorTemplate").fetchall()}
 		self.parameters = {}

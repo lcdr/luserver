@@ -1,4 +1,5 @@
 import enum
+import numbers
 
 from .bitstream import BitStream, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint
 
@@ -44,7 +45,7 @@ class LDF(dict):
 				if value < 0:
 					raise ValueError
 		elif data_type in (LDFDataType.FLOAT, LDFDataType.DOUBLE):
-			if not isinstance(value, float):
+			if not isinstance(value, numbers.Real):
 				raise TypeError
 		elif data_type == LDFDataType.BOOLEAN:
 			if not isinstance(value, bool):

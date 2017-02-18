@@ -39,21 +39,16 @@ while True:
 		os.system(r"start /d db runzeo -a 12345 -f ./server_db.db")
 		time.sleep(3)
 
-try:
-	if len(sys.argv) == 1:
-		AuthServer(config["connection"]["internal_host"], max_connections=8, db_conn=conn)
+if len(sys.argv) == 1:
+	AuthServer(config["connection"]["internal_host"], max_connections=8, db_conn=conn)
+else:
+	world_id = int(sys.argv[1]), int(sys.argv[2])
+	if len(sys.argv) == 4:
+		port = int(sys.argv[3])
 	else:
-		world_id = int(sys.argv[1]), int(sys.argv[2])
-		if len(sys.argv) == 4:
-			port = int(sys.argv[3])
-		else:
-			port = 0
-		WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn)
+		port = 0
+	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn)
 
-	loop = asyncio.get_event_loop()
-	loop.run_forever()
-	loop.close()
-except Exception:
-	import traceback
-	traceback.print_exc()
-	time.sleep(5)
+loop = asyncio.get_event_loop()
+loop.run_forever()
+loop.close()

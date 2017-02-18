@@ -15,10 +15,15 @@ class PhysicsComponent(Component):
 		self._flags["rotation"] = "physics_data_flag"
 		self.position = Vector3()
 		self.rotation = Quaternion()
+
 		if "position" in set_vars:
 			self.position.update(set_vars["position"])
+		elif "parent" in set_vars:
+			self.position.update(set_vars["parent"].physics.position)
 		if "rotation" in set_vars:
 			self.rotation.update(set_vars["rotation"])
+		elif "parent" in set_vars:
+			self.rotation.update(set_vars["parent"].physics.rotation)
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 

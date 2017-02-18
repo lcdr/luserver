@@ -91,10 +91,23 @@ class GameObject:
 		self.object_id = object_id
 		self.name = set_vars.get("name", "")
 		self.config = set_vars.get("config", LDF())
-		self.spawner_object = None
-		self.spawner_waypoint_index = 0
+
+		if "spawner" in set_vars:
+			self.spawner_object = set_vars["spawner"]
+			self.spawner_waypoint_index = set_vars["spawner"].spawner.last_waypoint_index
+		else:
+			self.spawner_object = None
+			self.spawner_waypoint_index = 0
+
 		self.scale = set_vars.get("scale", 1)
-		self.parent = None
+
+		if "parent" in set_vars:
+			self.parent = set_vars["parent"].object_id
+			set_vars["parent"].children.append(self.object_id)
+			set_vars["parent"].attr_changed("children")
+		else:
+			self.parent = None
+
 		self.children = []
 		self.groups = set_vars.get("groups", ())
 		if "respawn_name" in set_vars:
@@ -245,7 +258,7 @@ class GameObject:
 		if script_handler is not None:
 			handlers.append(script_handler)
 
-		if not silent and not handlers:
+		if not handlers and not silent:
 			log.info("Object %s has no handlers for %s", self, func_name)
 
 		return handlers

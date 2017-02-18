@@ -9,7 +9,7 @@ from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
 from .mission import TaskType
-from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Chain, ForceMovement, Interrupt, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, ClearTarget
+from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
 
 log = logging.getLogger(__name__)
 
@@ -102,11 +102,13 @@ TEMPLATES = {
 	BehaviorTemplate.Chain: Chain,
 	BehaviorTemplate.ForceMovement: ForceMovement,
 	BehaviorTemplate.Interrupt: Interrupt,
+	BehaviorTemplate.ChargeUp: ChargeUp,
 	BehaviorTemplate.SwitchMultiple: SwitchMultiple,
 	BehaviorTemplate.Start: Start,
 	BehaviorTemplate.NPCCombatSkill: NPCCombatSkill,
 	BehaviorTemplate.Verify: Verify,
 	BehaviorTemplate.AirMovement: AirMovement,
+	BehaviorTemplate.SpawnQuickbuild: SpawnQuickbuild,
 	BehaviorTemplate.ClearTarget: ClearTarget}
 
 class SkillSlot:
@@ -131,6 +133,7 @@ class SkillComponent(Component):
 		self.last_ui_handle = 0
 		self.last_ui_skill_handle = self.last_ui_handle
 		self.everlasting = False
+		self.skills = self.object._v_server.db.object_skills.get(self.object.lot, []).copy()
 
 	def serialize(self, out, is_creation):
 		if is_creation:
@@ -231,7 +234,7 @@ class SkillComponent(Component):
 			player = self.object
 		else:
 			player = None
-		self.echo_sync_skill(done, bitstream, ui_behavior_handle, ui_skill_handle, player=None) # don't send echo to self
+		self.echo_sync_skill(done, bitstream, ui_behavior_handle, ui_skill_handle, player=player) # don't send echo to self
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
@@ -279,8 +282,6 @@ class SkillComponent(Component):
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
 		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.NPCCombatSkill, BehaviorTemplate.AirMovement):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
-
-		log.debug("  "*level+"target",target)
 
 		if behavior.template in TEMPLATES:
 			return TEMPLATES[behavior.template].unserialize(self, behavior, bitstream, target, level)
