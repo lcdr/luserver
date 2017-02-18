@@ -472,6 +472,8 @@ class CharacterComponent(Component):
 
 	def pickup_item(self, loot_object_id:c_int64=None, player_id:c_int64=None):
 		assert player_id == self.object.object_id
+		if loot_object_id not in self.object._v_server.dropped_loot[player_id]:
+			return
 		lot = self.object._v_server.dropped_loot[player_id][loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id in self.object._v_server.db.object_skills[lot]:
@@ -586,7 +588,7 @@ class CharacterComponent(Component):
 					if component_type == 53: # PackageComponent, make an enum for this somewhen
 						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
 						for lot in self.random_loot(self.object._v_server.db.package_component[component_id]):
-							asyncio.get_event_loop.call_soon(self.object.inventory.add_item_to_inventory, lot)
+							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot)
 						return
 
 	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:c_bit=None):

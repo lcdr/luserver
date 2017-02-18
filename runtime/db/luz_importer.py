@@ -366,6 +366,9 @@ class _LVLImporter:
 
 					spawner_vars = {}
 					spawner_vars["spawntemplate"] = config["spawntemplate"]
+					if "spawnsGroupOnSmash" in config:
+						if config["spawnsGroupOnSmash"]:
+							spawner_vars["spawned_on_smash"] = True
 					spawner_vars["spawner_waypoints"] = spawned_vars,
 					spawned_vars = spawner_vars
 

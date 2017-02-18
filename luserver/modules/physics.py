@@ -1,8 +1,11 @@
 import logging
+import math
 
 from ..ldf import LDF, LDFDataType
 from ..math.vector import Vector3
 from .module import ServerModule
+
+log = logging.getLogger(__file__)
 
 MODEL_DIMENSIONS = {
 	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
@@ -10,25 +13,27 @@ MODEL_DIMENSIONS = {
 	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
 	5633: (Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)), # death plane
 	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
-	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225)), # POI wall
-	10042: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)), # primitive model
-	14510: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)), # primitive model phantom (humans only)
-	16506: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))} # primitive model phantom with skill component
-
+	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225))} # POI wall
 MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
 MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
 
-log = logging.getLogger(__file__)
+class PrimitiveModelType:
+	Cuboid = 1
+	Cone = 2
+	Cylinder = 3
+	Sphere = 4
+
+PRIMITIVE_DIMENSIONS = {
+	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
 
 # currently for static objects only, does not handle position/rotation updates
-
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
-		if obj.lot in (10042, 14510, 16506):
-			if obj.primitive_model_type != 1:
-				log.warning("Primitive model type not 1 %s", obj)
-			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.primitive_model_scale
-			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.primitive_model_scale
+		if hasattr(obj, "primitive_model_type"):
+			if obj.primitive_model_type != PrimitiveModelType.Cuboid:
+				raise NotImplementedError("Primitive model type not cuboid %s" % obj)
+			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
+			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
 		else:
 			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
 			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
@@ -56,12 +61,21 @@ class AABB: # axis aligned bounding box
 		       self.min.y < point.y < self.max.y and \
 		       self.min.z < point.z < self.max.z
 
+# for dynamic objects
+class CollisionSphere:
+	def __init__(self, obj, radius):
+		self.position = obj.physics.position
+		self.sq_radius = radius**2
+
+	def is_point_within(self, point):
+		return self.position.sq_distance(point) < self.sq_radius
+
 class PhysicsHandling(ServerModule):
 	def __init__(self, server):
 		super().__init__(server)
 		self.last_collisions = {}
 		self.tracked_objects = {}
-		self.debug_markers = []
+		self.debug_markers = {}
 		debug_cmd = self.server.chat.commands.add_parser("physicsdebug")
 		debug_cmd.add_argument("--original", action="store_true", default=False)
 		debug_cmd.set_defaults(func=self.debug_cmd)
@@ -78,20 +92,34 @@ class PhysicsHandling(ServerModule):
 	def on_destruction(self, obj):
 		if obj in self.tracked_objects:
 			del self.tracked_objects[obj]
+		if obj in self.debug_markers:
+			for marker in self.debug_markers[obj]:
+				self.server.destruct(marker)
+			del self.debug_markers[obj]
 		if hasattr(obj, "char"):
 			del self.last_collisions[obj]
 
 	def check_add_object(self, obj):
-		if obj.lot in MODEL_DIMENSIONS:
+		if obj.lot in MODEL_DIMENSIONS or (hasattr(obj, "primitive_model_type") and obj.primitive_model_type == PrimitiveModelType.Cuboid):
 			for comp in obj.components:
 				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 					self.tracked_objects[obj] = AABB(obj)
+					if self.debug_markers:
+						self.add_marker(obj)
 					break
+
+	def add_with_radius(self, obj, radius):
+		for comp in obj.components:
+			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
+				self.tracked_objects[obj] = CollisionSphere(obj, radius)
+				if self.debug_markers:
+					self.add_marker(obj)
+				break
 
 	def check_collisions(self, player):
 		collisions = []
-		for obj, aabb in self.tracked_objects.items():
-			if aabb.is_point_within(player.physics.position):
+		for obj, coll in self.tracked_objects.items():
+			if coll.is_point_within(player.physics.position):
 				collisions.append(obj)
 
 		for obj in collisions:
@@ -105,24 +133,37 @@ class PhysicsHandling(ServerModule):
 
 	def debug_cmd(self, args, sender):
 		if not self.debug_markers:
-			for obj, aabb in self.tracked_objects.copy().items():
-				if args.original:
-					set_vars = {}
-					set_vars["position"] = obj.physics.position
-					set_vars["rotation"] = obj.physics.rotation
-					set_vars["scale"] = obj.scale
-					self.debug_markers.append(self.server.spawn_object(obj.lot, set_vars=set_vars))
-				set_vars = {}
-				set_vars["position"] = Vector3((aabb.min.x+aabb.max.x)/2, aabb.min.y, (aabb.min.z+aabb.max.z)/2)
-				config = LDF()
-				config.ldf_set("primitiveModelType", LDFDataType.INT32, 1)
-				config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, aabb.max.x-aabb.min.x)
-				config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, aabb.max.y-aabb.min.y)
-				config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, aabb.max.z-aabb.min.z)
-				set_vars["config"] = config
-				self.debug_markers.append(self.server.spawn_object(14510, set_vars=set_vars))
-
+			for obj in self.tracked_objects.copy():
+				self.add_marker(obj, args.original)
 		else:
-			for marker in self.debug_markers:
-				self.server.destruct(marker)
+			for markers in self.debug_markers.copy().values():
+				for marker in markers:
+					self.server.destruct(marker)
 			self.debug_markers.clear()
+
+	def add_marker(self, obj, original=False):
+		if obj not in self.tracked_objects:
+			return
+		coll = self.tracked_objects[obj]
+		if original:
+			set_vars = {
+				"position": obj.physics.position,
+				"rotation": obj.physics.rotation,
+				"scale": obj.scale}
+			self.debug_markers.setdefault(obj, []).append(self.server.spawn_object(obj.lot, set_vars))
+		if isinstance(coll, AABB):
+			config = LDF()
+			config.ldf_set("primitiveModelType", LDFDataType.INT32, PrimitiveModelType.Cuboid)
+			config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, coll.max.x-coll.min.x)
+			config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, coll.max.y-coll.min.y)
+			config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, coll.max.z-coll.min.z)
+
+			set_vars = {
+				"position": Vector3((coll.min.x+coll.max.x)/2, coll.min.y, (coll.min.z+coll.max.z)/2),
+				"config": config}
+			self.debug_markers.setdefault(obj, []).append(self.server.spawn_object(14510, set_vars))
+		elif isinstance(coll, CollisionSphere):
+			set_vars = {
+				"position": coll.position,
+				"scale": math.sqrt(coll.sq_radius)/5}
+			self.debug_markers.setdefault(obj, []).append(self.server.spawn_object(6548, set_vars))

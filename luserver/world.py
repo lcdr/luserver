@@ -156,8 +156,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			self.reset_v_()
 			for obj in self.world_data.objects.values():
 				obj.handle("on_startup", silent=True)
-				if hasattr(obj, "spawner"):
-					obj.spawner.spawn(all=True)
 			if self.world_id[2] != 0:
 				self.models = []
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
@@ -240,46 +238,23 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.commit()
 		return current
 
-	def spawn_object(self, lot, spawner=None, parent=None, position=None, rotation=None, set_vars=None, is_world_control=False):
+	def spawn_object(self, lot, set_vars=None, is_world_control=False):
 		if set_vars is None:
 			set_vars = {}
-		if "position" not in set_vars:
-			if position is not None:
-				set_vars["position"] = position
-			elif parent is not None:
-				set_vars["position"] = parent.physics.position
-		if "rotation" not in set_vars:
-			if rotation is not None:
-				set_vars["rotation"] = rotation
-			elif parent is not None:
-				set_vars["rotation"] = parent.physics.rotation
 
 		if is_world_control:
 			object_id = 70368744177662
 		else:
 			object_id = self.new_spawned_id()
 		obj = GameObject(self, lot, object_id, set_vars)
-
-		if spawner is not None:
-			obj.spawner_object = spawner
-			obj.spawner_waypoint_index = spawner.spawner.last_waypoint_index
-
-		if parent is not None:
-			obj.parent = parent.object_id
-			parent.children.append(obj.object_id)
-			parent.attr_changed("children")
-
-		obj._serialize = False
 		self.game_objects[obj.object_id] = obj
 		self.construct(obj)
-
 		obj.handle("on_startup", silent=True)
-
-		if hasattr(obj, "rebuild"):
-			self.spawn_object(6604, parent=obj, position=obj.rebuild.rebuild_activator_position)
 		return obj
 
 	def get_object(self, object_id):
+		if object_id == 0:
+			return
 		if object_id in self.game_objects:
 			return self.game_objects[object_id]
 		elif self.world_id[0] != 0 and object_id in self.world_data.objects:

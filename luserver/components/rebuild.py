@@ -49,6 +49,11 @@ class RebuildComponent(ScriptedActivityComponent):
 		else:
 			self.rebuild_activator_position = Vector3(self.object.physics.position)
 
+	def on_startup(self):
+		self.object._v_server.spawn_object(6604, {"parent": self.object, "position": self.rebuild_activator_position})
+		if hasattr(self.object, "ai"):
+			self.object.ai.disable()
+
 	@property
 	def rebuild_state(self):
 		return self._rebuild_state
@@ -114,6 +119,8 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])
 		self.callback_handles.append(self.object.call_later(self.smash_time, self.smash_rebuild))
 
+		player.char.update_mission_task(TaskType.QuickBuild, self.activity_id)
+
 		# drop rewards
 		self.object.physics.drop_rewards(*self.completion_rewards, player)
 
@@ -121,7 +128,8 @@ class RebuildComponent(ScriptedActivityComponent):
 		if hasattr(self, "moving_platform"):
 			self.moving_platform.update_waypoint()
 
-		player.char.update_mission_task(TaskType.QuickBuild, self.activity_id)
+		if hasattr(self.object, "ai"):
+			self.object.ai.enable()
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0)

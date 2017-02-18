@@ -48,7 +48,10 @@ class DestructibleComponent(Component):
 		killer = self.object._v_server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
 			killer.char.update_mission_task(TaskType.KillEnemy, self.object.lot)
-			self.object.physics.drop_rewards(*self.death_rewards, killer)
+
+		loot_owner = self.object._v_server.get_object(loot_owner_id)
+		if loot_owner and hasattr(loot_owner, "char"):
+			self.object.physics.drop_rewards(*self.death_rewards, loot_owner)
 
 		if hasattr(self.object, "char"):
 			if self.object.char.vehicle_id != 0:
