@@ -154,6 +154,7 @@ class PropertyEntranceComponent(Component):
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
+				player.char.traveling_rocket = model.module_lots
 				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id)
 				break
 

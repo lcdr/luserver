@@ -8,4 +8,4 @@ class ScriptComponent(script.ScriptComponent):
 		player.render.play_animation(animation_id="knockback-recovery", play_immediate=False)
 
 		self.object.render.play_f_x_effect(name="console_sparks", effect_type="create", effect_id=1430)
-		self.object.call_later(2, lambda: self.object.render.stop_f_x_effect(name="console_sparks", kill_immediate=False))
+		self.object.call_later(2, lambda: self.object.render.stop_f_x_effect(name="console_sparks"))

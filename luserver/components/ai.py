@@ -32,7 +32,7 @@ class BaseCombatAIComponent(Component):
 		self.target = None
 		enemy_factions = self.object._v_server.db.factions.get(self.object.stats.faction, ())
 		# todo: make distance skill-dependent
-		nearest_dist = 3**2 # starting distance is maximum distance
+		nearest_dist = 7**2 # starting distance is maximum distance
 		for obj in self.object._v_server.game_objects.values():
 			if hasattr(obj, "stats") and obj.stats.faction in enemy_factions:
 				dist = self.object.physics.position.sq_distance(obj.physics.position)

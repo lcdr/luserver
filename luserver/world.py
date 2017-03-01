@@ -55,7 +55,6 @@ from .modules.char import CharHandling
 from .modules.chat import ChatHandling
 from .modules.general import GeneralHandling
 from .modules.mail import MailHandling
-from .modules.physics import PhysicsHandling
 from .modules.social import SocialHandling
 
 log = logging.getLogger(__name__)
@@ -82,7 +81,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.chat = ChatHandling(self)
 		self.general = GeneralHandling(self)
 		self.mail = MailHandling(self)
-		self.physics = PhysicsHandling(self)
 		self.social = SocialHandling(self)
 
 		self.current_spawned_id = BITS_SPAWNED
@@ -161,7 +159,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
 					lot, position, rotation = spawn_data
 					self.spawn_model(spawner_id, lot, position, rotation)
-			self.physics.on_startup()
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
 		spawned_vars = {}
@@ -174,8 +171,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.models.append((spawner, spawner.spawner.spawn()))
 
 	def on_disconnect_or_connection_lost(self, data, address):
-		for module in self.modules:
-			module.on_disconnect_or_connection_lost(address)
 		super().on_disconnect_or_connection_lost(data, address)
 		pyraknet.replicamanager.ReplicaManager.on_disconnect_or_connection_lost(self, data, address)
 		if self.world_id[0] != 0:
@@ -213,13 +208,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 
 	def construct(self, obj, recipients=None, new=True):
 		pyraknet.replicamanager.ReplicaManager.construct(self, obj, recipients, new)
-		if new:
-			for module in self.modules:
-				module.on_construction(obj)
 
 	def destruct(self, obj):
-		for module in self.modules:
-			module.on_destruction(obj)
 		pyraknet.replicamanager.ReplicaManager.destruct(self, obj)
 
 	def new_spawned_id(self):

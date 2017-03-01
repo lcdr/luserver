@@ -9,9 +9,22 @@ SKILL_ID = 43
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
 		if hasattr(self.object, "render"): # some objects have render disabled for some reason
-			self.object.render.play_f_x_effect(name="Burn", effect_type="running", effect_id=295)
-			self.object._v_server.physics.add_with_radius(self.object, PROX_RADIUS)
+			self.light_fire()
+			self.object.physics.proximity_radius(PROX_RADIUS)
+
+	def light_fire(self):
+		self.is_burning = True
+		self.object.render.stop_f_x_effect(name="Off")
+		self.object.render.play_f_x_effect(name="Burn", effect_type="running", effect_id=295)
 
 	def on_enter(self, player):
-		player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=440)
-		self.object.skill.cast_skill(SKILL_ID)
+		if self.is_burning:
+			player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=440)
+			self.object.skill.cast_skill(SKILL_ID)
+
+	def on_skill_event(self, caster, event_name):
+		if event_name == "waterspray":
+			self.is_burning = False
+			self.object.render.stop_f_x_effect(name="Burn")
+			self.object.render.play_f_x_effect(name="Off", effect_type="idle", effect_id=295)
+			self.object.call_later(37, self.light_fire)

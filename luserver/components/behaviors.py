@@ -306,6 +306,20 @@ class Buff(Behavior):
 		if hasattr(behavior, "imagination"):
 			self.object.stats.max_imagination += behavior.imagination
 
+class SkillEvent(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		pass
+
+	@staticmethod
+	def unserialize(self, behavior, bitstream, target, level):
+		if behavior.id == 14211:
+			event_name = "waterspray"
+		else:
+			event_name = None
+
+		target.handle("on_skill_event", self.object, event_name, silent=True)
+
 class Chain(Behavior):
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):

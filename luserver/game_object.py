@@ -101,7 +101,7 @@ class GameObject:
 
 		self.scale = set_vars.get("scale", 1)
 
-		if "parent" in set_vars:
+		if "parent" in set_vars and set_vars["parent"].object_id in self._v_server.game_objects:
 			self.parent = set_vars["parent"].object_id
 			set_vars["parent"].children.append(self.object_id)
 			set_vars["parent"].attr_changed("children")

@@ -51,6 +51,21 @@ checksum = {
 	World.BattleAgainstFrakjaw: 0x9eb00ef}
 
 class GeneralHandling(ServerModule):
+	def __init__(self, server):
+		super().__init__(server)
+		self.tracked_objects = {}
+		physics_debug_cmd = self.server.chat.commands.add_parser("physicsdebug")
+		physics_debug_cmd.set_defaults(func=self.physics_debug_cmd)
+
+	def physics_debug_cmd(self, args, sender):
+		debug_markers = self.server.get_objects_in_group("physics_debug_marker")
+		if not debug_markers:
+			for obj in self.tracked_objects.copy():
+				obj.physics.spawn_debug_marker()
+		else:
+			for marker in debug_markers:
+				self.server.destruct(marker)
+
 	def on_validated(self, address):
 		self.server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete, address)
 		self.server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update, address)
@@ -232,9 +247,23 @@ class GeneralHandling(ServerModule):
 		if vehicle:
 			player._serialize = serialize
 
-		# physics check for collisions
 		if player.stats.life != 0:
-			self.server.physics.check_collisions(player)
+			self.check_collisions(player)
+
+	def check_collisions(self, player):
+		collisions = []
+		for obj, coll in self.tracked_objects.items():
+			if coll.is_point_within(player.physics.position):
+				collisions.append(obj.object_id)
+
+		for object_id in collisions:
+			if object_id not in player.char.last_collisions:
+				self.server.get_object(object_id).handle("on_enter", player)
+		for object_id in player.char.last_collisions:
+			if object_id not in collisions:
+				self.server.get_object(object_id).handle("on_exit", player, silent=True)
+
+		player.char.last_collisions = collisions
 
 	def on_game_message(self, message, address):
 		object_id = message.read(c_int64)

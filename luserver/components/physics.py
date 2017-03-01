@@ -1,11 +1,77 @@
 import enum
+import math
 import random
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
+from ..ldf import LDF, LDFDataType
 from ..messages import broadcast
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
+
+MODEL_DIMENSIONS = {
+	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
+	4734: (Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)), # wall
+	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
+	5633: (Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)), # death plane
+	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
+	10285: (Vector3(-7, 0, -6), Vector3(7, 3, 8)), # lego club ring
+	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225))} # POI wall
+MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
+MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
+
+class PrimitiveModelType:
+	Cuboid = 1
+	Cone = 2
+	Cylinder = 3
+	Sphere = 4
+
+PRIMITIVE_DIMENSIONS = {
+	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
+
+# currently for static objects only, does not handle position/rotation updates
+class AABB: # axis aligned bounding box
+	def __init__(self, obj):
+		if hasattr(obj, "primitive_model_type"):
+			if obj.primitive_model_type != PrimitiveModelType.Cuboid:
+				raise NotImplementedError("Primitive model type not cuboid %s" % obj)
+			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
+			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
+		else:
+			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
+			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
+
+		rel_min = rel_min.rotate(obj.physics.rotation)
+		rel_max = rel_max.rotate(obj.physics.rotation)
+
+		# after rotation min and max are no longer necessarily the absolute min/max values
+
+		rot_min = Vector3()
+		rot_max = Vector3()
+
+		rot_min.x = min(rel_min.x, rel_max.x)
+		rot_min.y = min(rel_min.y, rel_max.y)
+		rot_min.z = min(rel_min.z, rel_max.z)
+		rot_max.x = max(rel_min.x, rel_max.x)
+		rot_max.y = max(rel_min.y, rel_max.y)
+		rot_max.z = max(rel_min.z, rel_max.z)
+
+		self.min = obj.physics.position + rot_min
+		self.max = obj.physics.position + rot_max
+
+	def is_point_within(self, point):
+		return self.min.x < point.x < self.max.x and \
+		       self.min.y < point.y < self.max.y and \
+		       self.min.z < point.z < self.max.z
+
+# for dynamic objects
+class CollisionSphere:
+	def __init__(self, obj, radius):
+		self.position = obj.physics.position
+		self.sq_radius = radius**2
+
+	def is_point_within(self, point):
+		return self.position.sq_distance(point) < self.sq_radius
 
 class PhysicsComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -24,6 +90,48 @@ class PhysicsComponent(Component):
 			self.rotation.update(set_vars["rotation"])
 		elif "parent" in set_vars:
 			self.rotation.update(set_vars["parent"].physics.rotation)
+
+	def on_startup(self):
+		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type == PrimitiveModelType.Cuboid):
+			for comp in self.object.components:
+				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
+					self.object._v_server.general.tracked_objects[self.object] = AABB(self.object)
+					if self.object._v_server.get_objects_in_group("physics_debug_marker"):
+						self.spawn_debug_marker()
+					break
+
+	def on_destruction(self):
+		if self.object in self.object._v_server.general.tracked_objects:
+			del self.object._v_server.general.tracked_objects[self.object]
+
+	def proximity_radius(self, radius):
+		for comp in self.object.components:
+			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
+				self.object._v_server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
+				if self.object._v_server.get_objects_in_group("physics_debug_marker"):
+					self.spawn_debug_marker()
+				break
+
+	def spawn_debug_marker(self):
+		if self.object not in self.object._v_server.general.tracked_objects:
+			return
+		coll = self.object._v_server.general.tracked_objects[self.object]
+		set_vars = {"groups": ("physics_debug_marker",), "parent": self.object}
+		if isinstance(coll, AABB):
+			config = LDF()
+			config.ldf_set("primitiveModelType", LDFDataType.INT32, PrimitiveModelType.Cuboid)
+			config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, coll.max.x-coll.min.x)
+			config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, coll.max.y-coll.min.y)
+			config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, coll.max.z-coll.min.z)
+
+			set_vars["position"] = Vector3((coll.min.x+coll.max.x)/2, coll.min.y, (coll.min.z+coll.max.z)/2)
+			set_vars["config"] = config
+			self.object._v_server.spawn_object(14510, set_vars)
+		elif isinstance(coll, CollisionSphere):
+			set_vars["position"] = coll.position
+			set_vars["scale"] = math.sqrt(coll.sq_radius)/5
+			self.object._v_server.spawn_object(6548, set_vars)
+
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 
