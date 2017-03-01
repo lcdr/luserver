@@ -71,8 +71,11 @@ class RebuildComponent(ScriptedActivityComponent):
 			out.write(c_uint(self.rebuild_state))
 			out.write(c_bit(self.success))
 			out.write(c_bit(self.enabled))
-			out.write(c_float(time.time() - self.rebuild_start_time))
-			out.write(c_uint(0))
+			if self.rebuild_state == RebuildState.Building:
+				out.write(c_float(time.time() - self.rebuild_start_time + self.last_progress))
+			else:
+				out.write(c_float(self.last_progress))
+			out.write(c_float(0))
 			if is_creation:
 				out.write(c_bit(False))
 				out.write(c_float(self.rebuild_activator_position.x))
@@ -136,13 +139,13 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.object._v_server.destruct(self.object)
 
 	def rebuild_cancel(self, early_release:c_bit=None, user_id:c_int64=None):
-		player = self.object._v_server.get_object(user_id)
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
 				self.object.cancel_callback(handle)
 			self.callback_handles.clear()
 			self.last_progress += time.time() - self.rebuild_start_time
 			self.rebuild_state = RebuildState.Incomplete
+			player = self.object._v_server.get_object(user_id)
 			self.remove_player(player)
 			player.char.rebuilding = 0
 			if early_release:
@@ -150,8 +153,8 @@ class RebuildComponent(ScriptedActivityComponent):
 			else:
 				fail_reason = FailReason.OutOfImagination
 			self.enable_rebuild(enable=False, fail=True, success=self.success, fail_reason=fail_reason, duration=self.last_progress, user=player.object_id)
+			player.char.terminate_interaction(obj_id_terminator=self.object.object_id, type=TerminateType.FromInteraction)
 			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
-		player.char.terminate_interaction(obj_id_terminator=self.object.object_id, type=TerminateType.FromInteraction)
 
 	@broadcast
 	def enable_rebuild(self, enable:c_bit=None, fail:c_bit=None, success:c_bit=None, fail_reason:c_uint=FailReason.NotGiven, duration:c_float=None, user:c_int64=None):

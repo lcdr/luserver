@@ -21,6 +21,7 @@ class LaunchpadComponent(Component):
 		assert multi_interact_id is None
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
+				player.char.traveling_rocket = model.module_lots
 				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id)
 				break
 		else:

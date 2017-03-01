@@ -19,6 +19,9 @@ class RenderComponent(Component):
 				out.write(c_float(1))
 				out.write(c_int64(0))
 
+	def on_destruction(self):
+		self.effects.clear()
+
 	@broadcast
 	def play_animation(self, animation_id:"wstr"=None, expect_anim_to_exist:c_bit=True, play_immediate:c_bit=None, trigger_on_complete_msg:c_bit=False, priority:c_float=2, f_scale:c_float=1):
 		pass
@@ -28,7 +31,7 @@ class RenderComponent(Component):
 		self.effects[name] = effect_id, effect_type
 
 	@broadcast
-	def stop_f_x_effect(self, kill_immediate:c_bit=None, name:"str"=None):
+	def stop_f_x_effect(self, kill_immediate:c_bit=False, name:"str"=None):
 		if name in self.effects:
 			del self.effects[name]
 

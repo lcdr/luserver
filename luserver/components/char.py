@@ -83,6 +83,8 @@ class CharacterComponent(Component):
 		for world in (World.BlockYard, World.AvantGrove, World.NimbusRock, World.NimbusIsle, World.ChanteyShanty, World.RavenBluff):
 			self.object._v_server.db.properties[world.value][self.clone_id] = PersistentMapping()
 
+		self.last_collisions = []
+
 		# Component stuff
 
 		self._flags["vehicle_id"] = "vehicle_id_flag"
@@ -132,6 +134,8 @@ class CharacterComponent(Component):
 		self.racing_smashables_smashed = 0
 		self.races_finished = 0
 		self.first_place_race_finishes = 0
+
+		self.traveling_rocket = None
 
 		self._flags["rebuilding"] = "rebuilding_flag"
 		self.rebuilding = 0
@@ -210,7 +214,13 @@ class CharacterComponent(Component):
 			out.write(c_uint64(self.races_finished))
 			out.write(c_uint64(self.first_place_race_finishes))
 			out.write(c_bit(False))
-			out.write(c_bit(False))
+			out.write(c_bit(self.traveling_rocket is not None))
+			if self.traveling_rocket is not None:
+				module_str = ""
+				for module in self.traveling_rocket:
+					module_str += "1:%i;" % module
+				out.write(module_str, length_type=c_ushort)
+				self.traveling_rocket = None
 
 		out.write(c_bit(False))
 		out.write(c_bit(self.rebuilding_flag))
@@ -259,6 +269,7 @@ class CharacterComponent(Component):
 			del self.object._v_server.dropped_loot[self.object.object_id]
 		self.vehicle_id = 0
 		self.online = False
+		self.last_collisions.clear()
 		self.check_for_leaks()
 
 	def check_for_leaks(self):

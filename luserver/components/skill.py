@@ -9,7 +9,7 @@ from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
 from .mission import TaskType
-from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
+from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, SkillEvent, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +99,7 @@ TEMPLATES = {
 	BehaviorTemplate.SpawnObject: SpawnObject,
 	BehaviorTemplate.Switch: Switch,
 	BehaviorTemplate.Buff: Buff,
+	BehaviorTemplate.SkillEvent: SkillEvent,
 	BehaviorTemplate.Chain: Chain,
 	BehaviorTemplate.ForceMovement: ForceMovement,
 	BehaviorTemplate.Interrupt: Interrupt,

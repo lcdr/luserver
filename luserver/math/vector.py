@@ -62,6 +62,9 @@ class Vector3:
 		diff = self - other
 		return diff.sq_magnitude()
 
+	def distance(self, other):
+		return math.sqrt(self.sq_distance(other))
+
 	def rotate(self, quaternion):
 		quatvector = Vector3(quaternion.x, quaternion.y, quaternion.z)
 		scalar = quaternion.w
