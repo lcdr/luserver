@@ -59,7 +59,7 @@ class MailHandling(ServerModule):
 		return_code = MailSendReturnCode.Success
 		try:
 			if attachment_item_count != 0:
-				self.server.chat.send_general_chat_message("", "Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
+				self.server.chat.system_message("Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
 				return_code = MailSendReturnCode.ItemCannotBeMailed
 				return
 			if recipient_name == player.name:

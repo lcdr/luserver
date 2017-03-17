@@ -1,7 +1,7 @@
 import random
 
 from ..bitstream import c_bit, c_int
-from ..modules.chat import ALL_MODELS
+from ..commands.misc import VendorCommand
 from .component import Component
 
 CYCLE_INTERVAL = 10
@@ -13,7 +13,7 @@ class ExhibitComponent(Component):
 		self.random_exhibit()
 
 	def random_exhibit(self):
-		self.exhibited_lot = random.choice(ALL_MODELS)
+		self.exhibited_lot = random.choice(VendorCommand.ALL_MODELS)
 		self.object.call_later(CYCLE_INTERVAL, self.random_exhibit)
 
 	def serialize(self, out, is_creation):
