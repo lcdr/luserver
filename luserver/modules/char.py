@@ -1,3 +1,55 @@
+
+class Color:
+	BrightRed = 0
+	BrightBlue = 1
+	Yellow = 2 # not normally available
+	DarkGreen = 3
+	# 4 = white/unused
+	BrightOrange = 5
+	Black = 6
+	DarkStoneGrey = 7
+	MediumStoneGrey = 8
+	ReddishBrown = 9
+	White = 10
+	MediumBlue = 11
+	Lime = 12 # not normally available
+	DarkRed = 13
+	EarthBlue = 14
+	EarthGreen = 15
+	BrickYellow = 16
+	Pink = 17 # not normally available
+	OtherYellow = 18 # not normally available
+	OtherOrange = 19 # not normally available
+	SandBlue = 84
+	SandGreen = 96
+
+class EyeStyle:
+	# incomplete
+	# all not normally available
+	Bob = 9
+	Scar = 24
+	Ninja = 30
+	Cyborg = 33
+	BandAid = 35
+	Sunglasses = 36
+	BobEyebrows = 38
+	BlueHeadWhiteEyes = 41
+	FullCyborg = 43
+	Robot = 44
+	RedEyes = 45
+	Monocle = 49
+	BlueEyes = 53
+
+class MouthStyle:
+	# incomplete
+	# all not normally available
+	HeadSet = 39
+	Mask = 40
+	LargeSmile = 45
+	Vampire = 46 # also makes face white
+	Robot = 48 # also makes face grey
+	WhiteFace = 51
+
 import asyncio
 import logging
 
@@ -19,24 +71,6 @@ class CharacterCreateReturnCode:
 
 class CharacterDeleteReturnCode:
 	Success = 1
-
-class Color:
-	BrightRed = 0
-	BrightBlue = 1
-	DarkGreen = 3
-	BrightOrange = 5
-	Black = 6
-	DarkStoneGrey = 7
-	MediumStoneGrey = 8
-	ReddishBrown = 9
-	White = 10
-	MediumBlue = 11
-	DarkRed = 13
-	EarthBlue = 14
-	EarthGreen = 15
-	BrickYellow = 16
-	SandBlue = 84
-	SandGreen = 96
 
 pants_lot = {
 	Color.BrightRed: 2508,
