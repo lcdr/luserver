@@ -13,6 +13,8 @@ class LaunchpadComponent(Component):
 		super().__init__(obj, set_vars, comp_id)
 		self.default_world_id = self.object._v_server.db.launchpad_component[comp_id][0]
 		self.respawn_point_name = self.object._v_server.db.launchpad_component[comp_id][1]
+		if "respawn_point_name" in set_vars:
+			self.respawn_point_name = set_vars["respawn_point_name"]
 
 	def serialize(self, out, is_creation):
 		pass

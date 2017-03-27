@@ -229,7 +229,7 @@ class GameObject:
 			self._v_server.game_objects[self.parent].children.remove(self.object_id)
 			self._v_server.game_objects[self.parent].attr_changed("children")
 
-		for child in self.children:
+		for child in self.children.copy():
 			self._v_server.destruct(self._v_server.game_objects[child])
 
 		if self.object_id in self._v_server.callback_handles:

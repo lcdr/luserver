@@ -4,24 +4,11 @@ import os
 import re
 import sys
 
+from ..world import World
 from ..components.inventory import InventoryType
 from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
-from .command import ChatCommand
-
-def toggle_bool(str_):
-	str_ = str_.lower()
-	if str_ == "toggle":
-		return None
-	return normal_bool(str_)
-
-def normal_bool(str_):
-	str_ = str_.lower()
-	if str_ in ("true", "on"):
-		return True
-	if str_ in ("false", "off"):
-		return False
-	raise ValueError
+from .command import ChatCommand, normal_bool, toggle_bool
 
 class AddItemCommand(ChatCommand):
 	def __init__(self, chat):
@@ -47,12 +34,28 @@ class CheckForLeaksCommand(ChatCommand):
 	def run(self, args, sender):
 		sender.char.check_for_leaks()
 
+class CurrencyCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "currency")
+		self.command.add_argument("amount", type=int)
+
+	def run(self, args, sender):
+		sender.char.set_currency(currency=sender.char.currency + args.amount, position=Vector3.zero)
+
 class DanceCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "dance")
 
 	def run(self, args, sender):
 		pass # client-side
+
+class DestroySpawnedCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "destroyspawned")
+
+	def run(self, args, sender):
+		for child in sender.children.copy():
+			self.chat.server.destruct(self.chat.server.game_objects[child])
 
 class DismountCommand(ChatCommand):
 	def __init__(self, chat):
@@ -74,7 +77,6 @@ class EverlastingCommand(ChatCommand):
 		else:
 			sender.skill.everlasting = args.enable
 
-
 class ExtendInventoryCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "extendinv")
@@ -91,6 +93,17 @@ class FactionCommand(ChatCommand):
 
 	def run(self, args, sender):
 		sender.stats.faction = args.faction
+
+class FactionTokensCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "factiontokens")
+
+	def run(self, args, sender):
+		sender.inventory.add_item_to_inventory(8318, 100)
+		sender.inventory.add_item_to_inventory(8319, 100)
+		sender.inventory.add_item_to_inventory(8320, 100)
+		sender.inventory.add_item_to_inventory(8321, 100)
+
 
 class FilelogCommand(ChatCommand):
 	def __init__(self, chat):
@@ -115,6 +128,14 @@ class GlowCommand(ChatCommand):
 			sender.char.rebuilding = 1
 		else:
 			sender.char.rebuilding = 0
+
+class GravityCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "gravity")
+		self.command.add_argument("--scale", type=float, default=1)
+
+	def run(self, args, sender):
+		sender.char.set_gravity_scale(args.scale)
 
 class HelpCommand(ChatCommand):
 	def __init__(self, chat):
@@ -232,7 +253,7 @@ class SendCommand(ChatCommand):
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:
 			with open(path+"/"+file, "rb") as content:
-				self.chat.sys_msg_sender("sending", file)
+				self.chat.sys_msg_sender("sending "+str(file))
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
@@ -319,15 +340,18 @@ class VendorCommand(ChatCommand):
 
 	def __init__(self, chat):
 		super().__init__(chat, "vendor")
-		self.command.add_argument("--items", choices=("items", "models"), default="items")
+		self.command.add_argument("--items", choices=("clothing", "items", "models"), default="items")
 
 	def run(self, args, sender):
+		if args.items == "clothing":
+			self.chat.server.spawn_object(3917, {"parent": sender})
+			return
 		if args.items == "items":
 			items = VendorCommand.ALL_ITEMS
 		elif args.items == "models":
 			items = VendorCommand.ALL_MODELS
 		vendor = self.chat.server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
-		vendor.vendor.items_for_sale = [(lot, 0) for lot in items]
+		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]
 
 class WhisperCommand(ChatCommand):
 	def __init__(self, chat):

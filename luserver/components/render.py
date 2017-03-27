@@ -23,7 +23,7 @@ class RenderComponent(Component):
 		self.effects.clear()
 
 	@broadcast
-	def play_animation(self, animation_id:"wstr"=None, expect_anim_to_exist:c_bit=True, play_immediate:c_bit=None, trigger_on_complete_msg:c_bit=False, priority:c_float=2, f_scale:c_float=1):
+	def play_animation(self, animation_id:"wstr"=None, expect_anim_to_exist:c_bit=True, play_immediate:c_bit=False, trigger_on_complete_msg:c_bit=False, priority:c_float=2, f_scale:c_float=1):
 		pass
 
 	@broadcast

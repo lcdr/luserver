@@ -8,6 +8,7 @@ class InventoryType:
 	# Properties = 8 ?
 	# VendorSellSpace = 11
 	MissionObjects = 12
+	Max = -1 # not the correct value
 
 class ItemType:
 	Brick = 1
@@ -50,10 +51,10 @@ from .mission import TaskType
 log = logging.getLogger(__name__)
 
 class Stack(Persistent):
-	def __init__(self, db, object_id, lot):
+	def __init__(self, db, object_id, lot, amount=1):
 		self.object_id = object_id
 		self.lot = lot
-		self.amount = 1
+		self.amount = amount
 
 		for component_type, component_id in db.components_registry[self.lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
@@ -158,6 +159,10 @@ class InventoryComponent(Component):
 			raise ValueError("lot", lot)
 			# no item component found
 
+
+		if hasattr(self.object, "char"):
+			self.object.char.update_mission_task(TaskType.ObtainItem, lot, increment=amount)
+
 		if inventory_type is None:
 			if item_type == ItemType.Brick:
 				inventory_type = InventoryType.Bricks
@@ -173,12 +178,14 @@ class InventoryComponent(Component):
 				raise NotImplementedError(lot, item_type)
 		inventory = self.inventory_type_to_inventory(inventory_type)
 
-		for _ in range(amount):
+		while amount > 0:
 			new_stack = stack_size == 1
 			if not new_stack:
 				for stack in inventory:
-					if stack is not None and stack.lot == lot and (stack_size == 0 or stack.amount < stack_size):
-						stack.amount += 1
+					if stack is not None and stack.lot == lot and stack.amount < stack_size:
+						added_amount = min(stack_size - stack.amount, amount)
+						stack.amount += added_amount
+						amount -= added_amount
 						index = inventory.index(stack)
 						break
 				else:
@@ -189,7 +196,12 @@ class InventoryComponent(Component):
 					object_id = self.object._v_server.new_object_id()
 				else:
 					object_id = self.object._v_server.new_spawned_id()
-				stack = Stack(self.object._v_server.db, object_id, lot)
+
+				added_amount = min(stack_size, amount)
+				amount -= added_amount
+				stack = Stack(self.object._v_server.db, object_id, lot, added_amount)
+				if module_lots:
+					stack.module_lots = module_lots
 
 				if inventory_type in (InventoryType.Bricks, InventoryType.TempItems, InventoryType.TempModels, InventoryType.MissionObjects):
 					inventory.append(stack)
@@ -202,21 +214,14 @@ class InventoryComponent(Component):
 					else:
 						log.info("no space left, sending item by mail")
 						self.object._v_server.mail.send_mail("%[MAIL_SYSTEM_NOTIFICATION]", "%[MAIL_ACHIEVEMENT_OVERFLOW_HEADER]", "%[MAIL_ACHIEVEMENT_OVERFLOW_BODY]", self.object, stack)
-						return
+						continue
 
-			if module_lots:
-				stack.module_lots = module_lots
+			if hasattr(self.object, "char") and notify_client:
+				extra_info = LDF()
+				if hasattr(stack, "module_lots"):
+					extra_info.ldf_set("assemblyPartLOTs", LDFDataType.STRING, [(LDFDataType.INT32, i) for i in stack.module_lots])
 
-			if hasattr(self.object, "char"):
-				if notify_client:
-					extra_info = LDF()
-					if hasattr(stack, "module_lots"):
-						extra_info.ldf_set("assemblyPartLOTs", LDFDataType.STRING, [(LDFDataType.INT32, i) for i in stack.module_lots])
-
-					self.add_item_to_inventory_client_sync(bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
-
-				self.object.char.update_mission_task(TaskType.ObtainItem, stack.lot)
-
+				self.add_item_to_inventory_client_sync(bound=True, bound_on_equip=True, bound_on_pickup=True, loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=added_amount, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
 		return stack
 
 	@single
@@ -231,28 +236,38 @@ class InventoryComponent(Component):
 			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount)
 
 	@single
-	def remove_item_from_inventory(self, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=0, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
-		if confirmed:
-			assert delete_item
-			assert not out_success
-			assert not extra_info
-			assert loot_type_source_id == 0
-			assert requesting_object_id == 0
-			assert stack_remaining == 0
-			assert subkey == 0
-			assert trade_id == 0
+	def remove_item_from_inventory(self, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
+		if not confirmed:
+			return
+		if object_id == 0 and object_template == 0:
+			log.warning("Neither object id nor lot specified, can't remove item")
+			return
+		assert delete_item
+		assert not out_success
+		assert not extra_info
+		assert loot_type_source_id == 0
+		assert requesting_object_id == 0
+		assert stack_remaining == 0
+		assert subkey == 0
+		assert trade_id == 0
+		if inventory_type == InventoryType.Max:
+			inventories = [InventoryType.Items, InventoryType.Models, InventoryType.MissionObjects]
+		else:
+			inventories = [inventory_type]
+		for inventory_type in inventories:
 			inventory = self.inventory_type_to_inventory(inventory_type)
 			if object_id != 0:
 				for item in inventory:
 					if item is not None and item.object_id == object_id:
 						break
+				else:
+					continue
 			elif object_template != 0:
 				for item in inventory:
 					if item is not None and item.lot == object_template:
 						break
-			else:
-				log.warning("Neither object id nor lot specified, can't remove item")
-				return
+				else:
+					continue
 
 			item.amount -= stack_count
 			assert item.amount >= 0
@@ -267,6 +282,7 @@ class InventoryComponent(Component):
 				if hasattr(item, "module_lots") and not force_deletion: # only give modules if the player removed it
 					for module_lot in item.module_lots:
 						self.add_item_to_inventory(module_lot)
+			return
 
 	def equip_inventory(self, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_equip:c_int64=None):
 		assert not out_success

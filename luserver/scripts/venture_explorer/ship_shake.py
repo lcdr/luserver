@@ -20,11 +20,11 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.render.play_f_x_effect(name="Debris", effect_type="DebrisFall")
 
 		self.ship_fx_obj.render.play_f_x_effect(name="FX", effect_type="shipboom%i" % random.randint(1, 3), effect_id=559)
-		self.ship_fx2_obj.render.play_animation(animation_id="explosion", play_immediate=False)
+		self.ship_fx2_obj.render.play_animation("explosion")
 
 		self.object.call_later(EXPLOSION_ANIM_LENGTH, self.explode_idle)
 		self.object.call_later(BASE_SHAKE_TIME + random.randint(MAX_SHAKE_TIME//2, MAX_SHAKE_TIME), self.shake)
 
 	def explode_idle(self):
-		self.ship_fx_obj.render.play_animation(animation_id="idle", play_immediate=False)
-		self.ship_fx2_obj.render.play_animation(animation_id="idle", play_immediate=False)
+		self.ship_fx_obj.render.play_animation("idle")
+		self.ship_fx2_obj.render.play_animation("idle")

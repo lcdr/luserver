@@ -147,6 +147,7 @@ class GameMessage(Enum):
 	MissionDialogueOK = 520
 	DisplayMessageBox = 529
 	MessageBoxRespond = 530
+	SetGravityScale = 541
 	PlaceModelResponse = 547
 	SetJetPackMode = 561
 	DisplayTooltip = 569
@@ -165,6 +166,7 @@ class GameMessage(Enum):
 	QueryPropertyData = 717
 	NotifyClientZoneObject = 737
 	PropertyRentalResponse = 750
+	PlayCinematic = 762
 	ToggleGhostReferenceOverride = 767
 	SetGhostReferencePosition = 768
 	FireEventServerSide = 770
@@ -218,6 +220,7 @@ class GameMessage(Enum):
 	StartCelebrationEffect = 1618
 	ServerDoneLoadingAllObjects = 1642
 	NotifyServerLevelProcessingComplete = 1734
+	NotifyLevelRewards = 1735
 
 def send_game_message(mode):
 	"""

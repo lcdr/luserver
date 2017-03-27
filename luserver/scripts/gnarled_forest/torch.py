@@ -14,7 +14,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		self.object.render.play_animation(animation_id="interact", play_immediate=False)
+		self.object.render.play_animation("interact")
 		for _ in range(3):
 			self.object.physics.drop_loot(IMAGINATION_POWERUP_LOT, player)
 
@@ -22,7 +22,7 @@ class ScriptComponent(script.ScriptComponent):
 		if event_name == "waterspray":
 			if self.is_burning:
 				self.is_burning = False
-				self.object.render.play_animation(animation_id="water", play_immediate=False)
+				self.object.render.play_animation("water")
 				self.object.render.stop_f_x_effect(name="tikitorch")
 				self.object.render.play_f_x_effect(name="", effect_type="water", effect_id=611)
 				self.object.render.play_f_x_effect(name="", effect_type="steam", effect_id=611)

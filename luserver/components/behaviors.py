@@ -315,6 +315,8 @@ class SkillEvent(Behavior):
 	def unserialize(self, behavior, bitstream, target, level):
 		if behavior.id == 14211:
 			event_name = "waterspray"
+		elif behavior.id == 27031:
+			event_name = "spinjitzu"
 		else:
 			event_name = None
 

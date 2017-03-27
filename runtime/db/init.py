@@ -122,6 +122,12 @@ class Init:
 				attachment_lot = None
 			self.root.mission_mail.setdefault(mission_id, []).append((id, attachment_lot))
 
+		# i guess this fits in best with missions
+
+		self.root.level_rewards = BTrees.IOBTree.BTree()
+		for level, reward_type, value in self.cdclient.execute("select LevelID, RewardType, value from Rewards"):
+			self.root.level_rewards.setdefault(level, []).append((reward_type, value))
+
 	def gen_comps(self):
 		# temporary, not actually needed for the server (therefore dict instead of root assignment)
 		currency_table = {}
@@ -129,12 +135,14 @@ class Init:
 			currency_table.setdefault(row[0], []).append((row[1], row[2], row[3]))
 
 		loot_matrix = {}
-		for row in self.cdclient.execute("select LootMatrixIndex, LootTableIndex, percent, minToDrop, maxToDrop from LootMatrix"):
-			loot_table_entry = []
-			for loot_table_row in self.cdclient.execute("select itemid, sortPriority from LootTable where LootTableIndex == %i" % row[1]):
-				loot_table_entry.append((loot_table_row[0], loot_table_row[1]))
-			loot_table_entry = tuple(loot_table_entry)
-			loot_matrix.setdefault(row[0], []).append((loot_table_entry, row[2], row[3], row[4]))
+		self.root.loot_table = BTrees.IOBTree.BTree()
+		for matrix_index, table_index, percent, min_drop, max_drop in self.cdclient.execute("select LootMatrixIndex, LootTableIndex, percent, minToDrop, maxToDrop from LootMatrix"):
+			if table_index not in self.root.loot_table:
+				loot_table_entry = []
+				for loot_table_row in self.cdclient.execute("select itemid, MissionDrop, sortPriority from LootTable where LootTableIndex == %i" % table_index):
+					loot_table_entry.append(loot_table_row)
+				self.root.loot_table[table_index] = tuple(loot_table_entry)
+			loot_matrix.setdefault(matrix_index, []).append((table_index, percent, min_drop, max_drop))
 
 		# actually persistent stuff
 
@@ -172,7 +180,7 @@ class Init:
 
 		self.root.item_component = BTrees.IOBTree.BTree()
 		for id, base_value, item_type, stack_size, sub_items in self.cdclient.execute("select id, baseValue, itemType, stackSize, subItems from ItemComponent"):
-			if item_type == ItemType.Vehicle:
+			if stack_size == 0:
 				stack_size = 1
 			if id in item_type_fixes:
 				item_type = item_type_fixes[id]

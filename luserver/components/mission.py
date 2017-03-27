@@ -1,12 +1,3 @@
-import logging
-
-from persistent import Persistent
-
-from ..bitstream import c_bit, c_int, c_int64
-from ..messages import single
-from .component import Component
-
-log = logging.getLogger(__name__)
 
 class TaskType:
 	KillEnemy = 0
@@ -33,21 +24,7 @@ class MissionState:
 	ReadyToComplete = 4
 	Completed = 8
 
-def check_prereqs(mission_id, player):
-	prereqs = player._v_server.db.missions[mission_id][1]
-	for prereq_ors in prereqs:
-		for prereq_mission in prereq_ors:
-			if isinstance(prereq_mission, tuple): # prereq requires special mission state
-				prereq_mission, prereq_mission_state = prereq_mission
-			else:
-				prereq_mission_state = MissionState.Completed
-			if prereq_mission in player.char.missions and player.char.missions[prereq_mission].state == prereq_mission_state:
-				break # an element was found, this prereq_ors is satisfied
-		else:
-			break # no elements found, not satisfied, checking further prereq_ors unnecessary
-	else: # all preconditions satisfied
-		return True
-	return False
+from persistent import Persistent
 
 class MissionTask(Persistent):
 	def __init__(self, task_type, target, target_value, parameter):
@@ -76,6 +53,32 @@ class MissionProgress(Persistent):
 		self.rew_max_items = rewards[7]
 		self.tasks = [MissionTask(task_type, target, target_value, parameter) for task_type, target, target_value, parameter in mission_data[2]]
 		self.is_mission = mission_data[3]
+
+import asyncio
+import logging
+
+from ..bitstream import c_bit, c_int, c_int64
+from ..messages import single
+from ..commands.mission import CompleteMissionCommand
+from .component import Component
+
+log = logging.getLogger(__name__)
+
+def check_prereqs(mission_id, player):
+	prereqs = player._v_server.db.missions[mission_id][1]
+	for prereq_ors in prereqs:
+		for prereq_mission in prereq_ors:
+			if isinstance(prereq_mission, tuple): # prereq requires special mission state
+				prereq_mission, prereq_mission_state = prereq_mission
+			else:
+				prereq_mission_state = MissionState.Completed
+			if prereq_mission in player.char.missions and player.char.missions[prereq_mission].state == prereq_mission_state:
+				break # an element was found, this prereq_ors is satisfied
+		else:
+			break # no elements found, not satisfied, checking further prereq_ors unnecessary
+	else: # all preconditions satisfied
+		return True
+	return False
 
 class MissionNPCComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -119,6 +122,8 @@ class MissionNPCComponent(Component):
 		if mission_state == MissionState.Available:
 			assert not is_complete
 			player.char.add_mission(mission_id)
+			if player.char.autocomplete_missions:
+				asyncio.get_event_loop().call_soon(CompleteMissionCommand.async_complete_mission, CompleteMissionCommand, mission_id, False, player)
 
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
