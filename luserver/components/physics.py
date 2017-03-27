@@ -27,14 +27,13 @@ class PrimitiveModelType:
 	Sphere = 4
 
 PRIMITIVE_DIMENSIONS = {
-	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
+	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)),
+	PrimitiveModelType.Cylinder: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
 
 # currently for static objects only, does not handle position/rotation updates
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
 		if hasattr(obj, "primitive_model_type"):
-			if obj.primitive_model_type != PrimitiveModelType.Cuboid:
-				raise NotImplementedError("Primitive model type not cuboid %s" % obj)
 			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
 			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
 		else:
@@ -92,7 +91,7 @@ class PhysicsComponent(Component):
 			self.rotation.update(set_vars["parent"].physics.rotation)
 
 	def on_startup(self):
-		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type == PrimitiveModelType.Cuboid):
+		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
 			for comp in self.object.components:
 				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 					self.object._v_server.general.tracked_objects[self.object] = AABB(self.object)
@@ -148,7 +147,7 @@ class PhysicsComponent(Component):
 	def drop_loot(self, lot, owner):
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
 		object_id = self.object._v_server.new_spawned_id()
-		self.object._v_server.dropped_loot.setdefault(owner.object_id, {})[object_id] = lot
+		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(use_position=True, spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner.object_id, source_obj=self.object.object_id)
 
 class Controllable(PhysicsComponent):

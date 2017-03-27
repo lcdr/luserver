@@ -35,6 +35,10 @@ class TerminateType:
 	User = 1
 	FromInteraction = 2
 
+class EndBehavior:
+	Return = 0
+	Wait = 1
+
 class BuildType:
 	BuildNowhere = 0
 	BuildInWorld = 1
@@ -57,6 +61,10 @@ class MatchRequestValue:
 class MatchUpdateType:
 	Time = 3
 
+class RewardType:
+	Item = 0
+	InventorySpace = 4
+
 class CharacterComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -69,6 +77,7 @@ class CharacterComponent(Component):
 		self.currency = 0 # todo: consider whether a property with set_currency is possible
 		self.friends = PersistentList()
 		self.mails = PersistentList()
+		self.autocomplete_missions = False
 		self.missions = PersistentMapping()
 		# add achievements
 		for mission_id, data in self.object._v_server.db.missions.items():
@@ -83,6 +92,7 @@ class CharacterComponent(Component):
 		for world in (World.BlockYard, World.AvantGrove, World.NimbusRock, World.NimbusIsle, World.ChanteyShanty, World.RavenBluff):
 			self.object._v_server.db.properties[world.value][self.clone_id] = PersistentMapping()
 
+		self.dropped_loot = {}
 		self.last_collisions = []
 
 		# Component stuff
@@ -265,10 +275,9 @@ class CharacterComponent(Component):
 			self.object._v_server.send(update_notify, friend_ref().char.address)
 
 	def on_destruction(self):
-		if self.object.object_id in self.object._v_server.dropped_loot:
-			del self.object._v_server.dropped_loot[self.object.object_id]
 		self.vehicle_id = 0
 		self.online = False
+		self.dropped_loot.clear()
 		self.last_collisions.clear()
 		self.check_for_leaks()
 
@@ -297,16 +306,26 @@ class CharacterComponent(Component):
 	def random_loot(self, loot_matrix):
 		loot = []
 		roll = random.random()
-		for loot_table, percent, min_to_drop, max_to_drop in loot_matrix:
+		for table_index, percent, min_to_drop, max_to_drop in loot_matrix:
 			if roll < percent:
 				for _ in range(random.randint(min_to_drop, max_to_drop)):
-					lot, _ = random.choice(loot_table)
+					lot, mission_drop, _ = random.choice(self.object._v_server.db.loot_table[table_index])
 					if lot == FACTION_TOKEN_PROXY:
 						lot = self.faction_token_lot()
 						if lot is None:
 							continue
+					if mission_drop and not self.should_be_dropped(lot):
+						continue
 					loot.append(lot)
 		return loot
+
+	def should_be_dropped(self, lot):
+		for mission in self.missions.values():
+			if mission.state == MissionState.Active:
+				for task in mission.tasks:
+					if task.type == TaskType.ObtainItem and lot in task.target and task.value < task.target_value:
+						return True
+		return False
 
 	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
 		if respawn_point_name is not None:
@@ -372,13 +391,12 @@ class CharacterComponent(Component):
 						if task_type in (TaskType.UseEmote, TaskType.UseSkill):
 							if parameter not in task.parameter:
 								continue
+						if isinstance(task.target, tuple):
+							if target not in task.target:
+								continue
 						else:
-							if isinstance(task.target, tuple):
-								if target not in task.target:
-									continue
-							else:
-								if task.target != target:
-									continue
+							if task.target != target:
+								continue
 
 						# don't update achievements whose previous tiers haven't been completed
 						if not mission.is_mission and not check_prereqs(mission_id, self.object):
@@ -483,16 +501,16 @@ class CharacterComponent(Component):
 
 	def pickup_item(self, loot_object_id:c_int64=None, player_id:c_int64=None):
 		assert player_id == self.object.object_id
-		if loot_object_id not in self.object._v_server.dropped_loot[player_id]:
+		if loot_object_id not in self.dropped_loot:
 			return
-		lot = self.object._v_server.dropped_loot[player_id][loot_object_id]
+		lot = self.dropped_loot[loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id in self.object._v_server.db.object_skills[lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
 				self.object.skill.unserialize_behavior(behavior, b"", self.object)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
-		del self.object._v_server.dropped_loot[player_id][loot_object_id]
+		del self.dropped_loot[loot_object_id]
 
 	def request_resurrect(self):
 		self.object.destructible.resurrect()
@@ -584,6 +602,10 @@ class CharacterComponent(Component):
 	def display_message_box(self, show:c_bit=None, callback_client:c_int64=None, identifier:"wstr"=None, image_id:c_int=None, text:"wstr"=None, user_data:"wstr"=None):
 		pass
 
+	@single
+	def set_gravity_scale(self, scale:c_float=None):
+		pass
+
 	@broadcast
 	def set_jet_pack_mode(self, bypass_checks:c_bit=True, hover:c_bit=False, enable:c_bit=False, effect_id:c_uint=-1, air_speed:c_float=10, max_air_speed:c_float=15, vertical_velocity:c_float=1, warning_effect_id:c_uint=-1):
 		pass
@@ -631,6 +653,10 @@ class CharacterComponent(Component):
 	def set_emote_lock_state(self, lock:c_bit=None, emote_id:c_int=None):
 		if not lock:
 			self.unlocked_emotes.append(emote_id)
+
+	@single
+	def play_cinematic(self, allow_ghost_updates:c_bit=True, close_multi_interact:c_bit=None, send_server_notify:c_bit=None, use_controlled_object_for_audio_listener:c_bit=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:c_bit=False, lead_in:c_float=-1.0, leave_player_locked_when_finished:c_bit=False, lock_player:c_bit=True, path_name:"wstr"=None, result:c_bit=False, skip_if_same_path:c_bit=False, start_time_advance:c_float=None):
+		pass
 
 	def toggle_ghost_reference_override(self, override:c_bit=False):
 		pass
@@ -746,6 +772,16 @@ class CharacterComponent(Component):
 		self.universe_score += score
 		if self.universe_score > self.object._v_server.db.level_scores[self.level]:
 			self.level += 1
+			if self.level in self.object._v_server.db.level_rewards:
+				self.notify_level_rewards(self.level, sending_rewards=True)
+				for reward_type, value in self.object._v_server.db.level_rewards[self.level]:
+					if reward_type == RewardType.Item:
+						self.object.inventory.add_item_to_inventory(value, amount, source_type=source_type)
+					elif reward_type == RewardType.InventorySpace:
+						self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+value)
+					else:
+						log.warning("Level reward type %i not implemented", reward_type)
+				self.notify_level_rewards(self.level, sending_rewards=False)
 
 	@single
 	def restore_to_post_load_stats(self):
@@ -769,3 +805,7 @@ class CharacterComponent(Component):
 
 	def notify_server_level_processing_complete(self):
 		self.object.render.play_f_x_effect(name="7074", effect_type="create", effect_id=7074)
+
+	@single
+	def notify_level_rewards(self, level:c_int=None, sending_rewards:c_bit=False):
+		pass

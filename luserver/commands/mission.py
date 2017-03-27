@@ -1,7 +1,7 @@
 import asyncio
 
 from ..components.mission import MissionProgress, MissionState
-from .command import ChatCommand
+from .command import ChatCommand, toggle_bool
 
 class AddMissionCommand(ChatCommand):
 	def __init__(self, chat):
@@ -14,6 +14,17 @@ class AddMissionCommand(ChatCommand):
 				sender.char.add_mission(mission_id)
 		else:
 			sender.char.add_mission(int(args.mission))
+
+class AutocompleteMissionsCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "autocompletemissions")
+		self.command.add_argument("--enable", type=toggle_bool)
+
+	def run(self, args, sender):
+		if args.enable is None:
+			sender.char.autocomplete_missions = not sender.char.autocomplete_missions
+		else:
+			sender.char.autocomplete_missions = args.enable
 
 class CompleteMissionCommand(ChatCommand):
 	def __init__(self, chat):
@@ -43,7 +54,11 @@ class CompleteMissionCommand(ChatCommand):
 						target = task.target[0]
 					else:
 						target = task.target
-					sender.char.update_mission_task(task.type, target, increment=task.target_value, mission_id=mission_id)
+					if isinstance(task.parameter, tuple) and task.parameter:
+						parameter = task.parameter[0]
+					else:
+						parameter = None
+					sender.char.update_mission_task(task.type, target, parameter, increment=task.target_value, mission_id=mission_id)
 
 class RemoveMissionCommand(ChatCommand):
 	def __init__(self, chat):
@@ -57,9 +72,9 @@ class RemoveMissionCommand(ChatCommand):
 		else:
 			self.chat.sys_msg_sender("Mission not found")
 
-class RemoveMissionCommand(ChatCommand):
+class ResetMissionsCommand(ChatCommand):
 	def __init__(self, chat):
-		super().__init__(chat, "removemission")
+		super().__init__(chat, "resetmissions")
 
 	def run(self, args, sender):
 		sender.char.missions.clear()

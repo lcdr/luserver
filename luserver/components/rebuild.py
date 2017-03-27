@@ -20,6 +20,8 @@ class FailReason:
 	CanceledEarly = 2
 	BuildEnded = 3
 
+ACTIVATOR_LOT = 6604
+
 class RebuildComponent(ScriptedActivityComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -50,9 +52,11 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.rebuild_activator_position = Vector3(self.object.physics.position)
 
 	def on_startup(self):
-		self.object._v_server.spawn_object(6604, {"parent": self.object, "position": self.rebuild_activator_position})
+		self.object._v_server.spawn_object(ACTIVATOR_LOT, {"parent": self.object, "position": self.rebuild_activator_position})
 		if hasattr(self.object, "ai"):
 			self.object.ai.disable()
+		if hasattr(self.object, "moving_platform"):
+			self.object.moving_platform.stop_pathing()
 
 	@property
 	def rebuild_state(self):
@@ -116,20 +120,19 @@ class RebuildComponent(ScriptedActivityComponent):
 		player.char.rebuilding = 0
 		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id)
 		self.object.render.play_f_x_effect(name="BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507)
-		player.render.play_animation(animation_id="rebuild-celebrate", play_immediate=False)
+		player.render.play_animation("rebuild-celebrate")
 
-		assert len(self.object.children) == 1
-		self.object._v_server.destruct(self.object._v_server.game_objects[self.object.children[0]])
+		for child_id in self.object.children:
+			child = self.object._v_server.game_objects[child_id]
+			if child.lot == ACTIVATOR_LOT:
+				self.object._v_server.destruct(child)
+				break
 		self.callback_handles.append(self.object.call_later(self.smash_time, self.smash_rebuild))
 
 		player.char.update_mission_task(TaskType.QuickBuild, self.activity_id)
 
 		# drop rewards
 		self.object.physics.drop_rewards(*self.completion_rewards, player)
-
-		# if this is a moving platform, set the waypoint
-		if hasattr(self, "moving_platform"):
-			self.moving_platform.update_waypoint()
 
 		if hasattr(self.object, "ai"):
 			self.object.ai.enable()

@@ -261,7 +261,9 @@ class GeneralHandling(ServerModule):
 				self.server.get_object(object_id).handle("on_enter", player)
 		for object_id in player.char.last_collisions:
 			if object_id not in collisions:
-				self.server.get_object(object_id).handle("on_exit", player, silent=True)
+				obj = self.server.get_object(object_id)
+				if obj is not None:
+					obj.handle("on_exit", player, silent=True)
 
 		player.char.last_collisions = collisions
 

@@ -91,7 +91,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.callback_handles = {}
 		self.set_world_id(world_id)
 		self.accounts = {}
-		self.dropped_loot = {}
 		atexit.register(self.shutdown)
 
 	async def init_network(self):

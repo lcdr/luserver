@@ -156,7 +156,8 @@ class _LUZImporter:
 			path_version = self.luz.read(c_uint)
 			path_name = self.luz.read(str, length_type=c_ubyte)
 			path_type = self.luz.read(c_uint)
-			self.luz.skip_read(8)
+			unknown1 = self.luz.read(c_uint)
+			path_behavior = self.luz.read(c_uint)
 
 			if path_type == PathType.MovingPlatform:
 				if path_version >= 18:
@@ -230,7 +231,7 @@ class _LUZImporter:
 
 			waypoints = tuple(waypoints)
 			if path_type == PathType.MovingPlatform:
-				self.world_data.paths[path_name] = waypoints
+				self.world_data.paths[path_name] = path_behavior, waypoints
 			elif path_type == PathType.Spawner:
 				if spawner_vars["spawntemplate"] == 0:
 					continue
@@ -280,7 +281,7 @@ class _LVLImporter:
 			self.parse_chunk_type_2001()
 
 	def parse_chunk_type_2001(self):
-		whitelisted_serverside_lots = 176, 2292, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11182, 11274, 11279, 11280, 11281, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14225, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16477, 16506, 16513, 16627
+		whitelisted_serverside_lots = 176, 2292, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7869, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11182, 11274, 11279, 11280, 11281, 12166, 12175, 12232, 12384, 12661, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14225, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16477, 16506, 16513, 16627
 
 		for _ in range(self.lvl.read(c_uint)):
 			object_id = self.lvl.read(c_int64)  # seems like the object id, but without some bits
@@ -303,6 +304,8 @@ class _LVLImporter:
 				spawned_vars["position"] = position
 				spawned_vars["rotation"] = rotation
 
+				if "custom_script_client" in config:
+					spawned_vars["custom_script"] = ""
 				if "custom_script_server" in config:
 					if config["custom_script_server"] == "":
 						spawned_vars["custom_script"] = ""
@@ -325,11 +328,21 @@ class _LVLImporter:
 					spawned_vars["primitive_model_scale"] = primitive_model_scale
 				if "respawnname" in config:
 					spawned_vars["respawn_name"] = config["respawnname"]
+				if "targetScene" in config:
+					spawned_vars["respawn_point_name"] = config["targetScene"]
 				script_vars = {}
 				spawned_vars["script_vars"] = script_vars
 
 				if "altFlagID" in config:
 					script_vars["alt_flag_id"] = config["altFlagID"]
+				if "Cinematic" in config:
+					script_vars["cinematic"] = config["Cinematic"]
+				if "ForceAmt" in config:
+					script_vars["force_amount"] = config["ForceAmt"]
+				if "ForceX" in config and "ForceY" in config and "ForceX" in config:
+					script_vars["force"] = Vector3(config["ForceX"], config["ForceY"], config["ForceZ"])
+				if "FrictionAmt" in config:
+					script_vars["friction_amount"] = config["FrictionAmt"]
 				if "number" in config:
 					script_vars["flag_id"] = int(config["number"])
 				if "POI" in config:
