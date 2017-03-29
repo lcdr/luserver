@@ -30,15 +30,33 @@ class CompleteMissionCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "completemission")
 		self.command.add_argument("mission")
+		self.command.add_argument("--upto", action="store_true")
 		self.command.add_argument("--fully", action="store_true")
 
 	def run(self, args, sender):
-		if args.mission in MISSIONS:
+		if args.upto:
+			args.fully = True
+			mission_id = int(args.mission)
+			missions = self.find_prereqs(mission_id)
+		elif args.mission in MISSIONS:
 			missions = MISSIONS[args.mission]
 		else:
 			missions = [int(args.mission)]
 		for mission_id in missions:
 			asyncio.get_event_loop().call_soon(self.async_complete_mission, mission_id, args.fully, sender)
+
+	def find_prereqs(self, mission_id):
+		missions = set()
+		prereqs = self.chat.server.db.missions[mission_id][1]
+		for prereq_ors in prereqs:
+			for prereq_mission in prereq_ors:
+				if isinstance(prereq_mission, tuple): # prereq requires special mission state
+					prereq_mission, prereq_mission_state = prereq_mission
+				else:
+					prereq_mission_state = MissionState.Completed
+				missions.add(prereq_mission)
+				missions.update(self.find_prereqs(prereq_mission))
+		return missions
 
 	def async_complete_mission(self, mission_id, fully, sender):
 		if mission_id not in sender.char.missions:
@@ -79,7 +97,7 @@ class ResetMissionsCommand(ChatCommand):
 	def run(self, args, sender):
 		sender.char.missions.clear()
 		# add achievements
-		for mission_id, data in self.server.db.missions.items():
+		for mission_id, data in self.chat.server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
 				sender.char.missions[mission_id] = MissionProgress(mission_id, data)

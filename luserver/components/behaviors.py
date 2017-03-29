@@ -1,6 +1,7 @@
 import logging
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort
+from ..math.vector import Vector3
 
 log = logging.getLogger(__name__)
 
@@ -219,7 +220,8 @@ class TargetCaster(Behavior):
 class Stun(Behavior):
 	@staticmethod
 	def serialize(self, behavior, bitstream, target, level):
-		if target.object_id != self.original_target_id:
+		# needs to be researched more
+		if True:#target.object_id != self.original_target_id:
 			log.debug("Stun writing bit")
 			bitstream.write(c_bit(False))
 
@@ -269,7 +271,8 @@ class RepairArmor(Behavior):
 class SpawnObject(Behavior):
 	@staticmethod
 	def unserialize(self, behavior, bitstream, target, level):
-		return self.object._v_server.spawn_object(behavior.lot, {"parent": self.object})
+		position = self.object.physics.position + Vector3.forward.rotate(self.object.physics.rotation)*behavior.distance
+		return self.object._v_server.spawn_object(behavior.lot, {"parent": self.object, "position": position})
 
 SpawnQuickbuild = SpawnObject # works the same
 
@@ -342,7 +345,7 @@ class Interrupt(Behavior):
 	@staticmethod
 	def serialize(self, behavior, bitstream, target, level):
 		if target != self.object:
-			log.debug("Interrupt: target != self, reading bit")
+			log.debug("Interrupt: target != self, writing bit")
 			bitstream.write(c_bit(False))
 		if not getattr(behavior, "interrupt_block", False):
 			bitstream.write(c_bit(False))
