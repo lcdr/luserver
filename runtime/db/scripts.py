@@ -47,6 +47,7 @@ SCRIPTS = {
 	1556: "nexus_tower.shadow_orb",
 	1566: "avant_gardens.rocco_sirocco",
 	1569: "venture_explorer.broken_console",
+	1573: "avant_gardens.melodie_foxtrot",
 	1582: "items.maelstrom_vacuum",
 	1584: "avant_gardens.monument_bird",
 	1586: "avant_gardens.caged_bricks",

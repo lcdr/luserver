@@ -1,5 +1,6 @@
 import luserver.components.script as script
 from luserver.bitstream import c_bit, c_int, c_int64
+from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 
 class ScriptComponent(script.ScriptComponent):
@@ -9,6 +10,8 @@ class ScriptComponent(script.ScriptComponent):
 				visible = 1
 			elif mission_state == MissionState.ReadyToComplete:
 				visible = 0
+				player = self.object._v_server.game_objects[responder]
+				player.inventory.remove_item_from_inv(InventoryType.Items, lot=14592)
 			else:
 				return
 			for obj in self.object._v_server.game_objects.values():

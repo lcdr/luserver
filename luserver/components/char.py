@@ -423,8 +423,8 @@ class CharacterComponent(Component):
 
 	def complete_mission(self, mission_id):
 		mission = self.missions[mission_id]
-		if mission.state != MissionState.Active:
-			raise RuntimeError("Mission not active")
+		if mission.state == MissionState.Completed:
+			return
 		mission.state = MissionState.Completed
 
 		if mission.is_mission:
