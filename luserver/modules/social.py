@@ -1,6 +1,6 @@
 import persistent.wref
 
-from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
+from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
 
@@ -28,7 +28,7 @@ class SocialHandling:
 		server.register_handler(SocialMsg.TeamInviteResponse, self.on_team_invite_response)
 
 	def on_get_friends_list(self, data, address):
-		assert sum(data) == 0 # seem to always be 0?
+		assert data.read(c_uint64) == 0 # seems to always be 0?
 
 		friends = server.accounts[address].characters.selected().char.friends
 

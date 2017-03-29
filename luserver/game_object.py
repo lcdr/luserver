@@ -6,13 +6,15 @@ from collections import OrderedDict
 
 from persistent import Persistent
 
+from pyraknet.replicamanager import Replica
+
 from .ldf import LDF
 from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
 from .world import server
 
 log = logging.getLogger(__name__)
 
-class GameObject:
+class GameObject(Replica):
 	def __setattr__(self, name, value):
 		self.attr_changed(name)
 		super().__setattr__(name, value)

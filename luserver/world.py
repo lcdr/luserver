@@ -75,7 +75,7 @@ import ZODB
 from persistent.mapping import PersistentMapping
 
 from pyraknet.replicamanager import ReplicaManager
-from .server import DisconnectReason, Server
+from .commonserver import DisconnectReason, Server
 from .game_object import GameObject
 from .messages import WorldServerMsg
 from .modules.char import CharHandling
@@ -107,11 +107,13 @@ class WorldServer(Server):
 
 	def __init__(self, address, external_host, world_id, max_connections, db_conn):
 		Server.__init__(self, address, max_connections, db_conn)
-		self.replica_manager = ReplicaManager(self)
+		self.replica_manager = ReplicaManager(self._server)
 		global _server
 		_server = self
 		self.external_address = external_host, address[1]
-		self.not_console_logged_packets.add("ReplicaManagerSerialize")
+		self._server.add_handler("network_init", self.on_network_init)
+		self._server.add_handler("disconnect_or_connection_lost", self._on_disconnect_or_connection_lost)
+		self._server.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
 		self.not_console_logged_packets.add("GameMessage/PickupItem")
@@ -142,9 +144,8 @@ class WorldServer(Server):
 		self.load_plugins()
 		self.set_world_id(world_id)
 
-	async def init_network(self):
-		await super().init_network()
-		self.external_address = self.external_address[0], self._address[1] # update port (for OS-chosen port)
+	def on_network_init(self, address):
+		self.external_address = self.external_address[0], address[1] # update port (for OS-chosen port)
 		with self.multi:
 			self.db.servers[self.external_address] = self.world_id
 
@@ -155,7 +156,6 @@ class WorldServer(Server):
 		else:
 			asyncio.get_event_loop().call_later(60*60, self.check_shutdown)
 
-
 	def shutdown(self):
 		self.commit()
 		for address in self.accounts.copy():
@@ -165,24 +165,6 @@ class WorldServer(Server):
 				del self.db.servers[self.external_address]
 		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
-
-	def log_packet(self, data, address, received):
-		try:
-			packetname = self.packetname(data)
-			console_log = packetname not in self.not_console_logged_packets
-		except ValueError:
-			packetname = self.unknown_packetname(data)
-			console_log = True
-
-		if packetname in self.file_logged_packets:
-			with open(os.path.normpath(os.path.join(__main__.__file__, "..", "logs", packetname+str(time.time())+".bin")), "wb") as file:
-				file.write(data)
-
-		if console_log:
-			if received:
-				log.debug("got %s", packetname)
-			else:
-				log.debug("snd %s", packetname)
 
 	def set_world_id(self, world_id):
 		self.world_id = world_id[0], 0, world_id[1]
@@ -203,6 +185,7 @@ class WorldServer(Server):
 					self.spawn_model(spawner_id, lot, position, rotation)
 
 	EVENT_NAMES = "proximity_radius", "spawn"
+
 	def add_handler(self, event_name: str, handler):
 		if event_name not in WorldServer.EVENT_NAMES:
 			raise ValueError("Invalid event name %s", event_name)
@@ -243,8 +226,7 @@ class WorldServer(Server):
 		spawner = GameObject(176, spawner_id, set_vars=spawner_vars)
 		self.models.append((spawner, spawner.spawner.spawn()))
 
-	def on_disconnect_or_connection_lost(self, data, address):
-		super().on_disconnect_or_connection_lost(data, address)
+	def _on_disconnect_or_connection_lost(self, address):
 		if self.world_id[0] != 0:
 			player = self.accounts[address].characters.selected()
 			if player in self.replica_manager._network_ids: # might already be destructed if "switch character" is selected:
