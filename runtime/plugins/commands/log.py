@@ -8,15 +8,21 @@ class Filelog(ChatCommand):
 		super().__init__("filelog", description="Change which packets are logged to file")
 		self.command.add_argument("action", choices=("add", "remove", "show"), default="show")
 		self.command.add_argument("packetname", nargs="+")
+		self.command.add_argument("--raknet", action="store_true", default=False)
 
 	def run(self, args, sender):
+		if args.raknet:
+			packets = server._server.file_logged_packets
+		else:
+			packets = server.file_logged_packets
+
 		args.packetname = " ".join(args.packetname)
 		if args.action == "add":
-			server.file_logged_packets.add(args.packetname)
+			packets.add(args.packetname)
 		elif args.action == "remove":
-			server.file_logged_packets.remove(args.packetname)
+			packets.remove(args.packetname)
 		elif args.action == "show":
-			server.chat.sys_msg_sender(server.file_logged_packets)
+			server.chat.sys_msg_sender(packets)
 
 class Log(ChatCommand):
 	def __init__(self):
@@ -33,11 +39,17 @@ class NoConsoleLog(ChatCommand):
 		super().__init__("noconsolelog", description="Change which packets are logged to console. Adding a packet removes it from logging and vice versa.")
 		self.command.add_argument("action", choices=("add", "remove", "show"), default="show")
 		self.command.add_argument("packetname")
+		self.command.add_argument("--raknet", action="store_true")
 
 	def run(self, args, sender):
+		if args.raknet:
+			packets = server._server.not_console_logged_packets
+		else:
+			packets = server.not_console_logged_packets
+
 		if args.action == "add":
-			server.not_console_logged_packets.add(args.packetname)
+			packets.add(args.packetname)
 		elif args.action == "remove":
-			server.not_console_logged_packets.remove(args.packetname)
+			packets.remove(args.packetname)
 		elif args.action == "show":
-			server.chat.sys_msg_sender(server.not_console_logged_packets)
+			server.chat.sys_msg_sender(packets)

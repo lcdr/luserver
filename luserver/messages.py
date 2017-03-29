@@ -4,13 +4,10 @@ import re
 from enum import Enum, IntEnum
 from functools import wraps
 
-from pyraknet.messages import Message
 from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, WriteStream
 from .ldf import LDF
 
 log = logging.getLogger(__name__)
-
-Message.LUPacket = 0x53
 
 class GeneralMsg(IntEnum):
 	@staticmethod

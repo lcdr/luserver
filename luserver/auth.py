@@ -11,7 +11,7 @@ except ImportError:
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
 
-from . import server
+from . import commonserver
 from .bitstream import c_bool, c_ubyte, c_uint, c_ushort, WriteStream
 from .messages import AuthServerMsg, WorldClientMsg
 
@@ -35,7 +35,7 @@ class LoginReturnCode:
 	PlaySchedule = 13
 	AccountNotActivated = 14
 
-class AuthServer(server.Server):
+class AuthServer(commonserver.Server):
 	PEER_TYPE = AuthServerMsg.header()
 
 	def __init__(self, host, max_connections, db_conn):

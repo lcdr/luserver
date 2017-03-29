@@ -97,7 +97,7 @@ class MailHandling:
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		with server.multi:
 			recipient.char.mails.append(mail)
-		if recipient.char.address in server._connected:
+		if recipient.char.address in server._server._connected:
 			self.send_mail_notification(recipient)
 
 	def send_mail_data(self, player):

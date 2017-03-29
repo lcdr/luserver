@@ -299,7 +299,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			if friend_ref() is None:
 				outdated_refs.insert(0, index)
 			else:
-				if friend_ref().char.address in server._connected:
+				if friend_ref().char.address in server._server._connected:
 					server.send(update_notify, friend_ref().char.address)
 
 		for index in outdated_refs:
