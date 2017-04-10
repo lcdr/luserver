@@ -1,9 +1,9 @@
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
-from ..messages import broadcast, single
+from ..messages import broadcast, single, Serializable
 from ..math.vector import Vector3
 from .component import Component
 
-class PropertyData:
+class PropertyData(Serializable):
 	def __init__(self):
 		self.owner = None
 		self.path = []
@@ -50,6 +50,7 @@ class PropertyData:
 			out.write(c_float(coord[1]))
 			out.write(c_float(coord[2]))
 
+	@staticmethod
 	def deserialize(self, data):
 		data.read(c_int64)
 		data.read(c_int)
@@ -91,7 +92,9 @@ class PropertyData:
 			data.read(c_float)
 			data.read(c_float)
 
-class PropertySelectQueryProperty: # award for best name
+		return PropertyData()
+
+class PropertySelectQueryProperty(Serializable):
 	def __init__(self):
 		self.clone_id = 0
 		self.owner_name = "Test owner name"
@@ -122,21 +125,23 @@ class PropertySelectQueryProperty: # award for best name
 		out.write(c_uint(self.date_last_published))
 		out.write(c_uint64(self.performance_cost))
 
-	def deserialize(self, data):
-		self.clone_id = data.read(c_uint)
-		self.owner_name = data.read(str, length_type=c_uint)
-		self.name = data.read(str, length_type=c_uint)
-		self.description = data.read(str, length_type=c_uint)
-		self.reputation = data.read(c_uint)
-		self.is_bff = data.read(c_bit)
-		self.is_friend = data.read(c_bit)
-		self.is_moderated_approved = data.read(c_bit)
-		self.is_alt = data.read(c_bit)
-		self.is_owned = data.read(c_bit)
-		self.access_type = data.read(c_uint)
-		self.date_last_published = data.read(c_uint)
-		self.performance_cost = data.read(c_uint64)
-
+	@staticmethod
+	def deserialize(data):
+		obj = PropertySelectQueryProperty()
+		obj.clone_id = data.read(c_uint)
+		obj.owner_name = data.read(str, length_type=c_uint)
+		obj.name = data.read(str, length_type=c_uint)
+		obj.description = data.read(str, length_type=c_uint)
+		obj.reputation = data.read(c_uint)
+		obj.is_bff = data.read(c_bit)
+		obj.is_friend = data.read(c_bit)
+		obj.is_moderated_approved = data.read(c_bit)
+		obj.is_alt = data.read(c_bit)
+		obj.is_owned = data.read(c_bit)
+		obj.access_type = data.read(c_uint)
+		obj.date_last_published = data.read(c_uint)
+		obj.performance_cost = data.read(c_uint64)
+		return obj
 
 class PropertyEntranceComponent(Component):
 	def serialize(self, out, is_creation):

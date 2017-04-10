@@ -8,6 +8,8 @@ class Vector3:
 			self.y = x.y
 			self.z = x.z
 		elif isinstance(x, collections.abc.Sequence):
+			if len(x) != 3:
+				raise ValueError("Sequence must have length 3")
 			self.x = x[0]
 			self.y = x[1]
 			self.z = x[2]
@@ -59,8 +61,13 @@ class Vector3:
 		return self.x*other.x + self.y*other.y + self.z*other.z
 
 	def sq_distance(self, other):
-		diff = self - other
-		return diff.sq_magnitude()
+		#diff = self - other
+		#return diff.sq_magnitude()
+		# optimized version without creating a new object
+		dx = self.x - other.x
+		dy = self.y - other.y
+		dz = self.z - other.z
+		return dx**2 + dy**2 + dz**2
 
 	def distance(self, other):
 		return math.sqrt(self.sq_distance(other))

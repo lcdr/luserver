@@ -31,6 +31,7 @@ class ItemType:
 class LootType:
 	Mission = 2
 	Achievement = 5
+	Trade = 6
 	# 8 occurs when deleting an item
 	# loot drop = 11 ?
 	# 16 occurs on completing modular build
@@ -41,20 +42,21 @@ import logging
 from persistent import Persistent
 from persistent.list import PersistentList
 
-from ..bitstream import c_bit, c_int, c_int64, c_uint
+from ..bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
 from ..ldf import LDF, LDFDataType
-from ..messages import broadcast, single
+from ..messages import broadcast, single, Serializable
 from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
 
 log = logging.getLogger(__name__)
 
-class Stack(Persistent):
+class Stack(Persistent, Serializable):
 	def __init__(self, db, object_id, lot, amount=1):
 		self.object_id = object_id
 		self.lot = lot
 		self.amount = amount
+		self.slot = 0
 
 		for component_type, component_id in db.components_registry[self.lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
@@ -67,6 +69,45 @@ class Stack(Persistent):
 
 	def __repr__(self):
 		return "%ix %i" % (self.amount, self.lot)
+
+	def serialize(self, stream):
+		stream.write(c_int64(self.object_id))
+		stream.write(c_int(self.lot))
+		stream.write(c_bit(False))
+		stream.write(c_bit(self.amount != 1))
+		if self.amount != 1:
+			stream.write(c_uint(self.amount))
+		stream.write(c_bit(self.slot != 0))
+		if self.slot != 0:
+			stream.write(c_ushort(self.slot))
+		stream.write(c_bit(False))
+		stream.write(c_bit(False))
+		stream.write(c_bit(True))
+
+	@staticmethod
+	def deserialize(stream):
+		item = Stack.__new__(Stack)
+		item.object_id = stream.read(c_int64)
+		item.lot = stream.read(c_int)
+		if stream.read(c_bit):
+			print("UNKNOWN1", stream.read(c_int64))
+		if stream.read(c_bit):
+			item.amount = stream.read(c_uint)
+		else:
+			item.amount = 1
+		if stream.read(c_bit):
+			item.slot = stream.read(c_ushort)
+		else:
+			item.slot = 0
+		if stream.read(c_bit):
+			print("UNKNOWN2", stream.read(c_uint))
+		if stream.read(c_bit):
+			raise NotImplementedError
+			#ldf = LDF()
+			#ldf.from_bitstream(stream)
+		print("bit", stream.read(c_bit))
+		print(item)
+		return item
 
 class ItemComponent(Component):
 	def serialize(self, out, is_creation):
@@ -98,14 +139,7 @@ class InventoryComponent(Component):
 		if self.equipped_items_flag or is_creation:
 			out.write(c_uint(len(self.equipped[-1])))
 			for item in self.equipped[-1]:
-				out.write(c_int64(item.object_id))
-				out.write(c_int(item.lot))
-				out.write(c_bit(False))
-				out.write(c_bit(False))
-				out.write(c_bit(False))
-				out.write(c_bit(False))
-				out.write(c_bit(False))
-				out.write(c_bit(True))
+				item.serialize(out)
 			self.equipped_items_flag = False
 		out.write(c_bit(False))
 

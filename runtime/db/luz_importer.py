@@ -328,6 +328,8 @@ class _LVLImporter:
 					spawned_vars["primitive_model_scale"] = primitive_model_scale
 				if "respawnname" in config:
 					spawned_vars["respawn_name"] = config["respawnname"]
+				if "respawnVol" in config and config["respawnVol"]:
+					spawned_vars["respawn_data"] = Vector3([float(i) for i in config["rspPos"].split("\x1f")]), Quaternion([float(i) for i in config["rspRot"].split("\x1f")])
 				if "targetScene" in config:
 					spawned_vars["respawn_point_name"] = config["targetScene"]
 				script_vars = {}

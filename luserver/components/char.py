@@ -49,6 +49,20 @@ class DeleteReason:
 	ReturningModelToInventory = 1
 	BreakingModelApart = 2
 
+class TradeInviteResult:
+	NotFound = 0
+	InviteSent = 1
+	OutOfRange = 2
+	AlreadyTrading = 3
+	GeneralError = 4
+
+class Trade:
+	def __init__(self):
+		self.other_player = None
+		self.accepted = False
+		self.currency_offered = 0
+		self.items_offered = {}
+
 class MatchRequestType:
 	Join = 0
 	Ready = 1
@@ -91,6 +105,8 @@ class CharacterComponent(Component):
 
 		for world in (World.BlockYard, World.AvantGrove, World.NimbusRock, World.NimbusIsle, World.ChanteyShanty, World.RavenBluff):
 			self.object._v_server.db.properties[world.value][self.clone_id] = PersistentMapping()
+
+		self.trade = None
 
 		self.dropped_loot = {}
 		self.last_collisions = []
@@ -277,6 +293,7 @@ class CharacterComponent(Component):
 	def on_destruction(self):
 		self.vehicle_id = 0
 		self.online = False
+		self.trade = None
 		self.dropped_loot.clear()
 		self.last_collisions.clear()
 		self.check_for_leaks()
@@ -348,7 +365,8 @@ class CharacterComponent(Component):
 		redirect.write(server_address[0], char_size=1, allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
-		self.object._v_server.send(redirect, self.address)
+		for address in self.object._v_server.accounts:
+			self.object._v_server.send(redirect, address)
 
 	async def transfer_to_last_non_instance(self, position=None, rotation=None):
 		if position is not None:
@@ -490,7 +508,10 @@ class CharacterComponent(Component):
 	def play_emote(self, emote_id:c_int, target_id:c_int64):
 		self.emote_played(emote_id, target_id)
 		if target_id:
-			self.update_mission_task(TaskType.UseEmote, self.object._v_server.game_objects[target_id].lot, emote_id)
+			target = self.object._v_server.get_object(target_id)
+			if target is not None:
+				target.handle("on_emote_received", self.object, emote_id, silent=True)
+				self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
 
 	@single
 	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
@@ -507,7 +528,7 @@ class CharacterComponent(Component):
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id in self.object._v_server.db.object_skills[lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id]
-				self.object.skill.unserialize_behavior(behavior, b"", self.object)
+				self.object.skill.deserialize_behavior(behavior, b"", self.object)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
 		del self.dropped_loot[loot_object_id]
@@ -655,7 +676,7 @@ class CharacterComponent(Component):
 			self.unlocked_emotes.append(emote_id)
 
 	@single
-	def play_cinematic(self, allow_ghost_updates:c_bit=True, close_multi_interact:c_bit=None, send_server_notify:c_bit=None, use_controlled_object_for_audio_listener:c_bit=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:c_bit=False, lead_in:c_float=-1.0, leave_player_locked_when_finished:c_bit=False, lock_player:c_bit=True, path_name:"wstr"=None, result:c_bit=False, skip_if_same_path:c_bit=False, start_time_advance:c_float=None):
+	def play_cinematic(self, allow_ghost_updates:c_bit=True, close_multi_interact:c_bit=False, send_server_notify:c_bit=False, use_controlled_object_for_audio_listener:c_bit=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:c_bit=False, lead_in:c_float=-1.0, leave_player_locked_when_finished:c_bit=False, lock_player:c_bit=True, path_name:"wstr"=None, result:c_bit=False, skip_if_same_path:c_bit=False, start_time_advance:c_float=None):
 		pass
 
 	def toggle_ghost_reference_override(self, override:c_bit=False):
@@ -691,6 +712,68 @@ class CharacterComponent(Component):
 	def parse_chat_message(self, client_state:c_int, text:"wstr"):
 		if text[0] == "/":
 			self.object._v_server.chat.parse_command(text[1:], self.object)
+
+	def client_trade_request(self, need_invite_pop_up:c_bit=False, invitee:c_int64=None):
+		# out of range error not implemented
+		invitee = self.object._v_server.get_object(invitee)
+
+		if (self.trade is not None and self.trade.other_player != invitee.object_id) \
+		or (invitee.char.trade is not None and invitee.char.trade.other_player != self.object.object_id):
+			result = TradeInviteResult.AlreadyTrading
+		else:
+			invitee.char.server_trade_invite(need_invite_pop_up, requestor=self.object.object_id, name=self.object.name)
+			invitee.char.trade = Trade()
+			invitee.char.trade.other_player = self.object.object_id
+			result = TradeInviteResult.InviteSent
+		self.server_trade_initial_reply(invitee.object_id, result, invitee.name)
+
+	@single
+	def server_trade_invite(self, need_invite_pop_up:c_bit=False, requestor:c_int64=None, name:"wstr"=None):
+		pass
+
+	@single
+	def server_trade_initial_reply(self, invitee:c_int64=None, result_type:c_uint=None, name:"wstr"=None):
+		pass
+
+	def client_trade_update(self, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
+		self.trade.currency_offered = currency
+		self.trade.items_offered = items
+		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player.char.server_trade_update(currency=currency, items=items)
+
+	@single
+	def server_trade_update(self, about_to_perform:c_bit=False, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
+		if about_to_perform:
+			trade_player = self.object._v_server.game_objects[self.trade.other_player]
+			if self.trade.currency_offered != 0:
+				trade_player.char.set_currency(currency=trade_player.char.currency + self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=self.object.object_id)
+				self.set_currency(currency=self.currency - self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=self.trade.other_player)
+			for item in self.trade.items_offered.values():
+				trade_player.inventory.add_item_to_inventory(item.lot, item.amount, source_type=LootType.Trade)
+				self.object.inventory.remove_item_from_inv(InventoryType.Max, object_id=item.object_id, amount=item.amount)
+			self.trade = None
+
+	def client_trade_cancel(self):
+		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player.char.server_trade_cancel()
+		self.trade = None
+
+	def client_trade_accept(self, first:c_bit=False):
+		self.trade.accepted = not first
+		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player.char.server_trade_accept(first)
+
+	@single
+	def server_trade_cancel(self):
+		self.trade = None
+
+	@single
+	def server_trade_accept(self, first:c_bit=False):
+		if not first:
+			if self.trade.accepted:
+				trade_player = self.object._v_server.game_objects[self.trade.other_player]
+				trade_player.char.server_trade_update(True, 0, {})
+				self.server_trade_update(True, 0, {})
 
 	def ready_for_updates(self, object_id:c_int64=None):
 		pass
@@ -728,11 +811,15 @@ class CharacterComponent(Component):
 
 	def report_bug(self, body:"wstr"=None, client_version:"str"=None, other_player_id:"str"=None, selection:"str"=None):
 		for account in self.object._v_server.accounts.values():
-			for char in account.characters:
+			for char in account.characters.values():
 				self.object._v_server.mail.send_mail(self.object.name, "Bug Report: "+selection, body, char)
 
 	def request_smash_player(self):
 		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
+
+	@broadcast
+	def player_reached_respawn_checkpoint(self, pos:Vector3=None, rot:Quaternion=Quaternion.identity):
+		pass
 
 	@single
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
@@ -770,7 +857,7 @@ class CharacterComponent(Component):
 	@single
 	def modify_lego_score(self, score:c_int64=None, source_type:c_int=0):
 		self.universe_score += score
-		if self.universe_score > self.object._v_server.db.level_scores[self.level]:
+		if self.level < len(self.object._v_server.db.level_scores) and self.universe_score > self.object._v_server.db.level_scores[self.level]:
 			self.level += 1
 			if self.level in self.object._v_server.db.level_rewards:
 				self.notify_level_rewards(self.level, sending_rewards=True)

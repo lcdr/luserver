@@ -27,6 +27,11 @@ class Comp108Component(Component):
 		player.char.vehicle_id = self.object.object_id
 		player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="Use /dismount to dismount.")
 
+	def on_destruction(self):
+		if self.driver_id != 0:
+			self.object._v_server.game_objects[self.driver_id].char.vehicle_id = 0
+			self.driver_id = 0
+
 	def request_die(self, unknown_bool:c_bit=None, death_type:"wstr"=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash
 		self.object.call_later(3, self.object.destructible.resurrect)

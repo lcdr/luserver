@@ -9,6 +9,6 @@ class ScriptComponent(script.ScriptComponent):
 				break
 
 	def teleport(self, player, obj):
-		player.char.play_cinematic(close_multi_interact=False, send_server_notify=False, lock_player=True, path_name=self.script_vars["cinematic"], start_time_advance=0)
+		player.char.play_cinematic(path_name=self.script_vars["cinematic"], start_time_advance=0)
 		player.char.teleport(ignore_y=False, pos=obj.physics.position, set_rotation=True, x=obj.physics.rotation.x, y=obj.physics.rotation.y, z=obj.physics.rotation.z, w=obj.physics.rotation.w)
 		player.render.play_animation("paradox-teleport-in", play_immediate=True, priority=4)

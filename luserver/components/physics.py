@@ -9,69 +9,6 @@ from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 
-MODEL_DIMENSIONS = {
-	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
-	4734: (Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)), # wall
-	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
-	5633: (Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)), # death plane
-	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
-	10285: (Vector3(-7, 0, -6), Vector3(7, 3, 8)), # lego club ring
-	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225))} # POI wall
-MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
-MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
-
-class PrimitiveModelType:
-	Cuboid = 1
-	Cone = 2
-	Cylinder = 3
-	Sphere = 4
-
-PRIMITIVE_DIMENSIONS = {
-	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)),
-	PrimitiveModelType.Cylinder: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
-
-# currently for static objects only, does not handle position/rotation updates
-class AABB: # axis aligned bounding box
-	def __init__(self, obj):
-		if hasattr(obj, "primitive_model_type"):
-			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
-			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
-		else:
-			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
-			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
-
-		rel_min = rel_min.rotate(obj.physics.rotation)
-		rel_max = rel_max.rotate(obj.physics.rotation)
-
-		# after rotation min and max are no longer necessarily the absolute min/max values
-
-		rot_min = Vector3()
-		rot_max = Vector3()
-
-		rot_min.x = min(rel_min.x, rel_max.x)
-		rot_min.y = min(rel_min.y, rel_max.y)
-		rot_min.z = min(rel_min.z, rel_max.z)
-		rot_max.x = max(rel_min.x, rel_max.x)
-		rot_max.y = max(rel_min.y, rel_max.y)
-		rot_max.z = max(rel_min.z, rel_max.z)
-
-		self.min = obj.physics.position + rot_min
-		self.max = obj.physics.position + rot_max
-
-	def is_point_within(self, point):
-		return self.min.x < point.x < self.max.x and \
-		       self.min.y < point.y < self.max.y and \
-		       self.min.z < point.z < self.max.z
-
-# for dynamic objects
-class CollisionSphere:
-	def __init__(self, obj, radius):
-		self.position = obj.physics.position
-		self.sq_radius = radius**2
-
-	def is_point_within(self, point):
-		return self.position.sq_distance(point) < self.sq_radius
-
 class PhysicsComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -89,15 +26,6 @@ class PhysicsComponent(Component):
 			self.rotation.update(set_vars["rotation"])
 		elif "parent" in set_vars:
 			self.rotation.update(set_vars["parent"].physics.rotation)
-
-	def on_startup(self):
-		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
-			for comp in self.object.components:
-				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
-					self.object._v_server.general.tracked_objects[self.object] = AABB(self.object)
-					if self.object._v_server.get_objects_in_group("physics_debug_marker"):
-						self.spawn_debug_marker()
-					break
 
 	def on_destruction(self):
 		if self.object in self.object._v_server.general.tracked_objects:
@@ -275,6 +203,69 @@ class VehiclePhysicsComponent(Controllable):
 			out.write(c_bit(False))
 		out.write(c_bit(False))
 
+MODEL_DIMENSIONS = {
+	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
+	4734: (Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)), # wall
+	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
+	5633: (Vector3(-819.2, 0, -819.2), Vector3(819.2, 13.521, 819.2)), # death plane
+	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
+	10285: (Vector3(-7, 0, -6), Vector3(7, 3, 8)), # lego club ring
+	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225))} # POI wall
+MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
+MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
+
+class PrimitiveModelType:
+	Cuboid = 1
+	Cone = 2
+	Cylinder = 3
+	Sphere = 4
+
+PRIMITIVE_DIMENSIONS = {
+	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)),
+	PrimitiveModelType.Cylinder: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
+
+# currently for static objects only, does not handle position/rotation updates
+class AABB: # axis aligned bounding box
+	def __init__(self, obj):
+		if hasattr(obj, "primitive_model_type"):
+			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
+			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
+		else:
+			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
+			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
+
+		rel_min = rel_min.rotate(obj.physics.rotation)
+		rel_max = rel_max.rotate(obj.physics.rotation)
+
+		# after rotation min and max are no longer necessarily the absolute min/max values
+
+		rot_min = Vector3()
+		rot_max = Vector3()
+
+		rot_min.x = min(rel_min.x, rel_max.x)
+		rot_min.y = min(rel_min.y, rel_max.y)
+		rot_min.z = min(rel_min.z, rel_max.z)
+		rot_max.x = max(rel_min.x, rel_max.x)
+		rot_max.y = max(rel_min.y, rel_max.y)
+		rot_max.z = max(rel_min.z, rel_max.z)
+
+		self.min = obj.physics.position + rot_min
+		self.max = obj.physics.position + rot_max
+
+	def is_point_within(self, point):
+		return self.min.x < point.x < self.max.x and \
+		       self.min.y < point.y < self.max.y and \
+		       self.min.z < point.z < self.max.z
+
+# for dynamic objects
+class CollisionSphere:
+	def __init__(self, obj, radius):
+		self.position = obj.physics.position
+		self.sq_radius = radius**2
+
+	def is_point_within(self, point):
+		return self.position.sq_distance(point) < self.sq_radius
+
 class PhysicsEffect(enum.IntEnum):
 	Push = 0
 	Attract = 1
@@ -293,6 +284,8 @@ class PhantomPhysicsComponent(PhysicsComponent):
 		self.physics_effect_type = 0
 		self.physics_effect_amount = 0
 		self.physics_effect_direction = Vector3()
+		if "respawn_data" in set_vars:
+			self.respawn_data = set_vars["respawn_data"]
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.physics_data_flag or is_creation))
@@ -318,3 +311,19 @@ class PhantomPhysicsComponent(PhysicsComponent):
 				out.write(c_float(self.physics_effect_direction.y))
 				out.write(c_float(self.physics_effect_direction.z))
 			self.physics_effect_flag = False
+
+	def on_startup(self):
+		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
+			for comp in self.object.components:
+				if comp is self:
+					if not hasattr(self, "respawn_data"):
+						continue
+				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
+					self.object._v_server.general.tracked_objects[self.object] = AABB(self.object)
+					if self.object._v_server.get_objects_in_group("physics_debug_marker"):
+						self.spawn_debug_marker()
+					break
+
+	def on_enter(self, player):
+		if hasattr(self, "respawn_data"):
+			player.char.player_reached_respawn_checkpoint(self.respawn_data[0], self.respawn_data[1])

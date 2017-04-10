@@ -82,8 +82,8 @@ class MailHandling(ServerModule):
 			out.write(c_uint(return_code))
 			self.server.send(out, player.char.address)
 
-	def send_mail(self, sender, subject, body, recipient, attachment=None):
-		mail = Mail(self.server.new_object_id(), sender, subject, body, attachment)
+	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
+		mail = Mail(self.server.new_object_id(), sender_name, subject, body, attachment)
 		recipient.char.mails.append(mail)
 		self.send_mail_notification(recipient)
 
