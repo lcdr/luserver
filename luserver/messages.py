@@ -179,6 +179,15 @@ class GameMessage(Enum):
 	PropertySelectQuery = 845
 	ParseChatMessage = 850
 	OpenPropertyVendor = 861
+	ClientTradeRequest = 868
+	ServerTradeInvite = 870
+	ServerTradeInitialReply = 873
+	ClientTradeUpdate = 875
+	ServerTradeUpdate = 877
+	ClientTradeCancel = 878
+	ClientTradeAccept = 880
+	ServerTradeCancel = 883
+	ServerTradeAccept = 884
 	ReadyForUpdates = 888
 	BounceNotification = 932
 	BBBSaveRequest = 1001
@@ -202,6 +211,7 @@ class GameMessage(Enum):
 	RequestSmashPlayer = 1202
 	FireEventClientSide = 1213
 	LockNodeRotation = 1260
+	PlayerReachedRespawnCheckpoint = 1296
 	HandleUGCEquipPostDeleteBasedOnEditMode = 1300
 	PropertyContentsFromClient = 1305
 	GetModelsOnProperty = 1306
@@ -221,6 +231,13 @@ class GameMessage(Enum):
 	ServerDoneLoadingAllObjects = 1642
 	NotifyServerLevelProcessingComplete = 1734
 	NotifyLevelRewards = 1735
+
+class Serializable:
+	def serialize(self, stream):
+		raise NotImplementedError
+
+	def deserialize(self, stream):
+		raise NotImplementedError
 
 def send_game_message(mode):
 	"""
@@ -320,8 +337,6 @@ def game_message_serialize(out, type, value):
 		out.write(c_float(value.y))
 		out.write(c_float(value.z))
 		out.write(c_float(value.w))
-	elif type in (PropertyData, PropertySelectQueryProperty):
-		value.serialize(out)
 	elif type == BitStream:
 		out.write(c_uint(len(value)))
 		out.write(bytes(value))
@@ -336,6 +351,8 @@ def game_message_serialize(out, type, value):
 		out.write(value, char_size=1, length_type=c_uint)
 	elif type == "wstr":
 		out.write(value, char_size=2, length_type=c_uint)
+	elif inspect.isclass(type) and issubclass(type, Serializable):
+		value.serialize(out)
 	else:
 		out.write(type(value))
 
@@ -348,21 +365,15 @@ def game_message_deserialize(message, type):
 		elif len(type) == 3: # dict
 			value = {}
 			for _ in range(game_message_deserialize(message, type[0])):
-				value[game_message_deserialize(message, type[1])] = game_message_deserialize(message, type[2])
+				key = game_message_deserialize(message, type[1])
+				val = game_message_deserialize(message, type[2])
+				value[key] = val
 		return value
 
 	if type == Vector3:
 		return Vector3(message.read(c_float), message.read(c_float), message.read(c_float))
 	if type == Quaternion:
 		return Quaternion(message.read(c_float), message.read(c_float), message.read(c_float), message.read(c_float))
-	if type == PropertyData:
-		value = PropertyData()
-		value.deserialize(message)
-		return value
-	if type == PropertySelectQueryProperty:
-		value = PropertySelectQueryProperty()
-		value.deserialize(message)
-		return value
 	if type == BitStream:
 		length = message.read(c_uint)
 		return BitStream(message.read(bytes, length=length))
@@ -378,5 +389,6 @@ def game_message_deserialize(message, type):
 		return message.read(str, char_size=1, length_type=c_uint)
 	if type == "wstr":
 		return message.read(str, char_size=2, length_type=c_uint)
-
+	if inspect.isclass(type) and issubclass(type, Serializable):
+		return type.deserialize(message)
 	return message.read(type)

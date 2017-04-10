@@ -10,22 +10,30 @@ class BaseCombatAIComponent(Component):
 		self.object.ai = self
 		self._flags["target"] = "ai_flag"
 		self.target = None
+		self.enabled = False
 		self.update_handle = None
 
 	def on_startup(self):
+		self.object.physics.proximity_radius(7)
 		self.enable()
 
 	def enable(self):
-		if not hasattr(self.object, "stats"):
-			return
-		self.update_handle = self.object.call_later(UPDATE_INTERVAL, self.update)
+		self.enabled = True
 
 	def disable(self):
-		if self.update_handle is not None:
-			self.object.cancel_callback(self.update_handle)
+		self.enabled = False
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))
+
+	def on_enter(self, player):
+		if not self.enabled:
+			return
+		self.update_handle = self.object.call_later(0, self.update)
+
+	def on_exit(self, player):
+		if self.update_handle is not None:
+			self.object.cancel_callback(self.update_handle)
 
 	def update(self):
 		# todo: move some targeting logic to TacArc
@@ -40,17 +48,11 @@ class BaseCombatAIComponent(Component):
 					self.target = obj
 					nearest_dist = dist
 		if self.target is not None:
-			#self.object.physics.velocity.update((self.target.physics.position - self.object.physics.position).unit() * 1.2)
-			#self.object.physics.attr_changed("velocity")
-			#self.object.physics.position += self.object.physics.velocity
-			#self.object.physics.attr_changed("position")
 			pos_diff = self.target.physics.position - self.object.physics.position
 			pos_diff.y = 0
-			#self.object.physics.angular_velocity = self.target.physics.angular_velocity
-			#self.object.physics.rotation.update(self.target.physics.rotation)
+			self.object.physics.rotation.update(Quaternion.look_rotation(pos_diff))
 			self.object.physics.attr_changed("rotation")
-			self.object.physics.rotation = Quaternion.look_rotation(pos_diff)
 			for skill_id in self.object.skill.skills:
 				self.object.skill.cast_skill(skill_id, self.target)
 
-		self.update_handle = self.object.call_later(UPDATE_INTERVAL, self.update)
+			self.update_handle = self.object.call_later(UPDATE_INTERVAL, self.update)

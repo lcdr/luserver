@@ -9,7 +9,7 @@ from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
 from .mission import TaskType
-from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, SkillEvent, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
+from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Jetpack, SkillEvent, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
 
 log = logging.getLogger(__name__)
 
@@ -99,6 +99,7 @@ TEMPLATES = {
 	BehaviorTemplate.SpawnObject: SpawnObject,
 	BehaviorTemplate.Switch: Switch,
 	BehaviorTemplate.Buff: Buff,
+	BehaviorTemplate.Jetpack: Jetpack,
 	BehaviorTemplate.SkillEvent: SkillEvent,
 	BehaviorTemplate.Chain: Chain,
 	BehaviorTemplate.ForceMovement: ForceMovement,
@@ -122,7 +123,7 @@ class CastType:
 	Consumable = 3
 	EverlastingConsumable = 4
 
-PASSIVE_BEHAVIORS = BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.ApplyBuff
+PASSIVE_BEHAVIORS = BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.Jetpack, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.ApplyBuff
 
 class SkillComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -203,7 +204,7 @@ class SkillComponent(Component):
 		self.picked_target_id = optional_target_id
 		behavior = self.object._v_server.db.skill_behavior[skill_id]
 		self.original_target_id = target.object_id
-		self.unserialize_behavior(behavior, bitstream, target)
+		self.deserialize_behavior(behavior, bitstream, target)
 
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
@@ -251,7 +252,7 @@ class SkillComponent(Component):
 
 		if behavior is not None: # no, this is not an "else" from above
 			self.original_target_id = target.object_id
-			self.unserialize_behavior(behavior, bitstream, target)
+			self.deserialize_behavior(behavior, bitstream, target)
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
 		if done:
@@ -268,7 +269,7 @@ class SkillComponent(Component):
 
 		for behav in self.projectile_behaviors[local_id]:
 			self.original_target_id = target.object_id
-			self.unserialize_behavior(behav, bitstream, target)
+			self.deserialize_behavior(behav, bitstream, target)
 		del self.projectile_behaviors[local_id]
 		# todo: do client projectile impact
 
@@ -277,7 +278,7 @@ class SkillComponent(Component):
 		if behavior.template in TEMPLATES:
 			return TEMPLATES[behavior.template].serialize(self, behavior, bitstream, target, level)
 
-	def unserialize_behavior(self, behavior, bitstream, target, level=0):
+	def deserialize_behavior(self, behavior, bitstream, target, level=0):
 		if behavior is None:
 			return
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
@@ -285,7 +286,7 @@ class SkillComponent(Component):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
 
 		if behavior.template in TEMPLATES:
-			return TEMPLATES[behavior.template].unserialize(self, behavior, bitstream, target, level)
+			return TEMPLATES[behavior.template].deserialize(self, behavior, bitstream, target, level)
 
 	def undo_behavior(self, behavior, params=None):
 		if behavior.template == BehaviorTemplate.SpawnObject:
@@ -297,6 +298,8 @@ class SkillComponent(Component):
 				self.object.stats.max_armor -= behavior.armor
 			if hasattr(behavior, "imagination"):
 				self.object.stats.max_imagination -= behavior.imagination
+		elif behavior.template == BehaviorTemplate.Jetpack:
+			self.object.char.set_jet_pack_mode(enable=False)
 
 	def add_skill_for_item(self, item, add_buffs=True):
 		if item.lot in self.object._v_server.db.object_skills:
@@ -307,7 +310,7 @@ class SkillComponent(Component):
 						if hasattr(self.object, "char"):
 							self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
-						self.unserialize_behavior(behavior, b"", self.object)
+						self.deserialize_behavior(behavior, b"", self.object)
 				else:
 					slot_id = SkillSlot.RightHand
 					if item.item_type == ItemType.Hat:
@@ -324,7 +327,7 @@ class SkillComponent(Component):
 			if hasattr(self.object, "char"):
 				self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
-			self.unserialize_behavior(behavior, b"", self.object)
+			self.deserialize_behavior(behavior, b"", self.object)
 
 	def remove_skill_for_item(self, item):
 		if item.lot in self.object._v_server.db.object_skills:

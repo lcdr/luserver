@@ -10,6 +10,8 @@ class Quaternion:
 			self.z = x.z
 			self.w = x.w
 		elif isinstance(x, collections.abc.Sequence):
+			if len(x) != 4:
+				raise ValueError("Sequence must have length 4")
 			self.x = x[0]
 			self.y = x[1]
 			self.z = x[2]

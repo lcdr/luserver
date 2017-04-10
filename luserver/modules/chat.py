@@ -5,7 +5,7 @@ import logging
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..commands.minifig import EyebrowsCommand, EyesCommand, HairColorCommand, HairStyleCommand, MouthCommand, StyleCommand
-from ..commands.misc import AddItemCommand, BuildCommand, CheckForLeaksCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, NoConsoleLogCommand, RefillStatsCommand, RestartCommand, SendCommand, SetFlagCommand, SpawnCommand, SpawnPhantomCommand, TeleportCommand, VendorCommand, WhisperCommand, WorldCommand
+from ..commands.misc import AddItemCommand, BuildCommand, CheckForLeaksCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, NoConsoleLogCommand, PlayCineCommand, PlaySoundCommand, RefillStatsCommand, RestartCommand, SendCommand, SetFlagCommand, SetRespawnCommand, SpawnCommand, SpawnPhantomCommand, TeleportCommand, UnlockEmoteCommand, VendorCommand, WhisperCommand, WorldCommand
 from ..commands.mission import AddMissionCommand, AutocompleteMissionsCommand, CompleteMissionCommand, RemoveMissionCommand, ResetMissionsCommand
 from .module import ServerModule
 
@@ -74,7 +74,7 @@ class ChatHandling(ServerModule):
 		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class= lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
 
-		cmds = AddItemCommand, AddMissionCommand, AutocompleteMissionsCommand, BuildCommand, CheckForLeaksCommand, CompleteMissionCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, EyebrowsCommand, EyesCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HairColorCommand, HairStyleCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, MouthCommand, NoConsoleLogCommand, RefillStatsCommand, RemoveMissionCommand, ResetMissionsCommand, RestartCommand, SendCommand, SetFlagCommand, SpawnCommand, SpawnPhantomCommand, StyleCommand, TeleportCommand, VendorCommand, WhisperCommand, WorldCommand
+		cmds = AddItemCommand, AddMissionCommand, AutocompleteMissionsCommand, BuildCommand, CheckForLeaksCommand, CompleteMissionCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, EyebrowsCommand, EyesCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HairColorCommand, HairStyleCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, MouthCommand, NoConsoleLogCommand, PlayCineCommand, PlaySoundCommand, RefillStatsCommand, RemoveMissionCommand, ResetMissionsCommand, RestartCommand, SendCommand, SetFlagCommand, SetRespawnCommand, SpawnCommand, SpawnPhantomCommand, StyleCommand, TeleportCommand, UnlockEmoteCommand, VendorCommand, WhisperCommand, WorldCommand
 
 		for cmd in cmds:
 			cmd(self)
