@@ -31,9 +31,9 @@ class ScriptComponent(Component):
 		pass
 
 	@broadcast
-	def notify_client_object(self, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):
+	def notify_client_object(self, name:str=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:bytes=None):
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+	def fire_event_client_side(self, args:str=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
 		pass

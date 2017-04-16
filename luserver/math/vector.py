@@ -1,7 +1,10 @@
 import collections.abc
 import math
 
-class Vector3:
+from ..bitstream import c_float
+from ..messages import Serializable
+
+class Vector3(Serializable):
 	def update(self, x=0, y=0, z=0):
 		if isinstance(x, Vector3):
 			self.x = x.x
@@ -77,6 +80,15 @@ class Vector3:
 		scalar = quaternion.w
 
 		return 2 * quatvector.dot(self) * quatvector + (scalar*scalar - quatvector.dot(quatvector)) * self + 2 * scalar * quatvector.cross(self)
+
+	def serialize(self, stream):
+		stream.write(c_float(self.x))
+		stream.write(c_float(self.y))
+		stream.write(c_float(self.z))
+
+	@staticmethod
+	def deserialize(stream):
+		return Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
 
 Vector3.zero = Vector3(0, 0, 0)
 Vector3.right = Vector3(1, 0, 0)

@@ -29,12 +29,12 @@ class LaunchpadComponent(Component):
 		else:
 			player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="You don't have a rocket!")
 
-	def fire_event_server_side(self, player, args:"wstr"=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender_id:c_int64=None):
+	def fire_event_server_side(self, player, args:str=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender_id:c_int64=None):
 		if args == "ZonePlayer":
 			if param2:
 				param3 = self.default_world_id
 			asyncio.ensure_future(player.char.transfer_to_world((param3, 0, param1), self.respawn_point_name))
 
 	@broadcast
-	def fire_event_client_side(self, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+	def fire_event_client_side(self, args:str=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
 		pass

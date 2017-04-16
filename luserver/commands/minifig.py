@@ -21,6 +21,9 @@ class MinifigCommand(ChatCommand):
 			sender.char.hair_style = hair_style
 			sender.char.mouth_style = mouth_style
 
+	def sub_run(self, args, sender):
+		raise NotImplementedError
+
 class EyebrowsCommand(MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "eyebrows")

@@ -152,7 +152,7 @@ class HighStatsCommand(ChatCommand):
 		sender.stats.max_life = 99
 		sender.stats.max_armor = 99
 		sender.stats.max_imagination = 99
-		RefillStatsCommand.run(self, args, sender)
+		RefillStatsCommand.run(args, sender)
 
 class JetpackCommand(ChatCommand):
 	def __init__(self, chat):
@@ -229,14 +229,15 @@ class PlaySoundCommand(ChatCommand):
 		self.command.add_argument("id")
 
 	def run(self, args, sender):
-		sender.render.play_n_d_audio_emitter(event_guid=args.id, meta_event_name="")
+		sender.render.play_n_d_audio_emitter(event_guid=args.id.encode(), meta_event_name=b"")
 
 
 class RefillStatsCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "refillstats")
 
-	def run(self, args, sender):
+	@staticmethod
+	def run(args, sender):
 		sender.stats.life = sender.stats.max_life
 		sender.stats.armor = sender.stats.max_armor
 		sender.stats.imagination = sender.stats.max_imagination

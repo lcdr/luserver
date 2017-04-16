@@ -1,6 +1,5 @@
 import luserver.components.script as script
 from luserver.components.physics import PhysicsEffect
-from luserver.math.vector import Vector3
 
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):

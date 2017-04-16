@@ -1,8 +1,11 @@
 import collections.abc
 import math
+
+from ..bitstream import c_float
+from ..messages import Serializable
 from .vector import Vector3
 
-class Quaternion:
+class Quaternion(Serializable):
 	def update(self, x=0, y=0, z=0, w=1):
 		if isinstance(x, Quaternion):
 			self.x = x.x
@@ -52,5 +55,15 @@ class Quaternion:
 		axis = axis.unit()
 		s = math.sin(angle / 2)
 		return Quaternion(axis.x*s, axis.y*s, axis.z*s, math.cos(angle / 2))
+
+	def serialize(self, stream):
+		stream.write(c_float(self.x))
+		stream.write(c_float(self.y))
+		stream.write(c_float(self.z))
+		stream.write(c_float(self.w))
+
+	@staticmethod
+	def deserialize(stream):
+		return Quaternion(stream.read(c_float), stream.read(c_float), stream.read(c_float), stream.read(c_float))
 
 Quaternion.identity = Quaternion(0, 0, 0, 1)

@@ -5,11 +5,8 @@ from enum import Enum, IntEnum
 from functools import wraps
 
 from pyraknet.messages import Message
-from . import amf3
-from .bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
+from .bitstream import BitStream, c_bit, c_int64, c_uint, c_ushort
 from .ldf import LDF
-from .math.vector import Vector3
-from .math.quaternion import Quaternion
 
 log = logging.getLogger(__name__)
 
@@ -236,7 +233,8 @@ class Serializable:
 	def serialize(self, stream):
 		raise NotImplementedError
 
-	def deserialize(self, stream):
+	@staticmethod
+	def deserialize(stream):
 		raise NotImplementedError
 
 def send_game_message(mode):
@@ -315,8 +313,6 @@ def send_game_message(mode):
 broadcast = send_game_message("broadcast")
 single = send_game_message("single")
 
-from .components.property import PropertyData, PropertySelectQueryProperty
-
 def game_message_serialize(out, type, value):
 	if isinstance(type, tuple):
 		out.write(type[0](len(value)))
@@ -328,15 +324,6 @@ def game_message_serialize(out, type, value):
 				game_message_serialize(out, type[1], k)
 				game_message_serialize(out, type[2], v)
 
-	elif type == Vector3:
-		out.write(c_float(value.x))
-		out.write(c_float(value.y))
-		out.write(c_float(value.z))
-	elif type == Quaternion:
-		out.write(c_float(value.x))
-		out.write(c_float(value.y))
-		out.write(c_float(value.z))
-		out.write(c_float(value.w))
 	elif type == BitStream:
 		out.write(c_uint(len(value)))
 		out.write(bytes(value))
@@ -345,14 +332,13 @@ def game_message_serialize(out, type, value):
 		out.write(ldf_text, length_type=c_uint)
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
-	elif type == "amf":
-		amf3.write(value, out)
-	elif type == "str":
-		out.write(value, char_size=1, length_type=c_uint)
-	elif type == "wstr":
-		out.write(value, char_size=2, length_type=c_uint)
+	elif type == bytes:
+		out.write(c_uint(len(value)))
+		out.write(value)
+	elif type == str:
+		out.write(value, length_type=c_uint)
 	elif inspect.isclass(type) and issubclass(type, Serializable):
-		value.serialize(out)
+		type.serialize(value, out)
 	else:
 		out.write(type(value))
 
@@ -368,12 +354,10 @@ def game_message_deserialize(message, type):
 				key = game_message_deserialize(message, type[1])
 				val = game_message_deserialize(message, type[2])
 				value[key] = val
+		else:
+			raise ValueError
 		return value
 
-	if type == Vector3:
-		return Vector3(message.read(c_float), message.read(c_float), message.read(c_float))
-	if type == Quaternion:
-		return Quaternion(message.read(c_float), message.read(c_float), message.read(c_float), message.read(c_float))
 	if type == BitStream:
 		length = message.read(c_uint)
 		return BitStream(message.read(bytes, length=length))
@@ -383,12 +367,10 @@ def game_message_deserialize(message, type):
 			assert message.read(c_ushort) == 0 # for some reason has a null terminator
 		# todo: convert to LDF
 		return value
-	if type == "amf":
-		return amf3.read(message)
-	if type == "str":
-		return message.read(str, char_size=1, length_type=c_uint)
-	if type == "wstr":
-		return message.read(str, char_size=2, length_type=c_uint)
+	if type == bytes:
+		return message.read(bytes, length=message.read(c_uint))
+	if type == str:
+		return message.read(str, length_type=c_uint)
 	if inspect.isclass(type) and issubclass(type, Serializable):
 		return type.deserialize(message)
 	return message.read(type)

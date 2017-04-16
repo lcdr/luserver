@@ -1,5 +1,3 @@
-import itertools
-
 from ..bitstream import c_bit, c_float, c_int, c_uint
 from ..math.vector import Vector3
 from .component import Component

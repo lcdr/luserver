@@ -35,7 +35,7 @@ class ScriptedActivityComponent(Component):
 	def activity_start(self):
 		pass
 
-	def message_box_respond(self, player, button:c_int=None, identifier:"wstr"=None, user_data:"wstr"=None):
+	def message_box_respond(self, player, button:c_int=None, identifier:str=None, user_data:str=None):
 		if identifier == "LobbyReady" and button == 1:
 			activity = self.object._v_server.db.activities[self.comp_id]
 			asyncio.ensure_future(player.char.transfer_to_world((activity[0], 0, 0)))
@@ -45,5 +45,5 @@ class ScriptedActivityComponent(Component):
 		pass
 
 	@broadcast
-	def notify_client_zone_object(self, name:"wstr"=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:"str"=None):
+	def notify_client_zone_object(self, name:str=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:bytes=None):
 		pass

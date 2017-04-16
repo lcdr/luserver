@@ -107,7 +107,7 @@ class Server(pyraknet.server.Server):
 					return server_address
 			# no server found, spawn a new one
 			# todo: os.system probably isn't the best way to do this
-			os.system("start python __main__.py %i %i" % (world_id[0], world_id[2]))
+			os.system("start cmd /K \"python __main__.py %i %i && pause && exit\"" % (world_id[0], world_id[2]))
 			await asyncio.sleep(4)
 
 class DisconnectReason:

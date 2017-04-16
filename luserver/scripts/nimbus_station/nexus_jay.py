@@ -35,7 +35,7 @@ class ScriptComponent(script.ScriptComponent):
 			celebration_id = 17
 
 		player.char.set_flag(True, flag_id)
-		player.char.start_celebration_effect(animation="", duration=0, icon_id=0, main_text="", mixer_program="", music_cue="", path_node_name="", sound_guid="", sub_text="", celebration_id=celebration_id)
+		player.char.start_celebration_effect(animation="", duration=0, icon_id=0, main_text="", mixer_program=b"", music_cue=b"", path_node_name=b"", sound_guid=b"", sub_text="", celebration_id=celebration_id)
 
 		achievements.append(778)
 		player.char.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually

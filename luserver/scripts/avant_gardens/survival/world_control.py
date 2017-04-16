@@ -67,8 +67,8 @@ class ScriptComponent(script.ScriptComponent):
 
 			player_time = values[1]
 			player_score = values[0]
-			self.object.scripted_activity.notify_client_zone_object(name="Update_ScoreBoard", param1=int(player_time), param2=0, param_str=str(player_score), param_obj=player.object_id)
-			self.notify_client_object(name="ToggleLeaderBoard", param1=0, param2=0, param_str="", param_obj=player.object_id)
+			self.object.scripted_activity.notify_client_zone_object(name="Update_ScoreBoard", param1=int(player_time), param2=0, param_str=b"%i" % player_score, param_obj=player.object_id)
+			self.notify_client_object(name="ToggleLeaderBoard", param1=0, param2=0, param_str=b"", param_obj=player.object_id)
 
 			for mission_id, time in SURVIVAL_MISSIONS:
 				if player_time > time:
@@ -88,9 +88,9 @@ class ScriptComponent(script.ScriptComponent):
 	def player_died(self, player):
 		if self.script_network_vars.get("wavesStarted", False):
 			if self.are_all_players_dead():
-				all_dead = "true"
+				all_dead = b"true"
 			else:
-				all_dead = "false"
+				all_dead = b"false"
 			self.object.scripted_activity.activity_values[player.object_id][1] = time.time()-self.start_time
 			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.time()-self.start_time), param2=0, param_str=all_dead, param_obj=player.object_id)
 			self.game_over(player)
@@ -107,7 +107,7 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.set_player_spawn_points()
 
-	def message_box_respond(self, player, button:c_int=None, identifier:"wstr"=None, user_data:"wstr"=None):
+	def message_box_respond(self, player, button:c_int=None, identifier:str=None, user_data:str=None):
 		if identifier == "RePlay":
 			self.start()
 

@@ -17,9 +17,9 @@ class ScriptComponent(script.ScriptComponent):
 	def shake(self):
 		self.object.render.play_embedded_effect_on_all_clients_near_object(effect_name=SHAKE_EFFECT_NAME, from_object_id=self.object.object_id, radius=SHAKE_RADIUS)
 
-		self.object.render.play_f_x_effect(name="Debris", effect_type="DebrisFall")
+		self.object.render.play_f_x_effect(name=b"Debris", effect_type="DebrisFall")
 
-		self.ship_fx_obj.render.play_f_x_effect(name="FX", effect_type="shipboom%i" % random.randint(1, 3), effect_id=559)
+		self.ship_fx_obj.render.play_f_x_effect(name=b"FX", effect_type="shipboom%i" % random.randint(1, 3), effect_id=559)
 		self.ship_fx2_obj.render.play_animation("explosion")
 
 		self.object.call_later(EXPLOSION_ANIM_LENGTH, self.explode_idle)
