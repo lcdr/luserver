@@ -16,4 +16,4 @@ class ScriptComponent(script.ScriptComponent):
 				return
 			for obj in self.object._v_server.game_objects.values():
 				if obj.lot == 14718:
-					obj.script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=0, param_str="")
+					obj.script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=0, param_str=b"")

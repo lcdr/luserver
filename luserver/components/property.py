@@ -1,3 +1,4 @@
+from ..amf3 import AMF3
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..messages import broadcast, single, Serializable
 from ..math.vector import Vector3
@@ -150,7 +151,7 @@ class PropertyEntranceComponent(Component):
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		self.property_entrance_begin(player=player)
-		player.char.u_i_message_server_to_single_client(str_message_name="pushGameState", args={"state": "property_menu"})
+		player.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
 	def enter_property1(self, player, index:c_int=None, return_to_zone:c_bit=True):
@@ -163,7 +164,7 @@ class PropertyEntranceComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, player, include_null_address:c_bit=None, include_null_description:c_bit=None, players_own:c_bit=None, update_ui:c_bit=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:"str"=None):
+	def property_entrance_sync(self, player, include_null_address:c_bit=None, include_null_description:c_bit=None, players_own:c_bit=None, update_ui:c_bit=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:bytes=None):
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		my_property.is_owned = True
@@ -175,7 +176,7 @@ class PropertyEntranceComponent(Component):
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:"wstr"=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+	def fire_event_client_side(self, args:str=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
 		pass
 
 	@single

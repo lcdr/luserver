@@ -21,9 +21,9 @@ class ScriptComponent(script.ScriptComponent):
 
 		if enable:
 			self.object.render.play_animation("fan-on", play_immediate=True)
-			self.object.render.play_f_x_effect(name="fanOn",  effect_type="fanOn", effect_id=495)
+			self.object.render.play_f_x_effect(name=b"fanOn",  effect_type="fanOn", effect_id=495)
 			fx_obj.render.play_animation("idle", play_immediate=True)
 		else:
 			self.object.render.play_animation("fan-off", play_immediate=True)
-			self.object.render.stop_f_x_effect(name="fanOn")
+			self.object.render.stop_f_x_effect(name=b"fanOn")
 			fx_obj.render.play_animation("trigger", play_immediate=True)

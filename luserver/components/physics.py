@@ -161,7 +161,7 @@ class ControllablePhysicsComponent(Controllable):
 
 	# not sure which component this belongs to, putting it here for now
 	@broadcast
-	def lock_node_rotation(self, node_name:"str"=None):
+	def lock_node_rotation(self, node_name:bytes=None):
 		pass
 
 class SimplePhysicsComponent(PhysicsComponent):

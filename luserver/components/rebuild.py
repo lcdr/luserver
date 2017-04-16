@@ -119,7 +119,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.enabled = False
 		player.char.rebuilding = 0
 		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player.object_id)
-		self.object.render.play_f_x_effect(name="BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507)
+		self.object.render.play_f_x_effect(name=b"BrickFadeUpVisCompleteEffect", effect_type="create", effect_id=507)
 		player.render.play_animation("rebuild-celebrate")
 
 		for child_id in self.object.children:

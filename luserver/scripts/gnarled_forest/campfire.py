@@ -14,8 +14,8 @@ class ScriptComponent(script.ScriptComponent):
 
 	def light_fire(self):
 		self.is_burning = True
-		self.object.render.stop_f_x_effect(name="Off")
-		self.object.render.play_f_x_effect(name="Burn", effect_type="running", effect_id=295)
+		self.object.render.stop_f_x_effect(name=b"Off")
+		self.object.render.play_f_x_effect(name=b"Burn", effect_type="running", effect_id=295)
 
 	def on_enter(self, player):
 		if self.is_burning:
@@ -25,6 +25,6 @@ class ScriptComponent(script.ScriptComponent):
 	def on_skill_event(self, caster, event_name):
 		if event_name == "waterspray":
 			self.is_burning = False
-			self.object.render.stop_f_x_effect(name="Burn")
-			self.object.render.play_f_x_effect(name="Off", effect_type="idle", effect_id=295)
+			self.object.render.stop_f_x_effect(name=b"Burn")
+			self.object.render.play_f_x_effect(name=b"Off", effect_type="idle", effect_id=295)
 			self.object.call_later(37, self.light_fire)

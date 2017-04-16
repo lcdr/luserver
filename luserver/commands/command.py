@@ -5,6 +5,9 @@ class ChatCommand:
 		self.command = chat.commands.add_parser(*args, **kwargs)
 		self.command.set_defaults(func=self.run)
 
+	def run(self, args, sender):
+		raise NotImplementedError
+
 def toggle_bool(str_):
 	str_ = str_.lower()
 	if str_ == "toggle":

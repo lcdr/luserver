@@ -1,4 +1,5 @@
 from .bitstream import c_double, c_ubyte
+from .messages import Serializable
 
 UNDEFINED_MARKER = 0
 FALSE_MARKER = 2
@@ -130,3 +131,17 @@ class AMF3Writer:
 
 read = AMF3Reader().read
 write = AMF3Writer().write
+
+class AMF3(Serializable):
+	def __init__(self, data):
+		self.data = data
+
+	def __str__(self):
+		return str(self.data)
+
+	def serialize(self, stream):
+		write(self.data, stream)
+
+	@staticmethod
+	def deserialize(stream):
+		amf = AMF3(read(stream))

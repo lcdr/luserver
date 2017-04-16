@@ -72,7 +72,7 @@ class ChatHandling(ServerModule):
 	def __init__(self, server):
 		super().__init__(server)
 		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
-		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class= lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
+		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
 
 		cmds = AddItemCommand, AddMissionCommand, AutocompleteMissionsCommand, BuildCommand, CheckForLeaksCommand, CompleteMissionCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, EyebrowsCommand, EyesCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HairColorCommand, HairStyleCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, MouthCommand, NoConsoleLogCommand, PlayCineCommand, PlaySoundCommand, RefillStatsCommand, RemoveMissionCommand, ResetMissionsCommand, RestartCommand, SendCommand, SetFlagCommand, SetRespawnCommand, SpawnCommand, SpawnPhantomCommand, StyleCommand, TeleportCommand, UnlockEmoteCommand, VendorCommand, WhisperCommand, WorldCommand
 
