@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_float, c_int, c_int64
+from ..bitstream import c_bit, c_int, c_int64
 from ..messages import broadcast
 from .component import Component
 from .mission import TaskType
@@ -9,7 +9,7 @@ class DestructibleComponent(Component):
 		self.comp_id = comp_id
 		self.object.destructible = self
 
-	def init(self):
+	def init(self, set_vars):
 		comp = self.object._v_server.db.destructible_component[self.comp_id]
 		self.object.stats.faction = comp[0]
 		self.death_rewards = comp[1]
@@ -19,7 +19,10 @@ class DestructibleComponent(Component):
 		self.object.stats.life = self.object.stats.max_life
 		self.object.stats.armor = self.object.stats.max_armor
 		self.object.stats.imagination = self.object.stats.max_imagination
-		self.object.stats.is_smashable = comp[5]
+		if "is_smashable" in set_vars:
+			self.object.stats.is_smashable = set_vars["is_smashable"]
+		else:
+			self.object.stats.is_smashable = comp[5]
 		del self.comp_id
 
 	def serialize(self, out, is_creation):
@@ -35,7 +38,7 @@ class DestructibleComponent(Component):
 		if self.object.stats.life <= 0:
 			self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
 
-	def request_die(self, unknown_bool:c_bit=None, death_type:str=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
+	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		if self.object.stats.armor != 0:
 			self.object.stats.armor = 0
 		if self.object.stats.life != 0:

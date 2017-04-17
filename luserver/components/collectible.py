@@ -1,4 +1,5 @@
-from ..bitstream import c_int64, c_ushort
+from ..bitstream import c_ushort
+from ..game_object import GameObject
 from .component import Component
 from .mission import TaskType
 
@@ -10,7 +11,6 @@ class CollectibleComponent(Component):
 	def serialize(self, out, is_creation):
 		out.write(c_ushort(self.collectible_id))
 
-	def has_been_collected(self, player_id:c_int64=None):
-		player = self.object._v_server.game_objects[player_id]
+	def has_been_collected(self, player:GameObject=None):
 		coll_id = self.collectible_id+(self.object._v_server.world_id[0]<<8)
 		player.char.update_mission_task(TaskType.Collect, self.object.lot, increment=coll_id)

@@ -5,7 +5,7 @@ from enum import Enum, IntEnum
 from functools import wraps
 
 from pyraknet.messages import Message
-from .bitstream import BitStream, c_bit, c_int64, c_uint, c_ushort
+from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from .ldf import LDF
 
 log = logging.getLogger(__name__)
@@ -276,13 +276,13 @@ def send_game_message(mode):
 
 			bound_args = signature.bind(self, *args, **kwargs)
 			for param in params:
-				if param.annotation == c_bit:
+				if param.annotation == bool:
 					if param.name in bound_args.arguments:
 						value = bound_args.arguments[param.name]
 					else:
 						value = param.default
 					assert value in (True, False)
-					out.write(param.annotation(value))
+					out.write(c_bit(value))
 				else:
 					if param.default not in (param.empty, None):
 						is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
@@ -290,7 +290,7 @@ def send_game_message(mode):
 						if not is_not_default:
 							continue
 
-					if param.name not in bound_args.arguments or bound_args.arguments[param.name] is None:
+					if param.name not in bound_args.arguments:
 						raise TypeError("\"%s\" needs to be specified" % param.name)
 					value = bound_args.arguments[param.name]
 					game_message_serialize(out, param.annotation, value)
@@ -314,16 +314,16 @@ broadcast = send_game_message("broadcast")
 single = send_game_message("single")
 
 def game_message_serialize(out, type, value):
-	if isinstance(type, tuple):
-		out.write(type[0](len(value)))
-		if len(type) == 2: # list
-			for i in value:
-				game_message_serialize(out, type[1], i)
-		elif len(type) == 3: # dict
-			for k, v in value.items():
-				game_message_serialize(out, type[1], k)
-				game_message_serialize(out, type[2], v)
-
+	from .game_object import GameObject
+	if type == float:
+		out.write(c_float(value))
+	elif type == bytes:
+		out.write(c_uint(len(value)))
+		out.write(value)
+	elif type == str:
+		out.write(value, length_type=c_uint)
+	elif type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
+		out.write(type(value))
 	elif type == BitStream:
 		out.write(c_uint(len(value)))
 		out.write(bytes(value))
@@ -332,45 +332,25 @@ def game_message_serialize(out, type, value):
 		out.write(ldf_text, length_type=c_uint)
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
-	elif type == bytes:
-		out.write(c_uint(len(value)))
-		out.write(value)
-	elif type == str:
-		out.write(value, length_type=c_uint)
+	elif type == GameObject:
+		if value is None:
+			out.write(c_int64(0))
+		else:
+			out.write(c_int64(value.object_id))
 	elif inspect.isclass(type) and issubclass(type, Serializable):
 		type.serialize(value, out)
-	else:
-		out.write(type(value))
-
-def game_message_deserialize(message, type):
-	if isinstance(type, tuple):
+	elif isinstance(type, tuple):
+		out.write(type[0](len(value)))
 		if len(type) == 2: # list
-			value = []
-			for _ in range(game_message_deserialize(message, type[0])):
-				value.append(game_message_deserialize(message, type[1]))
+			for i in value:
+				game_message_serialize(out, type[1], i)
 		elif len(type) == 3: # dict
-			value = {}
-			for _ in range(game_message_deserialize(message, type[0])):
-				key = game_message_deserialize(message, type[1])
-				val = game_message_deserialize(message, type[2])
-				value[key] = val
+			for k, v in value.items():
+				game_message_serialize(out, type[1], k)
+				game_message_serialize(out, type[2], v)
 		else:
-			raise ValueError
-		return value
+			raise ValueError(type)
+	else:
+		raise TypeError(type)
 
-	if type == BitStream:
-		length = message.read(c_uint)
-		return BitStream(message.read(bytes, length=length))
-	if type == LDF:
-		value = message.read(str, length_type=c_uint)
-		if value:
-			assert message.read(c_ushort) == 0 # for some reason has a null terminator
-		# todo: convert to LDF
-		return value
-	if type == bytes:
-		return message.read(bytes, length=message.read(c_uint))
-	if type == str:
-		return message.read(str, length_type=c_uint)
-	if inspect.isclass(type) and issubclass(type, Serializable):
-		return type.deserialize(message)
-	return message.read(type)
+# see modules.general for deserialize

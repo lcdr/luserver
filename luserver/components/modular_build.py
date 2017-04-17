@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_int, c_int64, c_ubyte
+from ..bitstream import c_int, c_int64, c_ubyte
 from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType
@@ -7,14 +7,14 @@ class ModularBuildComponent(Component):
 	def serialize(self, out, is_creation):
 		pass
 
-	def start_building_with_item(self, player, first_time:c_bit=True, success:c_bit=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
+	def start_building_with_item(self, player, first_time:bool=True, success:bool=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
 		if source_type == 1:
 			source_type = 8
 
-		player.char.start_arranging_with_item(first_time, self.object.object_id, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
+		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
 	def done_arranging_with_item(self, player, new_source_bag:c_int=None, new_source_id:c_int64=None, new_source_lot:c_int=None, new_source_type:c_int=None, new_target_id:c_int64=None, new_target_lot:c_int=None, new_target_type:c_int=None, new_target_pos:Vector3=None, old_item_bag:c_int=None, old_item_id:c_int64=None, old_item_lot:c_int=None, old_item_type:c_int=None):
 		for model in player.inventory.temp_models.copy():

@@ -27,7 +27,7 @@ class VendorComponent(Component):
 	def vendor_open_window(self):
 		pass
 
-	def buy_from_vendor(self, player, confirmed:c_bit=False, count:c_int=1, item:c_int=None):
+	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int=1, item:c_int=None):
 		new_item = player.inventory.add_item_to_inventory(item, count)
 		player.char.set_currency(currency=player.char.currency - new_item.base_value*count, position=Vector3.zero)
 
@@ -45,5 +45,5 @@ class VendorComponent(Component):
 			log.warning("Item not found")
 
 	@single
-	def vendor_status_update(self, update_only:c_bit=None, inv:(c_uint, c_int, c_int)=None):
+	def vendor_status_update(self, update_only:bool=None, inv:(c_uint, c_int, c_int)=None):
 		pass

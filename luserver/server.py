@@ -98,6 +98,7 @@ class Server(pyraknet.server.Server):
 		self.conn.sync()
 
 	async def address_for_world(self, world_id, include_self=False):
+		first = True
 		while True:
 			self.conn_sync()
 			for server_address, server_world in self.db.servers.items():
@@ -107,8 +108,12 @@ class Server(pyraknet.server.Server):
 					return server_address
 			# no server found, spawn a new one
 			# todo: os.system probably isn't the best way to do this
-			os.system("start cmd /K \"python __main__.py %i %i && pause && exit\"" % (world_id[0], world_id[2]))
-			await asyncio.sleep(4)
+			os.system("start cmd /K \"python __main__.py %i %i && exit || pause && exit\"" % (world_id[0], world_id[2]))
+			if first:
+				await asyncio.sleep(4)
+				first = False
+			else:
+				await asyncio.sleep(60)
 
 class DisconnectReason:
 	UnknownServerError = 0

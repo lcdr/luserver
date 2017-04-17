@@ -259,7 +259,7 @@ class InventoryComponent(Component):
 		return stack
 
 	@single
-	def add_item_to_inventory_client_sync(self, bound:c_bit=False, bound_on_equip:c_bit=False,  bound_on_pickup:c_bit=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:c_bit=True, slot_id:c_int=None):
+	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False,  bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:bool=True, slot_id:c_int=None):
 		pass
 
 	def remove_item_from_inv(self, inventory_type, item=None, object_id=0, lot=0, amount=1):
@@ -270,7 +270,7 @@ class InventoryComponent(Component):
 			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount)
 
 	@single
-	def remove_item_from_inventory(self, confirmed:c_bit=True, delete_item:c_bit=True, out_success:c_bit=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:c_bit=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
+	def remove_item_from_inventory(self, confirmed:bool=True, delete_item:bool=True, out_success:bool=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:bool=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if not confirmed:
 			return
 		if object_id == 0 and object_template == 0:
@@ -318,7 +318,7 @@ class InventoryComponent(Component):
 						self.add_item_to_inventory(module_lot)
 			return
 
-	def equip_inventory(self, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_equip:c_int64=None):
+	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64=None):
 		assert not out_success
 		for inv in (self.items, self.temp_items, self.models):
 			for item in inv:
@@ -348,7 +348,7 @@ class InventoryComponent(Component):
 										self.object.skill.add_skill_server(skill)
 					return
 
-	def un_equip_inventory(self, even_if_dead:c_bit=False, ignore_cooldown:c_bit=False, out_success:c_bit=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
+	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):
 		assert not out_success
 		assert replacement_object_id == 0
 		for item in self.equipped[-1]:
@@ -380,7 +380,7 @@ class InventoryComponent(Component):
 		inv = self.inventory_type_to_inventory(inventory_type)
 		inv.extend([None] * (size - len(inv)))
 
-	def move_item_between_inventory_types(self, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:c_bit=True, stack_count:c_uint=1, template_id:c_int=-1):
+	def move_item_between_inventory_types(self, inventory_type_a:c_int=None, inventory_type_b:c_int=None, object_id:c_int64=None, show_flying_loot:bool=True, stack_count:c_uint=1, template_id:c_int=-1):
 		source = self.inventory_type_to_inventory(inventory_type_a)
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):

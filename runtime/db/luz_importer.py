@@ -84,6 +84,69 @@ def _parse_lutriggers(lutriggers_path):
 		triggers[int(trigger.attrib["id"])] = events
 	return triggers
 
+def _parse_config(config, triggers=None):
+	spawned_vars = {}
+
+	if "custom_script_client" in config:
+		spawned_vars["custom_script"] = ""
+	if "custom_script_server" in config:
+		if config["custom_script_server"] == "":
+			spawned_vars["custom_script"] = ""
+		else:
+			spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
+	if "groupID" in config:
+		spawned_vars["groups"] = config["groupID"][:-1].split(";")
+	if "is_smashable" in config:
+		spawned_vars["is_smashable"] = config["is_smashable"]
+	if "markedAsPhantom" in config:
+		spawned_vars["marked_as_phantom"] = True
+	if "primitiveModelType" in config:
+		spawned_vars["primitive_model_type"] = config["primitiveModelType"]
+		primitive_model_scale = Vector3(config["primitiveModelValueX"], config["primitiveModelValueY"], config["primitiveModelValueZ"])
+		spawned_vars["primitive_model_scale"] = primitive_model_scale
+	if "renderDisabled" in config:
+		spawned_vars["render_disabled"] = True
+	if "respawnname" in config:
+		spawned_vars["respawn_name"] = config["respawnname"]
+	if "respawnVol" in config and config["respawnVol"]:
+		spawned_vars["respawn_data"] = Vector3([float(i) for i in config["rspPos"].split("\x1f")]), Quaternion([float(i) for i in config["rspRot"].split("\x1f")])
+	if "targetScene" in config:
+		spawned_vars["respawn_point_name"] = config["targetScene"]
+	if "trigger_id" in config and triggers is not None:
+		trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
+		if trigger_scene_id in triggers and trigger_id in triggers[trigger_scene_id]:
+			spawned_vars["trigger_events"] = triggers[trigger_scene_id][trigger_id]
+
+	script_vars = {}
+	spawned_vars["script_vars"] = script_vars
+
+	if "altFlagID" in config:
+		script_vars["alt_flag_id"] = config["altFlagID"]
+	if "Cinematic" in config:
+		script_vars["cinematic"] = config["Cinematic"]
+	if "ForceAmt" in config:
+		script_vars["force_amount"] = config["ForceAmt"]
+	if "ForceX" in config and "ForceY" in config and "ForceX" in config:
+		script_vars["force"] = Vector3(config["ForceX"], config["ForceY"], config["ForceZ"])
+	if "FrictionAmt" in config:
+		script_vars["friction_amount"] = config["FrictionAmt"]
+	if "number" in config:
+		script_vars["flag_id"] = int(config["number"])
+	if "POI" in config:
+		script_vars["poi"] = config["POI"]
+	if "storyText" in config:
+		script_vars["flag_id"] = int(config["storyText"][-2:])
+	if "teleGroup" in config:
+		script_vars["teleport_respawn_point_name"] = config["teleGroup"]
+	if "TouchCompleteID" in config:
+		script_vars["touch_complete_mission_id"] = config["TouchCompleteID"]
+	if "transferText" in config:
+		script_vars["transfer_text"] = config["transferText"]
+	if "transferZoneID" in config:
+		script_vars["transfer_world_id"] = int(config["transferZoneID"])
+
+	return spawned_vars
+
 class _LUZImporter:
 	def __init__(self, luz_path, root, world_data):
 		self.root = root
@@ -214,12 +277,12 @@ class _LUZImporter:
 						self.luz.skip_read(4)
 
 				if path_type in (PathType.Movement, PathType.Spawner, PathType.Rail):
-					config = {}
+					config = LDF()
 					for _ in range(self.luz.read(c_uint)):
 						config_name = self.luz.read(str, length_type=c_ubyte)
 						config_type_and_value = self.luz.read(str, length_type=c_ubyte)
 						try:
-							config[config_name] = LDF.from_str_type(config_type_and_value)
+							config.ldf_set(config_name, *LDF.from_str_type(config_type_and_value))
 						except ValueError:
 							pass
 
@@ -227,6 +290,7 @@ class _LUZImporter:
 					waypoints.append((position, waypoint_unknown3, waypoint_unknown4))
 				elif path_type == PathType.Spawner:
 					spawned_vars = {"position": position, "rotation": rotation}
+					spawned_vars.update(_parse_config(config))
 					waypoints.append(spawned_vars)
 
 			waypoints = tuple(waypoints)
@@ -298,67 +362,11 @@ class _LVLImporter:
 			object_id |= BITS_LOCAL
 			if lot in whitelisted_serverside_lots:
 				config = LDF(config_data)
-
-				spawned_vars = {}
-				spawned_vars["scale"] = scale
-				spawned_vars["position"] = position
-				spawned_vars["rotation"] = rotation
-
-				if "custom_script_client" in config:
-					spawned_vars["custom_script"] = ""
-				if "custom_script_server" in config:
-					if config["custom_script_server"] == "":
-						spawned_vars["custom_script"] = ""
-					else:
-						spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
-				if "trigger_id" in config:
-					trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
-					if trigger_scene_id in self.triggers and trigger_id in self.triggers[trigger_scene_id]:
-						spawned_vars["trigger_events"] = self.triggers[trigger_scene_id][trigger_id]
-				if "renderDisabled" in config:
-					spawned_vars["render_disabled"] = True
-				if "markedAsPhantom" in config:
-					spawned_vars["marked_as_phantom"] = True
-
-				if "groupID" in config:
-					spawned_vars["groups"] = config["groupID"][:-1].split(";")
-				if "primitiveModelType" in config:
-					spawned_vars["primitive_model_type"] = config["primitiveModelType"]
-					primitive_model_scale = Vector3(config["primitiveModelValueX"], config["primitiveModelValueY"], config["primitiveModelValueZ"])
-					spawned_vars["primitive_model_scale"] = primitive_model_scale
-				if "respawnname" in config:
-					spawned_vars["respawn_name"] = config["respawnname"]
-				if "respawnVol" in config and config["respawnVol"]:
-					spawned_vars["respawn_data"] = Vector3([float(i) for i in config["rspPos"].split("\x1f")]), Quaternion([float(i) for i in config["rspRot"].split("\x1f")])
-				if "targetScene" in config:
-					spawned_vars["respawn_point_name"] = config["targetScene"]
-				script_vars = {}
-				spawned_vars["script_vars"] = script_vars
-
-				if "altFlagID" in config:
-					script_vars["alt_flag_id"] = config["altFlagID"]
-				if "Cinematic" in config:
-					script_vars["cinematic"] = config["Cinematic"]
-				if "ForceAmt" in config:
-					script_vars["force_amount"] = config["ForceAmt"]
-				if "ForceX" in config and "ForceY" in config and "ForceX" in config:
-					script_vars["force"] = Vector3(config["ForceX"], config["ForceY"], config["ForceZ"])
-				if "FrictionAmt" in config:
-					script_vars["friction_amount"] = config["FrictionAmt"]
-				if "number" in config:
-					script_vars["flag_id"] = int(config["number"])
-				if "POI" in config:
-					script_vars["poi"] = config["POI"]
-				if "storyText" in config:
-					script_vars["flag_id"] = int(config["storyText"][-2:])
-				if "teleGroup" in config:
-					script_vars["teleport_respawn_point_name"] = config["teleGroup"]
-				if "TouchCompleteID" in config:
-					script_vars["touch_complete_mission_id"] = config["TouchCompleteID"]
-				if "transferText" in config:
-					script_vars["transfer_text"] = config["transferText"]
-				if "transferZoneID" in config:
-					script_vars["transfer_world_id"] = int(config["transferZoneID"])
+				spawned_vars = {
+					"scale": scale,
+					"position": position,
+					"rotation": rotation}
+				spawned_vars.update(_parse_config(config, self.triggers))
 
 				if lot == 176:
 					if "activityID" in config:
@@ -375,9 +383,9 @@ class _LVLImporter:
 						spawned_vars["rail_path_start"] = config["rail_path_start"]
 
 					if "KeyNum" in config:
-						script_vars["key_lot"] = config["KeyNum"]
+						spawned_vars["script_vars"]["key_lot"] = config["KeyNum"]
 					if "openItemID" in config:
-						script_vars["package_lot"] = config["openItemID"]
+						spawned_vars["script_vars"]["package_lot"] = config["openItemID"]
 
 					spawner_vars = {}
 					spawner_vars["spawntemplate"] = config["spawntemplate"]

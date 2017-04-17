@@ -57,7 +57,8 @@ class MissionProgress(Persistent):
 import asyncio
 import logging
 
-from ..bitstream import c_bit, c_int, c_int64
+from ..bitstream import c_int
+from ..game_object import GameObject
 from ..messages import single
 from ..commands.mission import CompleteMissionCommand
 from .component import Component
@@ -107,18 +108,16 @@ class MissionNPCComponent(Component):
 
 		if offer is not None:
 			log.debug("offering %i", offer)
-			self.offer_mission(offer, offerer=self.object.object_id, player=player)
-			player.char.offer_mission(offer, offerer=self.object.object_id)
+			self.offer_mission(offer, offerer=self.object, player=player)
+			player.char.offer_mission(offer, offerer=self.object)
 
 		return offer is not None
 
 	@single
-	def offer_mission(self, mission_id:c_int=None, offerer:c_int64=None):
+	def offer_mission(self, mission_id:c_int=None, offerer:GameObject=None):
 		pass
 
-	def mission_dialogue_o_k(self, is_complete:c_bit=None, mission_state:c_int=None, mission_id:c_int=None, responder:c_int64=None):
-		player = self.object._v_server.game_objects[responder]
-
+	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int=None, mission_id:c_int=None, player:GameObject=None):
 		if mission_state == MissionState.Available:
 			assert not is_complete
 			player.char.add_mission(mission_id)
@@ -129,6 +128,5 @@ class MissionNPCComponent(Component):
 			assert is_complete
 			player.char.complete_mission(mission_id)
 
-	def request_linked_mission(self, player_id:c_int64=None, mission_id:c_int=None, mission_offered:c_bit=None):
-		player = self.object._v_server.game_objects[player_id]
+	def request_linked_mission(self, player:GameObject=None, mission_id:c_int=None, mission_offered:bool=None):
 		self.on_use(player, None)

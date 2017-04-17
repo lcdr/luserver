@@ -7,72 +7,8 @@ from persistent import Persistent
 
 from .ldf import LDF
 from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort
-from .components.ai import BaseCombatAIComponent
-from .components.bouncer import BouncerComponent
-from .components.char import CharacterComponent
-from .components.collectible import CollectibleComponent
-from .components.comp108 import Comp108Component
-from .components.destructible import DestructibleComponent
-from .components.exhibit import ExhibitComponent
-from .components.inventory import InventoryComponent, ItemComponent
-from .components.launchpad import LaunchpadComponent
-from .components.mission import MissionNPCComponent
-from .components.modular_build import ModularBuildComponent
-from .components.moving_platform import MovingPlatformComponent
-from .components.pet import PetComponent
-from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
-from .components.property import PropertyEntranceComponent, PropertyManagementComponent, PropertyVendorComponent
-from .components.rail import RailActivatorComponent
-from .components.rebuild import RebuildComponent
-from .components.render import RenderComponent
-from .components.script import ScriptComponent
-from .components.scripted_activity import ScriptedActivityComponent
-from .components.skill import SkillComponent
-from .components.spawner import SpawnerComponent
-from .components.stats import StatsSubcomponent
-from .components.switch import SwitchComponent
-from .components.trigger import TriggerComponent
-from .components.vendor import VendorComponent
 
 log = logging.getLogger(__name__)
-
-component = OrderedDict()
-component[108] = Comp108Component,
-component[1] = ControllablePhysicsComponent,
-component[3] = SimplePhysicsComponent,
-component[20] = RigidBodyPhantomPhysicsComponent,
-component[30] = VehiclePhysicsComponent,
-component[40] = PhantomPhysicsComponent,
-component[7] = DestructibleComponent, StatsSubcomponent
-component[23] = StatsSubcomponent, CollectibleComponent
-component[4] = CharacterComponent,
-component[12] = ModularBuildComponent,
-component[17] = InventoryComponent,
-component[26] = PetComponent,
-component[5] = ScriptComponent,
-component[9] = SkillComponent,
-component[11] = ItemComponent,
-component[60] = BaseCombatAIComponent,
-component[48] = StatsSubcomponent, RebuildComponent
-component[25] = MovingPlatformComponent,
-
-component[73] = MissionNPCComponent, # belongs to the other nonserialized components below but is moved up to have higher priority than VendorComponent
-
-component[49] = SwitchComponent,
-component[16] = VendorComponent,
-component[6] = BouncerComponent,
-component[39] = ScriptedActivityComponent,
-component[75] = ExhibitComponent,
-component[2] = RenderComponent,
-
-component[10] = SpawnerComponent,
-component[43] = PropertyEntranceComponent,
-component[45] = PropertyManagementComponent,
-component[65] = PropertyVendorComponent,
-component[67] = LaunchpadComponent,
-component[104] = RailActivatorComponent,
-
-component_order = list(component.keys())
 
 class GameObject:
 	def __setattr__(self, name, value):
@@ -313,3 +249,68 @@ class PersistentObject(GameObject, Persistent): # possibly just make all game ob
 		if not self._p_setattr(name, value):
 			super().__setattr__(name, value)
 			self._p_changed = True
+
+from .components.ai import BaseCombatAIComponent
+from .components.bouncer import BouncerComponent
+from .components.char import CharacterComponent
+from .components.collectible import CollectibleComponent
+from .components.comp108 import Comp108Component
+from .components.destructible import DestructibleComponent
+from .components.exhibit import ExhibitComponent
+from .components.inventory import InventoryComponent, ItemComponent
+from .components.launchpad import LaunchpadComponent
+from .components.mission import MissionNPCComponent
+from .components.modular_build import ModularBuildComponent
+from .components.moving_platform import MovingPlatformComponent
+from .components.pet import PetComponent
+from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
+from .components.property import PropertyEntranceComponent, PropertyManagementComponent, PropertyVendorComponent
+from .components.rail import RailActivatorComponent
+from .components.rebuild import RebuildComponent
+from .components.render import RenderComponent
+from .components.script import ScriptComponent
+from .components.scripted_activity import ScriptedActivityComponent
+from .components.skill import SkillComponent
+from .components.spawner import SpawnerComponent
+from .components.stats import StatsSubcomponent
+from .components.switch import SwitchComponent
+from .components.trigger import TriggerComponent
+from .components.vendor import VendorComponent
+
+component = OrderedDict()
+component[108] = Comp108Component,
+component[1] = ControllablePhysicsComponent,
+component[3] = SimplePhysicsComponent,
+component[20] = RigidBodyPhantomPhysicsComponent,
+component[30] = VehiclePhysicsComponent,
+component[40] = PhantomPhysicsComponent,
+component[7] = DestructibleComponent, StatsSubcomponent
+component[23] = StatsSubcomponent, CollectibleComponent
+component[4] = CharacterComponent,
+component[12] = ModularBuildComponent,
+component[17] = InventoryComponent,
+component[26] = PetComponent,
+component[5] = ScriptComponent,
+component[9] = SkillComponent,
+component[11] = ItemComponent,
+component[60] = BaseCombatAIComponent,
+component[48] = StatsSubcomponent, RebuildComponent
+component[25] = MovingPlatformComponent,
+
+component[73] = MissionNPCComponent, # belongs to the other nonserialized components below but is moved up to have higher priority than VendorComponent
+
+component[49] = SwitchComponent,
+component[16] = VendorComponent,
+component[6] = BouncerComponent,
+component[39] = ScriptedActivityComponent,
+component[75] = ExhibitComponent,
+component[2] = RenderComponent,
+
+component[10] = SpawnerComponent,
+component[43] = PropertyEntranceComponent,
+component[45] = PropertyManagementComponent,
+component[65] = PropertyVendorComponent,
+component[67] = LaunchpadComponent,
+component[104] = RailActivatorComponent,
+
+component_order = list(component.keys())
