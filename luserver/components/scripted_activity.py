@@ -1,6 +1,7 @@
 import asyncio
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from ..game_object import GameObject
 from ..ldf import LDF
 from ..messages import broadcast, single
 from .component import Component
@@ -41,9 +42,9 @@ class ScriptedActivityComponent(Component):
 			asyncio.ensure_future(player.char.transfer_to_world((activity[0], 0, 0)))
 
 	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:c_bit=None, weekly:c_bit=None):
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:bool=None, weekly:bool=None):
 		pass
 
 	@broadcast
-	def notify_client_zone_object(self, name:str=None, param1:c_int=None, param2:c_int=None, param_obj:c_int64=None, param_str:bytes=None):
+	def notify_client_zone_object(self, name:str=None, param1:c_int=None, param2:c_int=None, param_obj:GameObject=None, param_str:bytes=None):
 		pass

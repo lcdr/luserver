@@ -144,4 +144,4 @@ class AMF3(Serializable):
 
 	@staticmethod
 	def deserialize(stream):
-		amf = AMF3(read(stream))
+		return read(stream)

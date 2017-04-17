@@ -7,9 +7,10 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 
+from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..game_object import GameObject
 from ..ldf import LDF, LDFDataType
-from ..bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
-from ..messages import game_message_deserialize, GameMessage, WorldClientMsg, WorldServerMsg
+from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, Serializable
 from ..world import World
 from ..components.mission import TaskType
 from .module import ServerModule
@@ -287,10 +288,10 @@ class GeneralHandling(ServerModule):
 		signature = inspect.signature(handlers[0])
 		kwargs = {}
 		params = list(signature.parameters.values())
-		if params and params[0].name == "player":
+		if params and params[0].name == "player" and params[0].annotation == inspect.Parameter.empty and params[0].default == inspect.Parameter.empty:
 			params.pop(0)
 		for param in params:
-			if param.annotation == c_bit:
+			if param.annotation == bool:
 				value = message.read(c_bit)
 				if param.default not in (param.empty, None) and value == param.default:
 					continue
@@ -300,7 +301,7 @@ class GeneralHandling(ServerModule):
 					if not is_not_default:
 						continue
 
-				value = game_message_deserialize(message, param.annotation)
+				value = self.game_message_deserialize(message, param.annotation)
 
 			kwargs[param.name] = value
 		assert message.all_read()
@@ -314,7 +315,52 @@ class GeneralHandling(ServerModule):
 			if hasattr(handler, "__wrapped__"):
 				handler = functools.partial(handler.__wrapped__, handler.__self__)
 			signature = inspect.signature(handler)
-			if "player" in signature.parameters:
+			playerarg = "player" in signature.parameters
+			if playerarg:
+				it = iter(signature.parameters.keys())
+				playerarg = next(it) == "player"
+				if playerarg:
+					arg = signature.parameters["player"]
+					playerarg = arg.annotation == inspect.Parameter.empty and arg.default == inspect.Parameter.empty
+			if playerarg:
 				handler(player, **kwargs)
 			else:
 				handler(**kwargs)
+
+	def game_message_deserialize(self, message, type):
+		if type == float:
+			return message.read(c_float)
+		if type == bytes:
+			return message.read(bytes, length=message.read(c_uint))
+		if type == str:
+			return message.read(str, length_type=c_uint)
+		if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
+			return message.read(type)
+		if type == BitStream:
+			length = message.read(c_uint)
+			return BitStream(message.read(bytes, length=length))
+		if type == LDF:
+			value = message.read(str, length_type=c_uint)
+			if value:
+				assert message.read(c_ushort) == 0 # for some reason has a null terminator
+			# todo: convert to LDF
+			return value
+		if type == GameObject:
+			return self.server.get_object(message.read(c_int64))
+		if inspect.isclass(type) and issubclass(type, Serializable):
+			return type.deserialize(message)
+		if isinstance(type, tuple):
+			if len(type) == 2: # list
+				value = []
+				for _ in range(self.game_message_deserialize(message, type[0])):
+					value.append(self.game_message_deserialize(message, type[1]))
+			elif len(type) == 3: # dict
+				value = {}
+				for _ in range(self.game_message_deserialize(message, type[0])):
+					key = self.game_message_deserialize(message, type[1])
+					val = self.game_message_deserialize(message, type[2])
+					value[key] = val
+			else:
+				raise ValueError(type)
+			return value
+		raise TypeError(type)

@@ -6,7 +6,8 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from ...amf3 import AMF3
-from ...bitstream import BitStream, c_bit, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ...bitstream import BitStream, c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ...game_object import GameObject
 from ...ldf import LDF, LDFDataType
 from ...messages import broadcast, single, WorldClientMsg
 from ...world import World
@@ -363,23 +364,21 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
 	@single
-	def teleport(self, ignore_y:c_bit=True, set_rotation:c_bit=False, skip_all_checks:c_bit=False, pos:Vector3=None, use_navmesh:c_bit=False, w:c_float=1, x:c_float=None, y:c_float=None, z:c_float=None):
+	def teleport(self, ignore_y:bool=True, set_rotation:bool=False, skip_all_checks:bool=False, pos:Vector3=None, use_navmesh:bool=False, w:float=1, x:float=None, y:float=None, z:float=None):
 		pass
 
 	@single
-	def drop_client_loot(self, use_position:c_bit=False, final_position:Vector3=Vector3.zero, currency:c_int=None, item_template:c_int=None, loot_id:c_int64=None, owner:c_int64=None, source_obj:c_int64=None, spawn_position:Vector3=Vector3.zero):
+	def drop_client_loot(self, use_position:bool=False, final_position:Vector3=Vector3.zero, currency:c_int=None, item_template:c_int=None, loot_id:c_int64=None, owner:GameObject=None, source_obj:GameObject=None, spawn_position:Vector3=Vector3.zero):
 		pass
 
-	def play_emote(self, emote_id:c_int, target_id:c_int64):
-		self.emote_played(emote_id, target_id)
-		if target_id:
-			target = self.object._v_server.get_object(target_id)
-			if target is not None:
-				target.handle("on_emote_received", self.object, emote_id, silent=True)
-				self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
+	def play_emote(self, emote_id:c_int, target:GameObject):
+		self.emote_played(emote_id, target)
+		if target is not None:
+			target.handle("on_emote_received", self.object, emote_id, silent=True)
+			self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
 
 	@single
-	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:c_int64=0, source_trade_id:c_int64=0, source_type:c_int=0):
+	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:GameObject=0, source_trade_id:GameObject=0, source_type:c_int=0):
 		self.currency = currency
 
 	def pickup_currency(self, currency:c_uint=None, position:Vector3=None):
@@ -404,21 +403,19 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		self.object.stats.imagination = 6
 
 	@broadcast
-	def knockback(self, caster:c_int64=0, originator:c_int64=0, knock_back_time_ms:c_int=0, vector:Vector3=None):
+	def knockback(self, caster:GameObject=0, originator:GameObject=0, knock_back_time_ms:c_int=0, vector:Vector3=None):
 		pass
 
 	@single
-	def terminate_interaction(self, obj_id_terminator:c_int64=None, type:c_int=None):
+	def terminate_interaction(self, terminator:GameObject=None, type:c_int=None):
 		pass
 
-	def request_use(self, is_multi_interact_use:c_bit=None, multi_interact_id:c_uint=None, multi_interact_type:c_int=None, object_id:c_int64=None, secondary:c_bit=False):
+	def request_use(self, is_multi_interact_use:bool=None, multi_interact_id:c_uint=None, multi_interact_type:c_int=None, obj:GameObject=None, secondary:bool=False):
 		if not is_multi_interact_use:
 			assert multi_interact_id == 0
 			multi_interact_id = None
-		assert object_id != 0
 		assert not secondary
-		obj = self.object._v_server.get_object(object_id)
-		if not obj:
+		if obj is None:
 			return
 		log.debug("Interacting with %s", obj)
 		obj.handle("on_use", self.object, multi_interact_id)
@@ -426,7 +423,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		self.update_mission_task(TaskType.Interact, obj.lot)
 
 	@broadcast
-	def emote_played(self, emote_id:c_int, target_id:c_int64):
+	def emote_played(self, emote_id:c_int, target:GameObject):
 		pass
 
 	def client_item_consumed(self, item_id:c_int64=None):
@@ -439,7 +436,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		return bool(self.flags & (1 << flag_id))
 
 	@single
-	def set_flag(self, flag:c_bit=None, flag_id:c_int=None):
+	def set_flag(self, flag:bool=None, flag_id:c_int=None):
 		if self.get_flag(flag_id) == flag:
 			return
 
@@ -463,19 +460,19 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def display_message_box(self, show:c_bit=None, callback_client:c_int64=None, identifier:str=None, image_id:c_int=None, text:str=None, user_data:str=None):
+	def display_message_box(self, show:bool=None, callback_client:GameObject=None, identifier:str=None, image_id:c_int=None, text:str=None, user_data:str=None):
 		pass
 
 	@single
-	def set_gravity_scale(self, scale:c_float=None):
+	def set_gravity_scale(self, scale:float=None):
 		pass
 
 	@broadcast
-	def set_jet_pack_mode(self, bypass_checks:c_bit=True, hover:c_bit=False, enable:c_bit=False, effect_id:c_uint=-1, air_speed:c_float=10, max_air_speed:c_float=15, vertical_velocity:c_float=1, warning_effect_id:c_uint=-1):
+	def set_jet_pack_mode(self, bypass_checks:bool=True, hover:bool=False, enable:bool=False, effect_id:c_uint=-1, air_speed:float=10, max_air_speed:float=15, vertical_velocity:float=1, warning_effect_id:c_uint=-1):
 		pass
 
 	@single
-	def display_tooltip(self, do_or_die:c_bit=False, no_repeat:c_bit=False, no_revive:c_bit=False, is_property_tooltip:c_bit=False, show:c_bit=None, translate:c_bit=False, time:c_int=None, id:str=None, localize_params:LDF=None, str_image_name:str=None, str_text:str=None):
+	def display_tooltip(self, do_or_die:bool=False, no_repeat:bool=False, no_revive:bool=False, is_property_tooltip:bool=False, show:bool=None, translate:bool=False, time:c_int=None, id:str=None, localize_params:LDF=None, str_image_name:str=None, str_text:str=None):
 		pass
 
 	def use_non_equipment_item(self, item_to_use:c_int64=None):
@@ -488,25 +485,25 @@ class CharacterComponent(Component, CharMission, CharTrade):
 							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot)
 						return
 
-	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:c_bit=None):
+	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:bool=None):
 		leaderboard = LDF()
 		leaderboard.ldf_set("ADO.Result", LDFDataType.BOOLEAN, True)
 		leaderboard.ldf_set("Result.Count", LDFDataType.INT32, 0)
 		self.send_activity_summary_leaderboard_data(game_id, query_type, leaderboard_data=leaderboard, throttled=False, weekly=False)
 
 	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:c_bit=None, weekly:c_bit=None):
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:bool=None, weekly:bool=None):
 		pass
 
 	@single
-	def notify_pet_taming_minigame(self, pet_id:c_int64=None, player_taming_id:c_int64=None, force_teleport:c_bit=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
+	def notify_pet_taming_minigame(self, pet:GameObject=None, player_taming:GameObject=None, force_teleport:bool=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
 		pass
 
-	def client_exit_taming_minigame(self, voluntary_exit:c_bit=True):
-		self.notify_pet_taming_minigame(pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
+	def client_exit_taming_minigame(self, voluntary_exit:bool=True):
+		self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
 	@broadcast
-	def pet_taming_try_build_result(self, success:c_bit=True, num_correct:c_int=0):
+	def pet_taming_try_build_result(self, success:bool=True, num_correct:c_int=0):
 		pass
 
 	@broadcast
@@ -514,15 +511,15 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def set_emote_lock_state(self, lock:c_bit=None, emote_id:c_int=None):
+	def set_emote_lock_state(self, lock:bool=None, emote_id:c_int=None):
 		if not lock:
 			self.unlocked_emotes.append(emote_id)
 
 	@single
-	def play_cinematic(self, allow_ghost_updates:c_bit=True, close_multi_interact:c_bit=False, send_server_notify:c_bit=False, use_controlled_object_for_audio_listener:c_bit=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:c_bit=False, lead_in:c_float=-1.0, leave_player_locked_when_finished:c_bit=False, lock_player:c_bit=True, path_name:str=None, result:c_bit=False, skip_if_same_path:c_bit=False, start_time_advance:c_float=None):
+	def play_cinematic(self, allow_ghost_updates:bool=True, close_multi_interact:bool=False, send_server_notify:bool=False, use_controlled_object_for_audio_listener:bool=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:bool=False, lead_in:float=-1.0, leave_player_locked_when_finished:bool=False, lock_player:bool=True, path_name:str=None, result:bool=False, skip_if_same_path:bool=False, start_time_advance:float=None):
 		pass
 
-	def toggle_ghost_reference_override(self, override:c_bit=False):
+	def toggle_ghost_reference_override(self, override:bool=False):
 		pass
 
 	def set_ghost_reference_position(self, position:Vector3=None):
@@ -559,7 +556,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def ready_for_updates(self, object_id:c_int64=None):
 		pass
 
-	def bounce_notification(self, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:c_bit=None):
+	def bounce_notification(self, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:bool=None):
 		pass
 
 	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:BitStream=None, time_taken_in_ms:c_uint=None):
@@ -574,7 +571,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		self.object._v_server.send(save_response, self.address)
 
 	@broadcast
-	def start_arranging_with_item(self, first_time:c_bit=True, build_area_id:c_int64=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
+	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		self.object.inventory.push_equipped_items_state()
 
 	@broadcast
@@ -585,10 +582,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def u_i_message_server_to_single_client(self, args:AMF3=None, str_message_name:bytes=None):
 		pass
 
-	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:c_bit=False):
+	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:bool=False):
 		if not client_failed:
 			self.pet_taming_try_build_result()
-			self.notify_pet_taming_minigame(pet_id=0, player_taming_id=0, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
+			self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
 	def report_bug(self, body:str=None, client_version:bytes=None, other_player_id:bytes=None, selection:bytes=None):
 		for account in self.object._v_server.accounts.values():
@@ -606,11 +603,11 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
 		pass
 
-	def property_contents_from_client(self, query_db:c_bit=False):
-		self.get_models_on_property(models={model.object_id:spawner.object_id for spawner, model in self.object._v_server.models})
+	def property_contents_from_client(self, query_db:bool=False):
+		self.get_models_on_property(models={model: spawner for spawner, model in self.object._v_server.models})
 
 	@broadcast
-	def get_models_on_property(self, models:(c_uint, c_int64, c_int64)=None):
+	def get_models_on_property(self, models:(c_uint, GameObject, GameObject)=None):
 		pass
 
 	def match_request(self, activator:c_int64=None, player_choices:LDF=None, type:c_int=None, value:c_int=None):
@@ -632,7 +629,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def activate_brick_mode(self, build_object_id:c_int64=0, build_type:c_int=BuildType.BuildOnProperty, enter_build_from_world:c_bit=True, enter_flag:c_bit=True):
+	def activate_brick_mode(self, build_object_id:c_int64=0, build_type:c_int=BuildType.BuildOnProperty, enter_build_from_world:bool=True, enter_flag:bool=True):
 		pass
 
 	@single
@@ -656,15 +653,15 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def set_rail_movement(self, path_go_forward:c_bit=None, path_name:str=None, path_start:c_uint=None, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0):
+	def set_rail_movement(self, path_go_forward:bool=None, path_name:str=None, path_start:c_uint=None, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0):
 		pass
 
 	@single
-	def start_rail_movement(self, damage_immune:c_bit=True, no_aggro:c_bit=True, notify_activator:c_bit=False, show_name_billboard:c_bit=True, camera_locked:c_bit=True, collision_enabled:c_bit=True, loop_sound:str=None, path_go_forward:c_bit=True, path_name:str=None, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0, start_sound:str=None, stop_sound:str=None, use_db:c_bit=True):
+	def start_rail_movement(self, damage_immune:bool=True, no_aggro:bool=True, notify_activator:bool=False, show_name_billboard:bool=True, camera_locked:bool=True, collision_enabled:bool=True, loop_sound:str=None, path_go_forward:bool=True, path_name:str=None, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator:GameObject=0, start_sound:str=None, stop_sound:str=None, use_db:bool=True):
 		pass
 
 	@single
-	def start_celebration_effect(self, animation:str=None, background_object:c_int=11164, camera_path_lot:c_int=12458, cele_lead_in:c_float=1, cele_lead_out:c_float=0.8, celebration_id:c_int=-1, duration:c_float=None, icon_id:c_uint=None, main_text:str=None, mixer_program:bytes=None, music_cue:bytes=None, path_node_name:bytes=None, sound_guid:bytes=None, sub_text:str=None):
+	def start_celebration_effect(self, animation:str=None, background_object:c_int=11164, camera_path_lot:c_int=12458, cele_lead_in:float=1, cele_lead_out:float=0.8, celebration_id:c_int=-1, duration:float=None, icon_id:c_uint=None, main_text:str=None, mixer_program:bytes=None, music_cue:bytes=None, path_node_name:bytes=None, sound_guid:bytes=None, sub_text:str=None):
 		pass
 
 	@single
@@ -675,5 +672,5 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		self.object.render.play_f_x_effect(name=b"7074", effect_type="create", effect_id=7074)
 
 	@single
-	def notify_level_rewards(self, level:c_int=None, sending_rewards:c_bit=False):
+	def notify_level_rewards(self, level:c_int=None, sending_rewards:bool=False):
 		pass

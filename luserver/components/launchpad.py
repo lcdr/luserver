@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from ..bitstream import c_int, c_int64
+from ..game_object import GameObject
 from ..ldf import LDF
 from ..messages import broadcast
 from .component import Component
@@ -24,7 +25,7 @@ class LaunchpadComponent(Component):
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
 				player.char.traveling_rocket = model.module_lots
-				self.fire_event_client_side(args="RocketEquipped", obj=model.object_id, sender_id=player.object_id)
+				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player)
 				break
 		else:
 			player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="You don't have a rocket!")
@@ -36,5 +37,5 @@ class LaunchpadComponent(Component):
 			asyncio.ensure_future(player.char.transfer_to_world((param3, 0, param1), self.respawn_point_name))
 
 	@broadcast
-	def fire_event_client_side(self, args:str=None, obj:c_int64=None, param1:c_int64=0, param2:c_int=-1, sender_id:c_int64=None):
+	def fire_event_client_side(self, args:str=None, obj:GameObject=None, param1:c_int64=0, param2:c_int=-1, sender:GameObject=None):
 		pass

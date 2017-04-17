@@ -13,3 +13,6 @@ class Component:
 		if hasattr(self, "_flags") and name in self._flags:
 			setattr(self, self._flags[name], hasattr(self, name))
 			self.object._serialize = True
+
+	def serialize(self, out, is_creation):
+		raise NotImplementedError

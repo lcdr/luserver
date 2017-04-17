@@ -386,6 +386,13 @@ class VendorCommand(ChatCommand):
 		vendor = self.chat.server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
 		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]
 
+class WaveCommand(ChatCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "wave")
+
+	def run(self, args, sender):
+		pass # client-side
+
 class WhisperCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "whisper", aliases=("w", "tell"), description="Private message")

@@ -25,7 +25,7 @@ class StatsSubcomponent(Component):
 			self.faction = -1
 			self.is_smashable = False
 		else:
-			self.object.destructible.init()
+			self.object.destructible.init(set_vars)
 
 	@property
 	def max_life(self):
@@ -119,5 +119,5 @@ class StatsSubcomponent(Component):
 			asyncio.get_event_loop().call_later(8, self.object.spawner_object.spawner.spawn)
 
 	@broadcast
-	def die(self, client_death:c_bit=False, spawn_loot:c_bit=True, death_type:str=None, direction_relative_angle_xz:c_float=None, direction_relative_angle_y:c_float=None, direction_relative_force:c_float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
+	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_uint=0, killer_id:c_int64=None, loot_owner_id:c_int64=0):
 		pass

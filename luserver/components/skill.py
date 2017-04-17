@@ -2,7 +2,7 @@ import logging
 import pprint
 import enum
 
-from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_uint, c_uint64
+from ..bitstream import BitStream, c_bit, c_int, c_int64, c_uint, c_uint64
 from ..messages import broadcast, single
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -180,10 +180,10 @@ class SkillComponent(Component):
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:c_bit=False, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		pass
 
-	def start_skill(self, used_mouse:c_bit=False, consumable_item_id:c_int64=0, caster_latency:c_float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -216,22 +216,22 @@ class SkillComponent(Component):
 					self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
 					break
 
-	def select_skill(self, from_skill_set:c_bit=False, skill_id:c_int=None):
+	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=None):
 		pass
 
 	@broadcast
-	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:c_bit=False, cast_type:c_int=0, time_secs:c_float=-1, times_can_cast:c_int=-1, skill_id:c_uint=None, slot_id:c_int=-1, temporary:c_bit=True):
+	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint=None, slot_id:c_int=-1, temporary:bool=True):
 		pass
 
 	@single
-	def remove_skill(self, from_skill_set:c_bit=False, skill_id:c_uint=None):
+	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint=None):
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def echo_sync_skill(self, done:bool=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		pass
 
-	def sync_skill(self, done:c_bit=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def sync_skill(self, done:bool=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:

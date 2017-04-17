@@ -1,6 +1,7 @@
 from persistent.mapping import PersistentMapping
 
-from ...bitstream import c_bit, c_float, c_int, c_int64, c_ubyte
+from ...bitstream import c_int, c_int64, c_ubyte
+from ...game_object import GameObject
 from ...messages import single
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
@@ -135,23 +136,23 @@ class CharMission:
 		self.object._v_server.commit()
 
 	@single
-	def offer_mission(self, mission_id:c_int=None, offerer:c_int64=None):
+	def offer_mission(self, mission_id:c_int=None, offerer:GameObject=None):
 		pass
 
-	def respond_to_mission(self, mission_id:c_int=None, player_id:c_int64=None, receiver:c_int64=None, reward_item:c_int=-1):
+	def respond_to_mission(self, mission_id:c_int=None, player_id:c_int64=None, receiver:GameObject=None, reward_item:c_int=-1):
+		assert player_id == self.object.object_id
 		if reward_item != -1:
 			mission = self.missions[mission_id]
 			for lot, amount in mission.rew_items:
 				if lot == reward_item:
 					self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
 					break
-		obj = self.object._v_server.get_object(receiver)
-		obj.handle("respond_to_mission", mission_id, self.object, reward_item, silent=True)
+		receiver.handle("respond_to_mission", mission_id, self.object, reward_item, silent=True)
 
 	@single
-	def notify_mission(self, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:c_bit=False):
+	def notify_mission(self, mission_id:c_int=None, mission_state:c_int=None, sending_rewards:bool=False):
 		pass
 
 	@single
-	def notify_mission_task(self, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, c_float)=None):
+	def notify_mission_task(self, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, float)=None):
 		pass

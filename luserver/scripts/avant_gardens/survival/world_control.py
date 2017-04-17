@@ -67,8 +67,8 @@ class ScriptComponent(script.ScriptComponent):
 
 			player_time = values[1]
 			player_score = values[0]
-			self.object.scripted_activity.notify_client_zone_object(name="Update_ScoreBoard", param1=int(player_time), param2=0, param_str=b"%i" % player_score, param_obj=player.object_id)
-			self.notify_client_object(name="ToggleLeaderBoard", param1=0, param2=0, param_str=b"", param_obj=player.object_id)
+			self.object.scripted_activity.notify_client_zone_object(name="Update_ScoreBoard", param1=int(player_time), param2=0, param_str=b"%i" % player_score, param_obj=player)
+			self.notify_client_object(name="ToggleLeaderBoard", param1=0, param2=0, param_str=b"", param_obj=player)
 
 			for mission_id, time in SURVIVAL_MISSIONS:
 				if player_time > time:
