@@ -161,13 +161,14 @@ class MovementType:
 	DoubleJump = 4
 	FallingAfterDoubleJumpAttack = 5
 	Jetpack = 6
+	# FallingAfterHit / Knockback ? 7
 	Rail = 10
 
 class MovementSwitch(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		movement_type = bitstream.read(c_uint)
-		if movement_type in (MovementType.Ground, MovementType.Rail):
+		if movement_type in (MovementType.Ground, 7, MovementType.Rail):
 			action = behavior.ground_action
 		elif movement_type == MovementType.Jump:
 			action = behavior.jump_action
@@ -178,7 +179,7 @@ class MovementSwitch(Behavior):
 		elif movement_type == MovementType.Jetpack:
 			action = behavior.jetpack_action
 		else:
-			raise NotImplementedError("Movement type", movement_type)
+			raise NotImplementedError("Behavior", behavior.id, ": Movement type", movement_type)
 		if action is not None:
 			self.deserialize_behavior(action, bitstream, target, level+1)
 

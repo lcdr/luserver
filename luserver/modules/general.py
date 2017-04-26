@@ -206,7 +206,8 @@ class GeneralHandling(ServerModule):
 		vehicle = None
 		if player.char.vehicle_id != 0:
 			vehicle = self.server.game_objects[player.char.vehicle_id]
-			serialize = player._serialize
+			serialized = player._serialize_scheduled
+			player._serialize_scheduled = True
 		player.physics.position.update(message.read(c_float), message.read(c_float), message.read(c_float))
 		player.physics.attr_changed("position")
 		player.physics.rotation.update(message.read(c_float), message.read(c_float), message.read(c_float), message.read(c_float))
@@ -246,7 +247,7 @@ class GeneralHandling(ServerModule):
 				if vehicle:
 					vehicle.physics.deeper_unknown_float3 = player.physics.deeper_unknown_float3
 		if vehicle:
-			player._serialize = serialize
+			player._serialize_scheduled = serialized
 
 		if player.stats.life != 0:
 			self.check_collisions(player)

@@ -83,6 +83,10 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.mail = MailHandling(self)
 		self.social = SocialHandling(self)
 
+		self.instance_id = self.db.current_instance_id
+		self.db.current_instance_id += 1
+		self.conn.transaction_manager.commit()
+		self.current_object_id = 0
 		self.current_spawned_id = BITS_SPAWNED
 		self.world_data = None
 		self.game_objects = {}
@@ -216,10 +220,8 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		return self.current_spawned_id
 
 	def new_object_id(self):
-		current = self.db.current_object_id
-		self.db.current_object_id += 1
-		self.commit()
-		return current | BITS_PERSISTENT
+		self.current_object_id += 1
+		return (self.instance_id << 16)| self.current_object_id | BITS_PERSISTENT
 
 	def new_clone_id(self):
 		current = self.db.current_clone_id

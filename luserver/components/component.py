@@ -12,7 +12,7 @@ class Component:
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
 		if hasattr(self, "_flags") and name in self._flags:
 			setattr(self, self._flags[name], hasattr(self, name))
-			self.object._serialize = True
+			self.object.signal_serialize()
 
 	def serialize(self, out, is_creation):
 		raise NotImplementedError

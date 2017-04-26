@@ -46,7 +46,7 @@ class Init:
 		print("Done initializing database!")
 
 	def gen_accounts(self):
-		self.root.current_object_id = 1
+		self.root.current_instance_id = 0
 		self.root.current_clone_id = 1
 		self.root.accounts = BTrees.OOBTree.BTree()
 		self.root.servers = BTrees.OOBTree.BTree()
@@ -180,8 +180,6 @@ class Init:
 
 		self.root.item_component = BTrees.IOBTree.BTree()
 		for id, base_value, item_type, stack_size, sub_items in self.cdclient.execute("select id, baseValue, itemType, stackSize, subItems from ItemComponent"):
-			if stack_size == 0:
-				stack_size = 1
 			if id in item_type_fixes:
 				item_type = item_type_fixes[id]
 			if sub_items is None or not sub_items.strip():
