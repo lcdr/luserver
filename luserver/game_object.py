@@ -22,7 +22,7 @@ class GameObject:
 		self._flags["children_flag"] = "related_objects_flag"
 		self._flags["parent"] = "parent_flag"
 		self._flags["children"] = "children_flag"
-		self._serialize = False
+		self._serialize_scheduled = True
 		self.lot = lot
 		self.object_id = object_id
 		self.name = set_vars.get("name", "")
@@ -106,7 +106,16 @@ class GameObject:
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
 		if hasattr(self, "_flags") and name in self._flags:
 			setattr(self, self._flags[name], hasattr(self, name))
-			self._serialize = True
+			self.signal_serialize()
+
+	def signal_serialize(self):
+		if not self._serialize_scheduled:
+			self.call_later(0, self.do_serialize)
+			self._serialize_scheduled = True
+
+	def do_serialize(self):
+		self._v_server.serialize(self)
+		self._serialize_scheduled = False
 
 	def send_construction(self):
 		out = BitStream()
@@ -132,6 +141,8 @@ class GameObject:
 		out.write(c_bit(False))
 
 		out.write(self.serialize(True))
+
+		self._serialize_scheduled = False
 		return out
 
 	def serialize(self, is_creation=False):
@@ -161,6 +172,7 @@ class GameObject:
 		return out
 
 	def on_destruction(self):
+		self._serialize_scheduled = True
 		if self.parent is not None:
 			self._v_server.game_objects[self.parent].children.remove(self.object_id)
 			self._v_server.game_objects[self.parent].attr_changed("children")

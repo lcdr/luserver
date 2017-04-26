@@ -17,12 +17,15 @@ class SpawnerComponent(Component):
 
 	def on_startup(self):
 		if not self.spawned_on_smash:
-			for _ in range(self.unknown[2]):
+			for _ in range(min(self.unknown[2], len(self.waypoints))):
 				self.spawn()
 
 	def spawn(self):
-		self.last_waypoint_index = random.randrange(len(self.waypoints))
 		spawned_vars = self.waypoints[self.last_waypoint_index].copy()
 		spawned_vars["spawner"] = self.object
 		spawned = self.object._v_server.spawn_object(self.spawntemplate, spawned_vars)
+		if self.last_waypoint_index == len(self.waypoints)-1:
+			self.last_waypoint_index = 0
+		else:
+			self.last_waypoint_index += 1
 		return spawned

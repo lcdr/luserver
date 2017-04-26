@@ -216,8 +216,11 @@ class InventoryComponent(Component):
 			new_stack = stack_size == 1
 			if not new_stack:
 				for stack in inventory:
-					if stack is not None and stack.lot == lot and stack.amount < stack_size:
-						added_amount = min(stack_size - stack.amount, amount)
+					if stack is not None and stack.lot == lot and (stack_size == 0 or stack.amount < stack_size):
+						if stack_size == 0:
+							added_amount = amount
+						else:
+							added_amount = min(stack_size - stack.amount, amount)
 						stack.amount += added_amount
 						amount -= added_amount
 						index = inventory.index(stack)
@@ -336,7 +339,7 @@ class InventoryComponent(Component):
 
 					self.equipped[-1].append(item)
 					self.equipped_items_flag = True
-					self.object._serialize = True
+					self.object.signal_serialize()
 
 					if hasattr(self.object, "char"):
 						self.object.skill.add_skill_for_item(item)
@@ -355,7 +358,7 @@ class InventoryComponent(Component):
 			if item.object_id == item_to_unequip:
 				self.equipped[-1].remove(item)
 				self.equipped_items_flag = True
-				self.object._serialize = True
+				self.object.signal_serialize()
 
 				for sub_item in item.sub_items:
 					self.remove_item_from_inv(InventoryType.TempItems, lot=sub_item)

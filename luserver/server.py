@@ -110,10 +110,10 @@ class Server(pyraknet.server.Server):
 			# todo: os.system probably isn't the best way to do this
 			os.system("start cmd /K \"python __main__.py %i %i && exit || pause && exit\"" % (world_id[0], world_id[2]))
 			if first:
-				await asyncio.sleep(4)
+				await asyncio.sleep(8)
 				first = False
 			else:
-				await asyncio.sleep(60)
+				await asyncio.sleep(30)
 
 class DisconnectReason:
 	UnknownServerError = 0

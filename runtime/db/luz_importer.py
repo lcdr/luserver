@@ -144,6 +144,8 @@ def _parse_config(config, triggers=None):
 		script_vars["transfer_text"] = config["transferText"]
 	if "transferZoneID" in config:
 		script_vars["transfer_world_id"] = int(config["transferZoneID"])
+	if "volGroup" in config:
+		script_vars["volume_group"] = config["volGroup"]
 
 	return spawned_vars
 
