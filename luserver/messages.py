@@ -215,6 +215,9 @@ class GameMessage(Enum):
 	MatchRequest = 1308
 	MatchResponse = 1309
 	MatchUpdate = 1310
+	ZonePropertyModelRotated = 1370
+	ZonePropertyModelRemovedWhileEquipped = 1371
+	ZonePropertyModelEquipped = 1372
 	UsedInformationPlaque = 1419
 	ActivateBrickMode = 1438
 	ModifyLegoScore = 1459

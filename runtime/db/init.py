@@ -74,8 +74,8 @@ class Init:
 		self.root.level_scores = tuple(i[0] for i in self.cdclient.execute("select requiredUScore from LevelProgressionLookup").fetchall())
 
 		self.root.world_info = BTrees.IOBTree.BTree()
-		for world_id, template in self.cdclient.execute("select zoneID, zoneControlTemplate from ZoneTable"):
-			self.root.world_info[world_id] = template
+		for world_id, script_id, template in self.cdclient.execute("select zoneID, scriptID, zoneControlTemplate from ZoneTable"):
+			self.root.world_info[world_id] = scripts.SCRIPTS.get(script_id), template
 
 	def gen_missions(self):
 		self.root.missions = BTrees.IOBTree.BTree()

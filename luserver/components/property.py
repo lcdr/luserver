@@ -12,7 +12,7 @@ class PropertyData(Serializable):
 
 	def serialize(self, out):
 		out.write(c_int64(0))
-		out.write(c_int(0))
+		out.write(c_int(25166))
 		out.write(c_ushort(0))
 		out.write(c_ushort(0))
 		out.write(c_uint(0))
@@ -161,14 +161,13 @@ class PropertyEntranceComponent(Component):
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
-				player.char.traveling_rocket = model.module_lots
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
 	def property_entrance_sync(self, player, include_null_address:bool=None, include_null_description:bool=None, players_own:bool=None, update_ui:bool=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:bytes=None):
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
-		my_property.is_owned = True
+		#my_property.is_owned = True
 
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
@@ -223,6 +222,17 @@ class PropertyVendorComponent(Component):
 		assert multi_interact_id is None
 		self.open_property_vendor(player=player)
 
+	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
+	def download_property_data(self, data:PropertyData=None):
+		pass
+
+	def query_property_data(self, player):
+		property = PropertyData()
+		property.owner = player
+		property.path = self.object._v_server.db.property_template[self.object._v_server.world_id[0]]
+
+		self.download_property_data(property, player=player)
+
 	@single
 	def open_property_vendor(self):
 		pass
@@ -231,6 +241,7 @@ class PropertyVendorComponent(Component):
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)
+		self.object._v_server.world_control_object.script.on_property_rented(player)
 
 	@single
 	def property_rental_response(self, clone_id:c_uint=None, code:c_int=None, property_id:c_int64=None, rentdue:c_int64=None):

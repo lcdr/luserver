@@ -120,6 +120,7 @@ class SkillSlot:
 	Hat = 3
 
 class CastType:
+	Two = 2 # not sure, but i'll use this for casts
 	Consumable = 3
 	EverlastingConsumable = 4
 
@@ -154,9 +155,9 @@ class SkillComponent(Component):
 		self.last_ui_handle += 1
 
 		bitstream = BitStream()
-		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
-		self.start_skill(skill_id=skill_id, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
+		self.start_skill(skill_id=skill_id, cast_type=CastType.Two, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
 
 	def cast_sync_skill(self, delay, behavior, target):
 		ui_behavior_handle = self.last_ui_handle
@@ -190,7 +191,12 @@ class SkillComponent(Component):
 		assert optional_originator_id in (0, self.object.object_id)
 		assert originator_rot == Quaternion(0, 0, 0, 0)
 
-		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle)
+		if cast_type == CastType.Two: # casts?
+			player = None # send to all including self
+		else:
+			player = self.object # exclude self
+
+		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, player=player)
 
 		if hasattr(self.object, "char"):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
@@ -202,7 +208,8 @@ class SkillComponent(Component):
 		else:
 			target = self.object
 		self.picked_target_id = optional_target_id
-		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		behavior, imagination_cost = self.object._v_server.db.skill_behavior[skill_id]
+		self.object.stats.imagination -= imagination_cost
 		self.original_target_id = target.object_id
 		self.deserialize_behavior(behavior, bitstream, target)
 
@@ -304,7 +311,7 @@ class SkillComponent(Component):
 	def add_skill_for_item(self, item, add_buffs=True):
 		if item.lot in self.object._v_server.db.object_skills:
 			for skill_id in self.object._v_server.db.object_skills[item.lot]:
-				behavior = self.object._v_server.db.skill_behavior[skill_id]
+				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 				if behavior.template in PASSIVE_BEHAVIORS:
 					if add_buffs:
 						if hasattr(self.object, "char"):
@@ -332,13 +339,13 @@ class SkillComponent(Component):
 	def remove_skill_for_item(self, item):
 		if item.lot in self.object._v_server.db.object_skills:
 			for skill_id in self.object._v_server.db.object_skills[item.lot]:
-				behavior = self.object._v_server.db.skill_behavior[skill_id]
+				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 				if behavior.template in PASSIVE_BEHAVIORS:
 					self.undo_behavior(behavior)
 				else:
 					self.remove_skill(skill_id=skill_id)
 
 	def remove_skill_server(self, skill_id):
-		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 		if behavior.template in PASSIVE_BEHAVIORS:
 			self.undo_behavior(behavior)

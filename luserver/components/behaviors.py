@@ -119,7 +119,7 @@ class ProjectileAttack(Behavior):
 
 		proj_behavs = []
 		for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
-			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id])
+			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
 		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
@@ -136,7 +136,7 @@ class ProjectileAttack(Behavior):
 
 		proj_behavs = []
 		for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
-			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id])
+			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
 		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
@@ -267,6 +267,10 @@ class AttackDelay(Behavior):
 ChargeUp = AttackDelay # works the same
 
 class RepairArmor(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		pass
+
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		target.stats.armor += behavior.armor
