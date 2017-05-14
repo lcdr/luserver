@@ -147,12 +147,12 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 	def set_world_id(self, world_id):
 		self.world_id = world_id[0], 0, world_id[1]
 		if self.world_id[0] != 0: # char
-			world_control_lot = self.db.world_info[self.world_id[0]]
-			if world_control_lot is not None:
-				self.world_control_object = self.spawn_object(world_control_lot, is_world_control=True)
-			else:
-				self.world_control_object = None
+			custom_script, world_control_lot = self.db.world_info[self.world_id[0]]
+			if world_control_lot is None:
+				world_control_lot = 2365
+			self.world_control_object = self.spawn_object(world_control_lot, set_vars={"custom_script": custom_script}, is_world_control=True)
 
+			self.spawners = {}
 			self.world_data = self.db.world_data[self.world_id[0]]
 			self.reset_v_()
 			for obj in self.world_data.objects.values():

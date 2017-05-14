@@ -34,8 +34,8 @@ class Init:
 			root.object_skills.setdefault(row[0], []).append(row[1])
 
 		root.skill_behavior = BTrees.IOBTree.BTree()
-		for skill_id, behavior_id in self.cdclient.execute("select skillID, behaviorID from SkillBehavior"):
-			root.skill_behavior[skill_id] = self.get_behavior(behavior_id)
+		for skill_id, behavior_id, imagination_cost in self.cdclient.execute("select skillID, behaviorID, imaginationcost from SkillBehavior"):
+			root.skill_behavior[skill_id] = self.get_behavior(behavior_id), imagination_cost
 		print("behavs_accessed", self.behavs_accessed)
 
 	def get_behavior(self, behavior_id):
@@ -159,6 +159,12 @@ class Init:
 				elif hasattr(behavior, "behavior 1"):
 					behavior.behavior = self.get_behavior(getattr(behavior, "behavior 1"))
 					delattr(behavior, "behavior 1")
+				if hasattr(behavior, "max range"):
+					behavior.max_range = getattr(behavior, "max range")
+					delattr(behavior, "max range")
+				if hasattr(behavior, "min range"):
+					behavior.min_range = getattr(behavior, "min range")
+					delattr(behavior, "min range")
 
 			elif template_id == BehaviorTemplate.Verify:
 				behavior.action = self.get_behavior(behavior.action)

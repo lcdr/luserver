@@ -359,7 +359,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		if rotation is not None:
 			self.object.physics.rotation.update(rotation)
 			self.object.physics.attr_changed("rotation")
-		await self.transfer_to_world(((self.world[0] // 100)*100, self.world[1], self.world[2]))
+		await self.transfer_to_world(((self.world[0] // 100)*100, self.world[1], 0))
 
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
@@ -391,8 +391,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		lot = self.dropped_loot[loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id in self.object._v_server.db.object_skills[lot]:
-				behavior = self.object._v_server.db.skill_behavior[skill_id]
-				self.object.skill.deserialize_behavior(behavior, b"", self.object)
+				self.object.skill.cast_skill(skill_id)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
 		del self.dropped_loot[loot_object_id]
@@ -533,6 +532,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				self.object._v_server.db.properties[self.object._v_server.world_id[0]][self.object._v_server.world_id[2]][spawner_id] = model.lot, position, rotation
 				self.object._v_server.spawn_model(spawner_id, model.lot, position, rotation)
 				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
+				self.object._v_server.world_control_object.script.on_model_placed(self.object)
 				break
 
 	def delete_model_from_client(self, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):

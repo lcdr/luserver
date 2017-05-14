@@ -76,7 +76,7 @@ class GameObject:
 
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
-				if "custom_script" in set_vars and set_vars["custom_script"] != "":
+				if "custom_script" in set_vars and set_vars["custom_script"] is not None:
 					script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
 					comp = script.ScriptComponent,
 				elif component_id is not None and component_id in self._v_server.db.script_component:

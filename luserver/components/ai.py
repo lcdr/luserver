@@ -1,6 +1,7 @@
 from ..bitstream import c_bit
 from ..math.quaternion import Quaternion
 from .component import Component
+from .skill import BehaviorTemplate
 
 UPDATE_INTERVAL = 1 # todo: make interval skill-dependent
 
@@ -9,12 +10,18 @@ class BaseCombatAIComponent(Component):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.ai = self
 		self._flags["target"] = "ai_flag"
+		self.skill_range = 7
 		self.target = None
 		self.enabled = False
 		self.update_handle = None
 
 	def on_startup(self):
-		self.object.physics.proximity_radius(7)
+		if self.object.skill.skills:
+			behavior = self.object._v_server.db.skill_behavior[self.object.skill.skills[0]][0]
+			assert behavior.template == BehaviorTemplate.NPCCombatSkill
+			self.skill_range = behavior.min_range
+		self.object.physics.proximity_radius(self.skill_range)
+
 		self.enable()
 
 	def enable(self):
@@ -40,7 +47,7 @@ class BaseCombatAIComponent(Component):
 		self.target = None
 		enemy_factions = self.object._v_server.db.factions.get(self.object.stats.faction, ())
 		# todo: make distance skill-dependent
-		nearest_dist = 7**2 # starting distance is maximum distance
+		nearest_dist = self.skill_range**2 # starting distance is maximum distance
 		for obj in self.object._v_server.game_objects.values():
 			if hasattr(obj, "stats") and obj.stats.faction in enemy_factions:
 				dist = self.object.physics.position.sq_distance(obj.physics.position)

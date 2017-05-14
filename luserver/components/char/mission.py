@@ -30,7 +30,6 @@ class CharMission:
 						if task.value == task.target_value:
 							break
 
-		self.object._v_server.commit()
 		return mission_progress
 
 	def update_mission_task(self, task_type, target, parameter=None, increment=1, mission_id=None):
@@ -132,8 +131,6 @@ class CharMission:
 				else:
 					attachment = None
 				self.object._v_server.mail.send_mail("%[MissionEmail_{id}_senderName]".format(id=id), "%[MissionEmail_{id}_subjectText]".format(id=id), "%[MissionEmail_{id}_bodyText]".format(id=id), self.object, attachment)
-
-		self.object._v_server.commit()
 
 	@single
 	def offer_mission(self, mission_id:c_int=None, offerer:GameObject=None):

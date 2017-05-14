@@ -88,12 +88,12 @@ def _parse_config(config, triggers=None):
 	spawned_vars = {}
 
 	if "custom_script_client" in config:
-		spawned_vars["custom_script"] = ""
+		spawned_vars["custom_script"] = None
 	if "custom_script_server" in config:
 		if config["custom_script_server"] == "":
-			spawned_vars["custom_script"] = ""
+			spawned_vars["custom_script"] = None
 		else:
-			spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):], "")
+			spawned_vars["custom_script"] = scripts.SCRIPTS.get(config["custom_script_server"][len("scripts\\"):])
 	if "groupID" in config:
 		spawned_vars["groups"] = config["groupID"][:-1].split(";")
 	if "is_smashable" in config:
@@ -301,6 +301,7 @@ class _LUZImporter:
 			elif path_type == PathType.Spawner:
 				if spawner_vars["spawntemplate"] == 0:
 					continue
+				spawner_vars["spawner_name"] = path_name
 				spawner_vars["spawner_waypoints"] = waypoints
 				spawner = GameObject(SimpleNamespace(db=self.root), 176, object_id, spawner_vars)
 				del spawner._v_server
