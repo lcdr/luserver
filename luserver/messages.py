@@ -210,6 +210,7 @@ class GameMessage(Enum):
 	LockNodeRotation = 1260
 	PlayerReachedRespawnCheckpoint = 1296
 	HandleUGCEquipPostDeleteBasedOnEditMode = 1300
+	HandleUGCEquipPreCreateBasedOnEditMode = 1301
 	PropertyContentsFromClient = 1305
 	GetModelsOnProperty = 1306
 	MatchRequest = 1308

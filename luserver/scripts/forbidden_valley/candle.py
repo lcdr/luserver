@@ -10,7 +10,7 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.render.play_f_x_effect(name=b"candle_light", effect_type="create", effect_id=2108)
 		self.script_vars["am_hit"] = False
 
-	def on_hit(self, attacker):
+	def on_hit(self, damage, attacker):
 		if not self.script_vars["am_hit"]:
 			attacker.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=850)
 

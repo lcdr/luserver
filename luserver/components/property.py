@@ -161,6 +161,7 @@ class PropertyEntranceComponent(Component):
 			clone_id = player.char.clone_id
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
+				player.char.traveling_rocket = model.module_lots
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
@@ -208,6 +209,7 @@ class PropertyManagementComponent(Component):
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
 	def set_build_mode(self, start:bool=None, distance_type:c_int=-1, mode_paused:bool=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
+		self.object._v_server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
 	@broadcast

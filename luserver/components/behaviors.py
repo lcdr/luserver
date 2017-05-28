@@ -172,7 +172,7 @@ class MovementSwitch(Behavior):
 			action = behavior.ground_action
 		elif movement_type == MovementType.Jump:
 			action = behavior.jump_action
-		elif movement_type == MovementType.Falling:
+		elif movement_type in (MovementType.Falling, MovementType.FallingAfterDoubleJumpAttack):
 			action = behavior.falling_action
 		elif movement_type == MovementType.DoubleJump:
 			action = behavior.double_jump_action
