@@ -272,6 +272,7 @@ from .components.exhibit import ExhibitComponent
 from .components.inventory import InventoryComponent, ItemComponent
 from .components.launchpad import LaunchpadComponent
 from .components.mission import MissionNPCComponent
+from .components.model import ModelComponent
 from .components.modular_build import ModularBuildComponent
 from .components.moving_platform import MovingPlatformComponent
 from .components.pet import PetComponent
@@ -316,6 +317,7 @@ component[16] = VendorComponent,
 component[6] = BouncerComponent,
 component[39] = ScriptedActivityComponent,
 component[75] = ExhibitComponent,
+component[42] = ModelComponent,
 component[2] = RenderComponent,
 
 component[10] = SpawnerComponent,

@@ -349,8 +349,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		redirect.write(server_address[0], char_size=1, allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
-		for address in self.object._v_server.accounts:
-			self.object._v_server.send(redirect, address)
+		self.object._v_server.send(redirect, self.address)
 
 	async def transfer_to_last_non_instance(self, position=None, rotation=None):
 		if position is not None:
@@ -466,6 +465,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def set_gravity_scale(self, scale:float=None):
 		pass
 
+	@single
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque_id:GameObject=0, response:c_int=0, rotation:Quaternion=Quaternion.identity):
+		pass
+
 	@broadcast
 	def set_jet_pack_mode(self, bypass_checks:bool=True, hover:bool=False, enable:bool=False, effect_id:c_uint=-1, air_speed:float=10, max_air_speed:float=15, vertical_velocity:float=1, warning_effect_id:c_uint=-1):
 		pass
@@ -528,15 +531,31 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = self.object._v_server.new_object_id()
-				rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped
+				if rotation != Quaternion.identity:
+					rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped
 				self.object._v_server.db.properties[self.object._v_server.world_id[0]][self.object._v_server.world_id[2]][spawner_id] = model.lot, position, rotation
 				self.object._v_server.spawn_model(spawner_id, model.lot, position, rotation)
 				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
 				self.object._v_server.world_control_object.script.on_model_placed(self.object)
+				for obj in self.object._v_server.game_objects.values():
+					if obj.lot == 3315:
+						plaque = obj
+						break
+				else:
+					log.error("no plaque found")
+					return
+
+				self.place_model_response(position, plaque, 14, rotation)
+				self.handle_u_g_c_equip_pre_create_based_on_edit_mode(0, spawner_id)
 				break
 
 	def delete_model_from_client(self, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
 		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
+		if reason == DeleteReason.PickingModelUp:
+			self.object._v_server.world_control_object.script.on_model_picked_up(self.object)
+		elif reason == DeleteReason.ReturningModelToInventory:
+			self.object._v_server.world_control_object.script.on_model_put_away(self.object)
+
 		self.object._v_server.destruct(self.object._v_server.game_objects[model_id])
 		for spawner, model in self.object._v_server.models:
 			if model.object_id == model_id:
@@ -547,6 +566,8 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				if reason == DeleteReason.PickingModelUp:
 					self.object.inventory.equip_inventory(item_to_equip=item.object_id)
 					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.amount)
+				self.get_models_on_property(models={model: spawner for spawner, model in self.object._v_server.models})
+				self.place_model_response(response=16)
 				break
 
 	def parse_chat_message(self, client_state:c_int, text:str):
@@ -601,6 +622,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	@single
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
+		pass
+
+	@single
+	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=None, model_id:c_int64=None):
 		pass
 
 	def property_contents_from_client(self, query_db:bool=False):

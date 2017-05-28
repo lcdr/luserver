@@ -34,6 +34,7 @@ class LootType:
 	Trade = 6
 	# 8 occurs when deleting an item
 	# loot drop = 11 ?
+	# 13 related to build
 	# 16 occurs on completing modular build
 	# 21 occurs with modular build temp models
 
@@ -211,6 +212,9 @@ class InventoryComponent(Component):
 			else:
 				raise NotImplementedError(lot, item_type)
 		inventory = self.inventory_type_to_inventory(inventory_type)
+
+		if module_lots:
+			stack_size = 1
 
 		while amount > 0:
 			new_stack = stack_size == 1

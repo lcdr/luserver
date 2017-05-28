@@ -82,3 +82,18 @@ class StyleCommand(MinifigCommand):
 		sender.char.hair_style = hair_style
 		sender.char.eye_style = eye_style
 		sender.char.mouth_style = mouth_style
+
+
+# for internal builds only - due to name change this will cause bugs when used incorrectly!
+class LCDRCommand(MinifigCommand):
+	def __init__(self, chat):
+		super().__init__(chat, "lcdr")
+
+	def sub_run(self, args, sender):
+		sender.name = "lcdr"
+		sender.char.hair_color = 10
+		sender.char.hair_style = 7
+		sender.char.eyebrow_style = 22
+		sender.char.eye_style = 1
+		sender.char.mouth_style = 24
+

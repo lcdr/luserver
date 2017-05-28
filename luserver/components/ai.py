@@ -29,6 +29,8 @@ class BaseCombatAIComponent(Component):
 
 	def disable(self):
 		self.enabled = False
+		if self.update_handle is not None:
+			self.object.cancel_callback(self.update_handle)
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))

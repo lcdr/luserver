@@ -329,7 +329,7 @@ class SkillComponent(Component):
 					self.add_skill(skill_id=skill_id, slot_id=slot_id)
 
 	def add_skill_server(self, skill_id):
-		behavior = self.object._v_server.db.skill_behavior[skill_id]
+		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 		if behavior.template in PASSIVE_BEHAVIORS:
 			if hasattr(self.object, "char"):
 				self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)

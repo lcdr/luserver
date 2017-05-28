@@ -7,10 +7,18 @@ from luserver.components.mission import MissionState, TaskType
 FLAG_DEFEATED_SPIDER = 71
 
 class ScriptComponent(script.ScriptComponent):
+	def on_startup(self):
+		self.tutorial = None
+
 	@single
 	def player_ready(self, player):
 		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
+			self.clear_maelstrom(player)
 			return
+
+		for spawner in ("BirdFX", "SunBeam", "Instancer"):
+			self.object._v_server.spawners[spawner].spawner.destroy()
+
 		self.set_network_var("unclaimed", LDFDataType.BOOLEAN, True)
 
 		fx = self.object._v_server.get_objects_in_group("FXObject")[0]
@@ -20,7 +28,21 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.notify_client_object(name="maelstromSkyOn", param1=0, param2=0, param_str=b"", param_obj=None)
 
+	def clear_maelstrom(self, player):
+		for spawner in ("AggroVol", "FXObject", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderBoss", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
+			self.object._v_server.spawners[spawner].spawner.destroy()
+		for i in range(5):
+			self.object._v_server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
+		for i in range(1, 9):
+			self.object._v_server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
+
+		if 320 in player.char.missions:
+			self.object._v_server.spawners["PropertyGuard"].spawner.destroy()
+
 	def on_spider_defeated(self):
+		player = [obj for obj in self.object._v_server.game_objects.values() if obj.lot == 1][0]
+		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
+			return
 		self.object._v_server.spawners["SpiderBoss"].spawner.deactivate()
 		for spawner in ("AggroVol", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
 			self.object._v_server.spawners[spawner].spawner.destroy()
@@ -29,7 +51,6 @@ class ScriptComponent(script.ScriptComponent):
 		for i in range(1, 9):
 			self.object._v_server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
 		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"DestroyMaelstrom", param_obj=None)
-		player = [obj for obj in self.object._v_server.game_objects.values() if obj.lot == 1][0]
 		player.char.set_flag(True, FLAG_DEFEATED_SPIDER)
 		self.object.call_later(0.5, self.tornado_off)
 
@@ -66,6 +87,13 @@ class ScriptComponent(script.ScriptComponent):
 	def bounds_on(self):
 		self.notify_client_object(name="boundsAnim", param1=0, param2=0, param_str=b"", param_obj=None)
 
+
+	def on_build_mode(self, start):
+		if start:
+			self.set_network_var("PlayerAction", LDFDataType.STRING, "Enter")
+		else:
+			self.set_network_var("PlayerAction", LDFDataType.STRING, "Exit")
+
 	def on_model_placed(self, player):
 		if not player.char.get_flag(101):
 			player.char.set_flag(True, 101)
@@ -84,14 +112,28 @@ class ScriptComponent(script.ScriptComponent):
 			player.char.set_flag(True, 104)
 			self.set_network_var("Tooltip", LDFDataType.STRING, "TwoMoreModelsOff")
 
+		elif self.tutorial == "place_model":
+			self.tutorial = None
+			self.set_network_var("Tooltip", LDFDataType.STRING, "PutAway")
+
+	def on_model_picked_up(self, player):
+		if not player.char.get_flag(109):
+			player.char.set_flag(True, 109)
+			if 891 in player.char.missions and player.char.missions[891].state == MissionState.Active and not player.char.get_flag(110):
+				self.set_network_var("Tooltip", LDFDataType.STRING, "Rotate")
+
+	def on_model_put_away(self, player):
+		player.char.set_flag(True, 111)
+
 	def zone_property_model_rotated(self, player:GameObject=0, property_id:c_int64=0):
 		if not player.char.get_flag(110):
 			player.char.set_flag(True, 110)
 			if 891 in player.char.missions and player.char.missions[891].state == MissionState.Active:
 				self.set_network_var("Tooltip", LDFDataType.STRING, "PlaceModel")
+				self.tutorial = "place_model"
 
 	def zone_property_model_removed_while_equipped(self, player:GameObject=0, property_id:c_int64=0):
-		player.char.set_flag(True, 111)
+		self.on_model_put_away(player)
 
 	def zone_property_model_equipped(self, player:GameObject=0, property_id:c_int64=0):
 		self.set_network_var("PlayerAction", LDFDataType.STRING, "ModelEquipped")

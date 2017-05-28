@@ -31,10 +31,10 @@ class DestructibleComponent(Component):
 			out.write(c_bit(False))
 
 	def deal_damage(self, damage, dealer):
+		self.object.handle("on_hit", damage, dealer, silent=True)
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 		if self.object.stats.armor - damage < 0:
 			self.object.stats.life += self.object.stats.armor - damage
-		self.object.handle("on_hit", dealer, silent=True)
 		if self.object.stats.life <= 0:
 			self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
 
@@ -65,7 +65,10 @@ class DestructibleComponent(Component):
 				self.object._v_server.world_control_object.script.player_died(player=self.object)
 		else:
 			if not hasattr(self.object, "comp_108"):
-				self.object._v_server.destruct(self.object)
+				if self.object.lot == 9632: # hardcode for property guard, generalize this somewhen
+					self.object.call_later(5, lambda: self.object._v_server.destruct(self.object))
+				else:
+					self.object._v_server.destruct(self.object)
 
 	@broadcast
 	def resurrect(self, resurrect_immediately=False):

@@ -13,6 +13,7 @@ class PetTamingNotify:
 class PetComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		self.object.pet = self
 		self.flags = 67108866 # possibly the same flags as in the object id?
 
 	def serialize(self, out, is_creation):
