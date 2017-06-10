@@ -1,8 +1,11 @@
 import asyncio
+import logging
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
 from ..messages import broadcast
 from .component import Component
+
+log = logging.getLogger(__name__)
 
 class StatsSubcomponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
@@ -33,7 +36,10 @@ class StatsSubcomponent(Component):
 
 	@max_life.setter
 	def max_life(self, value):
-		self._max_life = value
+		if value < 0:
+			log.warning("Max life attempted to set to %i", value)
+
+		self._max_life = max(0, value)
 		if self.life > self.max_life:
 			self.life = self.max_life
 
@@ -43,6 +49,9 @@ class StatsSubcomponent(Component):
 
 	@life.setter
 	def life(self, value):
+		if value < 0:
+			log.warning("Life attempted to set to %i", value)
+
 		self._life = max(0, min(value, self.max_life))
 
 	@property
@@ -51,7 +60,10 @@ class StatsSubcomponent(Component):
 
 	@max_armor.setter
 	def max_armor(self, value):
-		self._max_armor = value
+		if value < 0:
+			log.warning("Max armor attempted to set to %i", value)
+
+		self._max_armor = max(0, value)
 		if self.armor > self.max_armor:
 			self.armor = self.max_armor
 
@@ -61,6 +73,9 @@ class StatsSubcomponent(Component):
 
 	@armor.setter
 	def armor(self, value):
+		if value < 0:
+			log.warning("Armor attempted to set to %i", value)
+
 		self._armor = max(0, min(value, self.max_armor))
 
 	@property
@@ -69,7 +84,10 @@ class StatsSubcomponent(Component):
 
 	@max_imagination.setter
 	def max_imagination(self, value):
-		self._max_imagination = value
+		if value < 0:
+			log.warning("Max imagination attempted to set to %i", value)
+
+		self._max_imagination = max(0, value)
 		if self.imagination > self.max_imagination:
 			self.imagination = self.max_imagination
 
@@ -79,6 +97,9 @@ class StatsSubcomponent(Component):
 
 	@imagination.setter
 	def imagination(self, value):
+		if value < 0:
+			log.warning("Imagination attempted to set to %i", value)
+
 		self._imagination = max(0, min(value, self.max_imagination))
 
 	def serialize(self, out, is_creation):

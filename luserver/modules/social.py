@@ -115,7 +115,7 @@ class SocialHandling(ServerModule):
 		players = requester_ref, requested_friend_ref
 
 		for player1_ref, player2_ref in (players, reversed(players)):
-			player1_ref().friends.remove(player2_ref)
+			player1_ref().char.friends.remove(player2_ref)
 
 			remove_message = BitStream()
 			remove_message.write_header(WorldClientMsg.RemoveFriendResponse)

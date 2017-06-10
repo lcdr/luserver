@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+from collections import Counter
 
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
@@ -147,8 +148,18 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 		self.traveling_rocket = None
 
+		self._flags["pvp_enabled"] = "gm_flag"
+		self._flags["show_gm_status"] = "gm_flag"
+		self._flags["gm_level"] = "gm_flag"
+		self.pvp_enabled = False
+		self.show_gm_status = False
+		self.gm_level = 0
+
 		self._flags["rebuilding"] = "rebuilding_flag"
 		self.rebuilding = 0
+
+		self._flags["tags"] = "guild_flag"
+		self.tags = PersistentList()
 
 	def serialize(self, out, is_creation):
 		# First index
@@ -232,12 +243,33 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				out.write(module_str, length_type=c_ushort)
 				self.traveling_rocket = None
 
-		out.write(c_bit(False))
-		out.write(c_bit(self.rebuilding_flag))
-		if self.rebuilding_flag:
+		out.write(c_bit(self.gm_flag or is_creation))
+		if self.gm_flag or is_creation:
+			out.write(c_bit(self.pvp_enabled))
+			out.write(c_bit(self.show_gm_status))
+			out.write(c_ubyte(self.gm_level))
+			out.write(c_bit(False))
+			out.write(c_ubyte(0))
+			if self.gm_flag:
+				self.gm_flag = False
+
+		out.write(c_bit(self.rebuilding_flag or is_creation))
+		if self.rebuilding_flag or is_creation:
 			out.write(c_uint(self.rebuilding))
-			self.rebuilding_flag = False
-		out.write(c_bit(False))
+			if self.rebuilding_flag:
+				self.rebuilding_flag = False
+
+		out.write(c_bit(self.guild_flag or (is_creation and self.tags)))
+		if self.guild_flag or (is_creation and self.tags):
+			if self.tags:
+				out.write(c_int64(self.object.object_id))
+			else:
+				out.write(c_int64(0))
+			out.write(", ".join(self.tags), length_type=c_ubyte)
+			out.write(c_bit(False))
+			out.write(c_int(-1))
+			if self.guild_flag:
+				self.guild_flag = False
 
 	@property
 	def online(self):
@@ -282,7 +314,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		CharTrade.on_destruction(self)
 		self.check_for_leaks()
 
-	def check_for_leaks(self):
+	def check_for_leaks(self, fullcheck=False):
 		if len(self.object.inventory.equipped) > 1:
 			log.warning("Multiple equipped states")
 			for _ in range(len(self.object.inventory.equipped)-1):
@@ -290,6 +322,31 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		elif not self.object.inventory.equipped:
 			log.warning("No equipped state")
 			self.object.inventory.equipped.append(PersistentList())
+
+		clean_equipped = False
+		item_types_equipped = set()
+		for item in self.object.inventory.equipped[-1]:
+			if item.item_type in item_types_equipped:
+				log.warning("Multiple items of same type equipped: %s", item)
+				clean_equipped = True
+			else:
+				item_types_equipped.add(item.item_type)
+
+			if item.amount <= 0:
+				log.warning("Item equipped with amount %i: %s", item.amount, item)
+				clean_equipped = True
+
+		if clean_equipped:
+			log.info(self.object.inventory.equipped[-1])
+			for item in self.object.inventory.equipped[-1]:
+				self.object.inventory.un_equip_inventory(item_to_unequip=item.object_id)
+
+		if fullcheck:
+			for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
+				for item in inv:
+					if item is not None and item.amount <= 0:
+						log.warning("Item in inventory with amount %i: %s", item.amount, item)
+
 		if self.object.inventory.temp_models:
 			log.warning("Temp Models not empty")
 			log.warning(self.object.inventory.temp_models)
@@ -305,7 +362,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			return SENTINEL_TOKEN
 
 	def random_loot(self, loot_matrix):
-		loot = []
+		loot = Counter()
 		roll = random.random()
 		for table_index, percent, min_to_drop, max_to_drop in loot_matrix:
 			if roll < percent:
@@ -317,7 +374,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 							continue
 					if mission_drop and not self.should_be_dropped(lot):
 						continue
-					loot.append(lot)
+					loot[lot] += 1
 		return loot
 
 	def should_be_dropped(self, lot):
@@ -346,7 +403,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		log.info("Sending redirect to world %s", server_address)
 		redirect = BitStream()
 		redirect.write_header(WorldClientMsg.Redirect)
-		redirect.write(server_address[0], char_size=1, allocated_length=33)
+		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
 		self.object._v_server.send(redirect, self.address)
@@ -389,7 +446,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			return
 		lot = self.dropped_loot[loot_object_id]
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
-			for skill_id in self.object._v_server.db.object_skills[lot]:
+			for skill_id, _ in self.object._v_server.db.object_skills[lot]:
 				self.object.skill.cast_skill(skill_id)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
@@ -445,13 +502,13 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def player_loaded(self, player_id:c_int64=None):
 		assert player_id == self.object.object_id
 		self.player_ready()
-		self.restore_to_post_load_stats()
 		for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
 			for item in inv:
 				if item is not None and item in self.object.inventory.equipped[-1]:
 					self.object.skill.add_skill_for_item(item, add_buffs=False)
-		if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_ready"):
-			self.object._v_server.world_control_object.script.player_ready(player=self.object)
+
+		self.restore_to_post_load_stats()
+		self.object._v_server.world_control_object.handle("player_ready", player=self.object)
 
 	@single
 	def player_ready(self):
@@ -483,8 +540,8 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				for component_type, component_id in self.object._v_server.db.components_registry[item.lot]:
 					if component_type == 53: # PackageComponent, make an enum for this somewhen
 						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
-						for lot in self.random_loot(self.object._v_server.db.package_component[component_id]):
-							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot)
+						for lot, amount in self.random_loot(self.object._v_server.db.package_component[component_id]).items():
+							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot, amount)
 						return
 
 	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:bool=None):
@@ -615,6 +672,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	def request_smash_player(self):
 		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
+
+	@broadcast
+	def toggle_g_m_invis(self, state_out:c_bit=False):
+		pass
 
 	@broadcast
 	def player_reached_respawn_checkpoint(self, pos:Vector3=None, rot:Quaternion=Quaternion.identity):

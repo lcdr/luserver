@@ -271,6 +271,7 @@ from .components.destructible import DestructibleComponent
 from .components.exhibit import ExhibitComponent
 from .components.inventory import InventoryComponent, ItemComponent
 from .components.launchpad import LaunchpadComponent
+from .components.minigame import MinigameComponent
 from .components.mission import MissionNPCComponent
 from .components.model import ModelComponent
 from .components.modular_build import ModularBuildComponent
@@ -323,6 +324,7 @@ component[2] = RenderComponent,
 component[10] = SpawnerComponent,
 component[43] = PropertyEntranceComponent,
 component[45] = PropertyManagementComponent,
+component[50] = MinigameComponent,
 component[65] = PropertyVendorComponent,
 component[67] = LaunchpadComponent,
 component[104] = RailActivatorComponent,

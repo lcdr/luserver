@@ -27,6 +27,7 @@ checksum = {
 	World.SpiderQueenBattle: 0xfd403da,
 	World.BlockYard: 0xfd403da,
 	World.AvantGrove: 0xa890303,
+	World.AGPropLarge: 0x30e00e0,
 	World.NimbusStation: 0xda1e6b30,
 	World.PetCove: 0x476e1330,
 	World.VertigoLoop: 0x10fc0502,
@@ -73,6 +74,7 @@ class GeneralHandling(ServerModule):
 		self.server.register_handler(WorldServerMsg.GameMessage, self.on_game_message, address)
 		player = self.server.accounts[address].characters.selected()
 		if player is not None:
+			self.server.game_objects[player.object_id] = player
 			player._v_server = self.server
 			player.parent = None
 			player.children = []
@@ -90,7 +92,7 @@ class GeneralHandling(ServerModule):
 		load_world.write(c_ushort(world_id))
 		load_world.write(c_ushort(world_instance))
 		load_world.write(c_uint(world_clone))
-		load_world.write(c_uint(checksum[World(world_id)]))
+		load_world.write(c_uint(checksum.get(World(world_id), 0)))
 		load_world.write(bytes(2))
 		load_world.write(c_float(player.physics.position.x))
 		load_world.write(c_float(player.physics.position.y))
@@ -196,7 +198,6 @@ class GeneralHandling(ServerModule):
 		chardata.write(encoded_ldf)
 		self.server.send(chardata, address)
 
-		self.server.game_objects[player.object_id] = player
 		self.server.add_participant(address) # Add to replica manager sync list
 		self.server.construct(player)
 		player.char.server_done_loading_all_objects()

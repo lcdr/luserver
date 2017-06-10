@@ -90,7 +90,7 @@ class AuthServer(server.Server):
 		is_ftp = False # not implemented
 
 		response.write(session_key, allocated_length=66)
-		response.write(redirect_host, char_size=1, allocated_length=33)
+		response.write(redirect_host.encode("latin1"), allocated_length=33)
 		response.write(bytes(33))
 		response.write(c_ushort(redirect_port))
 		response.write(bytes(35))

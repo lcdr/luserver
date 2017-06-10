@@ -207,6 +207,7 @@ class GameMessage(Enum):
 	ReportBug = 1198
 	RequestSmashPlayer = 1202
 	FireEventClientSide = 1213
+	ToggleGMInvis = 1218
 	LockNodeRotation = 1260
 	PlayerReachedRespawnCheckpoint = 1296
 	HandleUGCEquipPostDeleteBasedOnEditMode = 1300

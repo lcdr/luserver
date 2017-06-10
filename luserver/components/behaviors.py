@@ -118,7 +118,7 @@ class ProjectileAttack(Behavior):
 		bitstream.write(c_int64(target.object_id))
 
 		proj_behavs = []
-		for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
+		for skill_id, _ in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
 			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
@@ -135,7 +135,7 @@ class ProjectileAttack(Behavior):
 			log.debug("target %s", target)
 
 		proj_behavs = []
-		for skill_id in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
+		for skill_id, _ in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
 			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
@@ -165,6 +165,11 @@ class MovementType:
 	Rail = 10
 
 class MovementSwitch(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		bitstream.write(c_uint(1))
+		return
+
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		movement_type = bitstream.read(c_uint)
@@ -213,6 +218,11 @@ class Imagination(Behavior):
 		target.stats.imagination += behavior.imagination
 
 class TargetCaster(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		casted_behavior = behavior.action
+		self.serialize_behavior(casted_behavior, bitstream, target, level+1)
+
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		casted_behavior = behavior.action
@@ -307,6 +317,10 @@ class Switch(Behavior):
 			self.deserialize_behavior(behavior.action_false, bitstream, target, level+1)
 
 class Buff(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		pass
+
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		if hasattr(behavior, "life"):

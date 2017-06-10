@@ -1,5 +1,6 @@
 from ..bitstream import c_bit, c_int, c_int64
 from ..messages import broadcast
+from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
 
@@ -32,10 +33,12 @@ class DestructibleComponent(Component):
 
 	def deal_damage(self, damage, dealer):
 		self.object.handle("on_hit", damage, dealer, silent=True)
+
+		if damage > self.object.stats.armor:
+			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
-		if self.object.stats.armor - damage < 0:
-			self.object.stats.life += self.object.stats.armor - damage
-		if self.object.stats.life <= 0:
+
+		if self.object.stats.life == 0:
 			self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
 
 	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
@@ -57,6 +60,9 @@ class DestructibleComponent(Component):
 			self.object.physics.drop_rewards(*self.death_rewards, loot_owner)
 
 		if hasattr(self.object, "char"):
+			if self.object._v_server.world_id[0] % 100 == 0:
+				coins_lost = min(10000, self.object.char.currency//100)
+				self.object.char.set_currency(currency=self.object.char.currency - coins_lost, loot_type=8, position=Vector3.zero)
 			if self.object.char.vehicle_id != 0:
 				self.object._v_server.game_objects[self.object.char.vehicle_id].comp_108.driver_id = 0
 				self.object.char.vehicle_id = 0

@@ -40,6 +40,7 @@ class World(Enum):
 	NexusTower = 1900
 	NT = NexusTower
 	NinjagoMonastery = 2000
+	Ninjago = NinjagoMonastery
 	BattleAgainstFrakjaw = 2001
 	FVSiege = 58001
 
@@ -134,8 +135,10 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.reset_v_()
 
 	def commit(self):
-		self.conn.transaction_manager.commit()
-		self.reset_v_()
+		try:
+			self.conn.transaction_manager.commit()
+		finally:
+			self.reset_v_()
 
 	def reset_v_(self):
 		if self.world_id[0] != 0: # char

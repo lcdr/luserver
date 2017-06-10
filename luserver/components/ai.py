@@ -19,7 +19,7 @@ class BaseCombatAIComponent(Component):
 		if self.object.skill.skills:
 			behavior = self.object._v_server.db.skill_behavior[self.object.skill.skills[0]][0]
 			assert behavior.template == BehaviorTemplate.NPCCombatSkill
-			self.skill_range = behavior.min_range
+			self.skill_range = behavior.max_range
 		self.object.physics.proximity_radius(self.skill_range)
 
 		self.enable()

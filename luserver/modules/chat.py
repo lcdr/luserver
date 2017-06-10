@@ -1,12 +1,13 @@
 import argparse
 import functools
+import importlib
+import inspect
 import logging
+import os
 
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
-from ..commands.minifig import EyebrowsCommand, EyesCommand, HairColorCommand, HairStyleCommand, LCDRCommand, MouthCommand, StyleCommand
-from ..commands.misc import AddItemCommand, BuildCommand, CheckForLeaksCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HelpCommand, HighStatsCommand, JetpackCommand, LevelCommand, LocationCommand, LogCommand, NoConsoleLogCommand, PlayCineCommand, PlaySoundCommand, RefillStatsCommand, RestartCommand, SendCommand, SetFlagCommand, SetRespawnCommand, SpawnCommand, SpawnPhantomCommand, TeleportCommand, UnlockEmoteCommand, VendorCommand, WaveCommand, WhisperCommand, WorldCommand
-from ..commands.mission import AddMissionCommand, AutocompleteMissionsCommand, CompleteMissionCommand, RemoveMissionCommand, ResetMissionsCommand
+from ..commands.command import ChatCommand
 from .module import ServerModule
 
 log = logging.getLogger(__file__)
@@ -74,7 +75,17 @@ class ChatHandling(ServerModule):
 		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
 
-		cmds = AddItemCommand, AddMissionCommand, AutocompleteMissionsCommand, BuildCommand, CheckForLeaksCommand, CompleteMissionCommand, CurrencyCommand, DanceCommand, DestroySpawnedCommand, DismountCommand, EverlastingCommand, ExtendInventoryCommand, EyebrowsCommand, EyesCommand, FactionCommand, FactionTokensCommand, FilelogCommand, GlowCommand, GravityCommand, HairColorCommand, HairStyleCommand, HelpCommand, HighStatsCommand, JetpackCommand, LCDRCommand, LevelCommand, LocationCommand, LogCommand, MouthCommand, NoConsoleLogCommand, PlayCineCommand, PlaySoundCommand, RefillStatsCommand, RemoveMissionCommand, ResetMissionsCommand, RestartCommand, SendCommand, SetFlagCommand, SetRespawnCommand, SpawnCommand, SpawnPhantomCommand, StyleCommand, TeleportCommand, UnlockEmoteCommand, VendorCommand, WaveCommand, WhisperCommand, WorldCommand
+		cmds = []
+		cmd_dir = os.path.abspath(os.path.join(__file__, "..", "..", "commands"))
+
+		for filename in os.listdir(cmd_dir):
+			name, ext = os.path.splitext(filename)
+			if ext == ".py":
+				mod = importlib.import_module("luserver.commands."+name)
+				for name in dir(mod):
+					var = getattr(mod, name)
+					if not name.startswith("_") and inspect.isclass(var) and var is not ChatCommand and issubclass(var, ChatCommand):
+						cmds.append(var)
 
 		for cmd in cmds:
 			cmd(self)
@@ -112,7 +123,8 @@ class ChatHandling(ServerModule):
 		message.write(c_uint(len(encoded_text)))
 		message.write(sender.name, allocated_length=66)
 		message.write(c_int64(sender.object_id))
-		message.write(bytes(3))
+		message.write(bytes(2))
+		message.write(c_bool(sender.char.show_gm_status))
 		message.write(encoded_text)
 		message.write(bytes(2)) # null terminator
 
@@ -120,6 +132,7 @@ class ChatHandling(ServerModule):
 
 	def system_message(self, text, address=None, broadcast=True, log_level=logging.INFO):
 		if text:
+			text = str(text)
 			log.log(log_level, text)
 			chat_channel = 4
 			# have to do this because the length is variable but has no length specifier directly before it

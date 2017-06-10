@@ -1,10 +1,13 @@
 from ..bitstream import c_bit, c_float, c_int
-from ..ldf import LDF, LDFDataType
+from ..ldf import LDFDataType
 from .component import Component
 
 class ModelComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		if hasattr(self.object, "pet"):
+			return
+
 		self.object.config.ldf_set("userModelID", LDFDataType.INT64_9, self.object.lot)
 		self.object.config.ldf_set("propertyObjectID", LDFDataType.BOOLEAN, True)
 		self.object.config.ldf_set("componentWhitelist", LDFDataType.INT32, 1)
