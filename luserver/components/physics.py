@@ -43,7 +43,7 @@ class PhysicsComponent(Component):
 		if self.object not in self.object._v_server.general.tracked_objects:
 			return
 		coll = self.object._v_server.general.tracked_objects[self.object]
-		set_vars = {"groups": ("physics_debug_marker",), "parent": self.object}
+		set_vars = {"groups": ("physics_debug_marker",), "parent": self.object, "rotation": Quaternion.identity}
 		if isinstance(coll, AABB):
 			config = LDF()
 			config.ldf_set("primitiveModelType", LDFDataType.INT32, PrimitiveModelType.Cuboid)
@@ -69,7 +69,7 @@ class PhysicsComponent(Component):
 
 		if loot_matrix is not None:
 			loot = owner.char.random_loot(loot_matrix)
-			for lot in loot:
+			for lot in loot.elements():
 				self.drop_loot(lot, owner)
 
 	def drop_loot(self, lot, owner):
@@ -228,26 +228,36 @@ PRIMITIVE_DIMENSIONS = {
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
 		if hasattr(obj, "primitive_model_type"):
-			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0] * obj.primitive_model_scale
-			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1] * obj.primitive_model_scale
+			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0].hadamard(obj.primitive_model_scale)
+			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1].hadamard(obj.primitive_model_scale)
 		else:
 			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
 			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
 
-		rel_min = rel_min.rotate(obj.physics.rotation)
-		rel_max = rel_max.rotate(obj.physics.rotation)
+		vertices = [
+			Vector3(rel_min.x, rel_min.y, rel_min.z),
+			Vector3(rel_min.x, rel_min.y, rel_max.z),
+			Vector3(rel_min.x, rel_max.y, rel_min.z),
+			Vector3(rel_min.x, rel_max.y, rel_max.z),
+			Vector3(rel_max.x, rel_min.y, rel_min.z),
+			Vector3(rel_max.x, rel_min.y, rel_max.z),
+			Vector3(rel_max.x, rel_max.y, rel_min.z),
+			Vector3(rel_max.x, rel_max.y, rel_max.z)]
 
-		# after rotation min and max are no longer necessarily the absolute min/max values
+		rotated_vertices = []
+		for vertex in vertices:
+			rotated_vertices.append(vertex.rotate(obj.physics.rotation))
 
 		rot_min = Vector3()
 		rot_max = Vector3()
 
-		rot_min.x = min(rel_min.x, rel_max.x)
-		rot_min.y = min(rel_min.y, rel_max.y)
-		rot_min.z = min(rel_min.z, rel_max.z)
-		rot_max.x = max(rel_min.x, rel_max.x)
-		rot_max.y = max(rel_min.y, rel_max.y)
-		rot_max.z = max(rel_min.z, rel_max.z)
+		for vertex in rotated_vertices:
+			rot_min.x = min(rot_min.x, vertex.x)
+			rot_min.y = min(rot_min.y, vertex.y)
+			rot_min.z = min(rot_min.z, vertex.z)
+			rot_max.x = max(rot_max.x, vertex.x)
+			rot_max.y = max(rot_max.y, vertex.y)
+			rot_max.z = max(rot_max.z, vertex.z)
 
 		self.min = obj.physics.position + rot_min
 		self.max = obj.physics.position + rot_max

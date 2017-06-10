@@ -18,8 +18,8 @@ class Init:
 			root.factions[faction] = enemies
 
 		root.object_skills = BTrees.IOBTree.BTree()
-		for lot, skill_id in self.cdclient.execute("select objectTemplate, skillID from ObjectSkills"):
-			root.object_skills.setdefault(lot, []).append(skill_id)
+		for lot, skill_id, cast_on_type in self.cdclient.execute("select objectTemplate, skillID, castOnType from ObjectSkills"):
+			root.object_skills.setdefault(lot, []).append((skill_id, cast_on_type))
 
 		self.behavs_accessed = 0
 		self.templates = {b: t for b, t in self.cdclient.execute("select behaviorID, templateID from BehaviorTemplate").fetchall()}
@@ -28,11 +28,6 @@ class Init:
 			self.parameters.setdefault(behavior_id, {})[parameter_id] = value
 
 		root.behavior = BTrees.IOBTree.BTree()
-
-		root.object_skills = BTrees.IOBTree.BTree()
-		for row in self.cdclient.execute("select objectTemplate, skillID from ObjectSkills"):
-			root.object_skills.setdefault(row[0], []).append(row[1])
-
 		root.skill_behavior = BTrees.IOBTree.BTree()
 		for skill_id, behavior_id, imagination_cost in self.cdclient.execute("select skillID, behaviorID, imaginationcost from SkillBehavior"):
 			root.skill_behavior[skill_id] = self.get_behavior(behavior_id), imagination_cost
@@ -165,6 +160,9 @@ class Init:
 				if hasattr(behavior, "min range"):
 					behavior.min_range = getattr(behavior, "min range")
 					delattr(behavior, "min range")
+
+			elif template_id == BehaviorTemplate.Block:
+				behavior.break_action = self.get_behavior(behavior.break_action)
 
 			elif template_id == BehaviorTemplate.Verify:
 				behavior.action = self.get_behavior(behavior.action)

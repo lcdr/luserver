@@ -120,6 +120,8 @@ class SkillSlot:
 	Hat = 3
 
 class CastType:
+	AddSkill = 0
+	Cast = 1
 	Two = 2 # not sure, but i'll use this for casts
 	Consumable = 3
 	EverlastingConsumable = 4
@@ -136,7 +138,7 @@ class SkillComponent(Component):
 		self.last_ui_handle = 0
 		self.last_ui_skill_handle = self.last_ui_handle
 		self.everlasting = False
-		self.skills = self.object._v_server.db.object_skills.get(self.object.lot, []).copy()
+		self.skills = [skill_id for skill_id, _ in self.object._v_server.db.object_skills.get(self.object.lot, [])]
 
 	def serialize(self, out, is_creation):
 		if is_creation:
@@ -146,7 +148,7 @@ class SkillComponent(Component):
 		self.delayed_behaviors.clear()
 		self.projectile_behaviors.clear()
 
-	def cast_skill(self, skill_id, target=None):
+	def cast_skill(self, skill_id, target=None, cast_type=CastType.Two):
 		if target is None:
 			target = self.object
 		self.original_target_id = target.object_id
@@ -157,7 +159,7 @@ class SkillComponent(Component):
 		bitstream = BitStream()
 		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
-		self.start_skill(skill_id=skill_id, cast_type=CastType.Two, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
+		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
 
 	def cast_sync_skill(self, delay, behavior, target):
 		ui_behavior_handle = self.last_ui_handle
@@ -191,7 +193,7 @@ class SkillComponent(Component):
 		assert optional_originator_id in (0, self.object.object_id)
 		assert originator_rot == Quaternion(0, 0, 0, 0)
 
-		if cast_type == CastType.Two: # casts?
+		if cast_type in (CastType.Cast, CastType.Two): # casts?
 			player = None # send to all including self
 		else:
 			player = self.object # exclude self
@@ -310,15 +312,9 @@ class SkillComponent(Component):
 
 	def add_skill_for_item(self, item, add_buffs=True):
 		if item.lot in self.object._v_server.db.object_skills:
-			for skill_id in self.object._v_server.db.object_skills[item.lot]:
+			for skill_id, cast_on_type in self.object._v_server.db.object_skills[item.lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
-				if behavior.template in PASSIVE_BEHAVIORS:
-					if add_buffs:
-						if hasattr(self.object, "char"):
-							self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
-
-						self.deserialize_behavior(behavior, b"", self.object)
-				else:
+				if cast_on_type == CastType.AddSkill:
 					slot_id = SkillSlot.RightHand
 					if item.item_type == ItemType.Hat:
 						slot_id = SkillSlot.Hat
@@ -327,22 +323,20 @@ class SkillComponent(Component):
 					elif item.item_type == ItemType.Neck:
 						slot_id = SkillSlot.Neck
 					self.add_skill(skill_id=skill_id, slot_id=slot_id)
+				elif cast_on_type == CastType.Cast and add_buffs:
+					self.cast_skill(skill_id, cast_type=CastType.Cast)
 
 	def add_skill_server(self, skill_id):
-		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
-		if behavior.template in PASSIVE_BEHAVIORS:
-			if hasattr(self.object, "char"):
-				self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
-
-			self.deserialize_behavior(behavior, b"", self.object)
+		self.cast_skill(skill_id, cast_type=CastType.Cast)
 
 	def remove_skill_for_item(self, item):
 		if item.lot in self.object._v_server.db.object_skills:
-			for skill_id in self.object._v_server.db.object_skills[item.lot]:
+			for skill_id, cast_on_type in self.object._v_server.db.object_skills[item.lot]:
 				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
 				if behavior.template in PASSIVE_BEHAVIORS:
+					assert cast_on_type == 1
 					self.undo_behavior(behavior)
-				else:
+				elif cast_on_type == CastType.AddSkill:
 					self.remove_skill(skill_id=skill_id)
 
 	def remove_skill_server(self, skill_id):

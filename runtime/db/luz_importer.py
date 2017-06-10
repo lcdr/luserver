@@ -21,6 +21,7 @@ def import_data(root, maps_path):
 		World.SpiderQueenBattle: "01_live_maps/avant_gardens/property/small/nd_ag_property_small.luz",
 		World.BlockYard: "01_live_maps/avant_gardens/property/small/nd_ag_property_small.luz",
 		World.AvantGrove: "01_live_maps/avant_gardens/property/medium/nd_ag_property_medium.luz",
+		World.AGPropLarge: "2011_Live_Maps/PP_AG_Large/nd_ag_property_large.luz",
 		World.NimbusStation: "01_live_maps/nimbus_station/nd_nimbus_station.luz",
 		World.PetCove: "01_live_maps/nimbus_station/pet_ranch/nd_ns_pet_ranch.luz",
 		World.VertigoLoop: "01_live_maps/nimbus_station/racetrack/nd_nimbus_station_racetrack.luz",
@@ -173,9 +174,9 @@ class _LUZImporter:
 
 		scenes = {}
 		for _ in range(number_of_scenes):
-			filename = self.luz.read(str, char_size=1, length_type=c_ubyte)
+			filename = self.luz.read(bytes, length_type=c_ubyte).decode("latin1")
 			scene_id = self.luz.read(c_uint64)
-			self.luz.read(str, char_size=1, length_type=c_ubyte)
+			self.luz.read(bytes, length_type=c_ubyte)
 			self.luz.read(bytes, length=3)
 			scenes[scene_id] = filename
 
@@ -191,9 +192,9 @@ class _LUZImporter:
 		assert self.luz.read(c_ubyte) == 0
 
 		# terrain
-		filename = self.luz.read(str, char_size=1, length_type=c_ubyte)
-		name = self.luz.read(str, char_size=1, length_type=c_ubyte)
-		description = self.luz.read(str, char_size=1, length_type=c_ubyte)
+		filename = self.luz.read(bytes, length_type=c_ubyte)
+		name = self.luz.read(bytes, length_type=c_ubyte)
+		description = self.luz.read(bytes, length_type=c_ubyte)
 
 		# unknown
 		for _ in range(self.luz.read(c_uint)):
@@ -338,9 +339,9 @@ class _LVLImporter:
 		else:
 			# old lvl version
 			self.lvl.skip_read(265)
-			self.lvl.read(str, char_size=1, length_type=c_uint)
+			self.lvl.read(bytes, length_type=c_uint)
 			for _ in range(5):
-				self.lvl.read(str, char_size=1, length_type=c_uint)
+				self.lvl.read(bytes, length_type=c_uint)
 			self.lvl.skip_read(4)
 			for _ in range(self.lvl.read(c_uint)):
 				self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float)

@@ -38,6 +38,8 @@ class Vector3(Serializable):
 		return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
 	def __mul__(self, other):
+		if isinstance(other, Vector3):
+			raise TypeError("Multiple multiplications for vectors possible, choose one of cross, dot, hadamard")
 		return Vector3(self.x * other, self.y * other, self.z * other)
 
 	__rmul__ = __mul__
@@ -62,6 +64,9 @@ class Vector3(Serializable):
 
 	def dot(self, other):
 		return self.x*other.x + self.y*other.y + self.z*other.z
+
+	def hadamard(self, other):
+		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
 
 	def sq_distance(self, other):
 		#diff = self - other

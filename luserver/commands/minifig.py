@@ -1,7 +1,7 @@
 from ..modules.char import EyeStyle, MouthStyle
 from .command import ChatCommand
 
-class MinifigCommand(ChatCommand):
+class _MinifigCommand(ChatCommand):
 	def __init__(self, chat, name):
 		super().__init__(chat, name)
 		self.command.add_argument("--permanent", action="store_true", default=False)
@@ -24,7 +24,7 @@ class MinifigCommand(ChatCommand):
 	def sub_run(self, args, sender):
 		raise NotImplementedError
 
-class EyebrowsCommand(MinifigCommand):
+class EyebrowsCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "eyebrows")
 		self.command.add_argument("value", type=int)
@@ -32,7 +32,7 @@ class EyebrowsCommand(MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.eyebrow_style = args.value
 
-class EyesCommand(MinifigCommand):
+class EyesCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "eyes")
 		self.command.add_argument("value", type=int)
@@ -40,7 +40,7 @@ class EyesCommand(MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.eye_style = args.value
 
-class HairColorCommand(MinifigCommand):
+class HairColorCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "haircolor")
 		self.command.add_argument("value", type=int)
@@ -48,7 +48,7 @@ class HairColorCommand(MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.hair_color = args.value
 
-class HairStyleCommand(MinifigCommand):
+class HairStyleCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "hairstyle")
 		self.command.add_argument("value", type=int)
@@ -59,7 +59,7 @@ class HairStyleCommand(MinifigCommand):
 			return
 		sender.char.hair_style = args.value
 
-class MouthCommand(MinifigCommand):
+class MouthCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "mouth")
 		self.command.add_argument("value", type=int)
@@ -67,7 +67,7 @@ class MouthCommand(MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.mouth_style = args.value
 
-class StyleCommand(MinifigCommand):
+class StyleCommand(_MinifigCommand):
 	styles = {
 		"creepy": (8, EyeStyle.RedEyes, MouthStyle.LargeSmile),
 		"robot": (0, EyeStyle.Robot, MouthStyle.Robot),
@@ -85,7 +85,7 @@ class StyleCommand(MinifigCommand):
 
 
 # for internal builds only - due to name change this will cause bugs when used incorrectly!
-class LCDRCommand(MinifigCommand):
+class LCDRCommand(_MinifigCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "lcdr")
 
