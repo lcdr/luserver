@@ -7,7 +7,6 @@ ROCKET_MISSION_PARTS = 9516, 9517, 9518
 
 class ScriptComponent(script.ScriptComponent):
 	def modular_build_finish(self, player, module_lots:(c_ubyte, c_int)=None):
-		print("jio"*4, module_lots)
 		if MARDOLF_ROCKET_MISSION in player.char.missions and player.char.missions[MARDOLF_ROCKET_MISSION].state == MissionState.Active:
 			for lot in module_lots:
 				if lot in ROCKET_MISSION_PARTS:

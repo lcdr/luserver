@@ -29,6 +29,7 @@ SCRIPTS = {
 	1088: "general.mailbox",
 	1093: "forbidden_valley.ronin_statue",
 	1094: "forbidden_valley.candle",
+	1118: "nimbus_station.racetrack.world_control",
 	1136: "avant_gardens.property.small.world_control",
 	1167: "avant_gardens.wisp_lee",
 	1195: "general.wishing_well",
@@ -94,7 +95,8 @@ SCRIPTS = {
 	r"ai\FV\L_ACT_BOUNCE_OVER_WALL.lua": "forbidden_valley.bounce_over_wall",
 	r"ai\GF\L_GF_JAIL_WALLS.lua": "gnarled_forest.jail_walls",
 	r"ai\GENERAL\L_INSTANCE_EXIT_TRANSFER_PLAYER_TO_LAST_NON_INSTANCE.lua": "general.transfer_to_last_non_instance",
+	r"ai\NS\L_NS_CAR_MODULAR_BUILD.lua": "nimbus_station.car_modular_build",
 	r"ai\NS\L_NS_JONNY_FLAG_MISSION_SERVER.lua": "nimbus_station.johnny_thunder",
-	r"ai\NS\L_NS_MODULAR_BUILD.lua": "nimbus_station.modular_build",
+	r"ai\NS\L_NS_MODULAR_BUILD.lua": "nimbus_station.rocket_modular_build",
 	r"ai\NS\L_NS_QB_IMAGINATION_STATUE.lua": "nimbus_station.imagination_statue",
 	r"ai\NS\NS_PP_01\L_NS_PP_01_TELEPORT.lua": "property.teleport"}

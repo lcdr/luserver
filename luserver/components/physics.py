@@ -20,11 +20,11 @@ class PhysicsComponent(Component):
 
 		if "position" in set_vars:
 			self.position.update(set_vars["position"])
-		elif "parent" in set_vars:
+		elif "parent" in set_vars and hasattr(set_vars["parent"], "physics"):
 			self.position.update(set_vars["parent"].physics.position)
 		if "rotation" in set_vars:
 			self.rotation.update(set_vars["rotation"])
-		elif "parent" in set_vars:
+		elif "parent" in set_vars and hasattr(set_vars["parent"], "physics"):
 			self.rotation.update(set_vars["parent"].physics.rotation)
 
 	def on_destruction(self):
@@ -144,9 +144,13 @@ class Controllable(PhysicsComponent):
 					self.deeper_unknown_flag = False
 
 				self.unknown_flag = False
+			self.write_vehicle_stuff(out, is_creation)
 			if not is_creation:
 				out.write(c_bit(False))
 			self.physics_data_flag = False
+
+	def write_vehicle_stuff(self, out, is_creation):
+		pass # hook for vehiclephysics
 
 class ControllablePhysicsComponent(Controllable):
 	def serialize(self, out, is_creation):
@@ -202,6 +206,10 @@ class VehiclePhysicsComponent(Controllable):
 			out.write(c_ubyte(0))
 			out.write(c_bit(False))
 		out.write(c_bit(False))
+
+	def write_vehicle_stuff(self, out, is_creation):
+		out.write(c_bit(False))
+		out.write(c_float(0))
 
 MODEL_DIMENSIONS = {
 	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup

@@ -46,6 +46,7 @@ class World(Enum):
 
 import atexit
 import logging
+import os.path
 import time
 
 import pyraknet.replicamanager
@@ -121,7 +122,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			console_log = True
 
 		if packetname in self.file_logged_packets:
-			with open("logs/"+packetname+str(time.time())+".bin", "wb") as file:
+			with open(os.path.join(__file__, "..", "..", "runtime", "logs", packetname+str(time.time())+".bin"), "wb") as file:
 				file.write(data)
 
 		if console_log:

@@ -266,6 +266,7 @@ from .components.ai import BaseCombatAIComponent
 from .components.bouncer import BouncerComponent
 from .components.char import CharacterComponent
 from .components.collectible import CollectibleComponent
+from .components.comp107 import Comp107Component
 from .components.comp108 import Comp108Component
 from .components.destructible import DestructibleComponent
 from .components.exhibit import ExhibitComponent
@@ -279,6 +280,7 @@ from .components.moving_platform import MovingPlatformComponent
 from .components.pet import PetComponent
 from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
 from .components.property import PropertyEntranceComponent, PropertyManagementComponent, PropertyVendorComponent
+from .components.racing_control import RacingControlComponent
 from .components.rail import RailActivatorComponent
 from .components.rebuild import RebuildComponent
 from .components.render import RenderComponent
@@ -305,6 +307,7 @@ component[12] = ModularBuildComponent,
 component[17] = InventoryComponent,
 component[26] = PetComponent,
 component[5] = ScriptComponent,
+component[71] = RacingControlComponent,
 component[9] = SkillComponent,
 component[11] = ItemComponent,
 component[60] = BaseCombatAIComponent,
@@ -320,6 +323,7 @@ component[39] = ScriptedActivityComponent,
 component[75] = ExhibitComponent,
 component[42] = ModelComponent,
 component[2] = RenderComponent,
+component[107] = Comp107Component,
 
 component[10] = SpawnerComponent,
 component[43] = PropertyEntranceComponent,

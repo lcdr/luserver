@@ -67,9 +67,7 @@ class DismountCommand(ChatCommand):
 		super().__init__(chat, "dismount")
 
 	def run(self, args, sender):
-		if sender.char.vehicle_id != 0:
-			self.chat.server.game_objects[sender.char.vehicle_id].comp_108.driver_id = 0
-			sender.char.vehicle_id = 0
+		sender.char.dismount()
 
 class EverlastingCommand(ChatCommand):
 	def __init__(self, chat):
@@ -111,9 +109,10 @@ class FilelogCommand(ChatCommand):
 	def __init__(self, chat):
 		super().__init__(chat, "filelog", description="Change which packets are logged to file")
 		self.command.add_argument("action", choices=("add", "remove", "show"), default="show")
-		self.command.add_argument("packetname")
+		self.command.add_argument("packetname", nargs="+")
 
 	def run(self, args, sender):
+		args.packetname = " ".join(args.packetname)
 		if args.action == "add":
 			self.chat.server.file_logged_packets.add(args.packetname)
 		elif args.action == "remove":
@@ -275,11 +274,11 @@ class SendCommand(ChatCommand):
 		if not args.broadcast and args.address is None:
 			args.address = sender.char.address
 
-		path = "./packets/"+args.directory
+		path = os.path.join(__file__, "..", "..", "..", "runtime", "packets", args.directory)
 		files = os.listdir(path)
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:
-			with open(path+"/"+file, "rb") as content:
+			with open(os.path.join(path, file), "rb") as content:
 				self.chat.sys_msg_sender("sending "+str(file))
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
