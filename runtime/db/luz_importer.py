@@ -113,6 +113,8 @@ def _parse_config(config, triggers=None):
 		spawned_vars["respawn_data"] = Vector3([float(i) for i in config["rspPos"].split("\x1f")]), Quaternion([float(i) for i in config["rspRot"].split("\x1f")])
 	if "targetScene" in config:
 		spawned_vars["respawn_point_name"] = config["targetScene"]
+	if "transferZoneID" in config:
+		spawned_vars["transfer_world_id"] = int(config["transferZoneID"])
 	if "trigger_id" in config and triggers is not None:
 		trigger_scene_id, trigger_id = (int(i) for i in config["trigger_id"].split(":"))
 		if trigger_scene_id in triggers and trigger_id in triggers[trigger_scene_id]:

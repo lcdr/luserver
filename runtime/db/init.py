@@ -1,6 +1,7 @@
 import configparser
 import os
 import sqlite3
+import subprocess
 import time
 
 import BTrees
@@ -18,14 +19,18 @@ import scripts
 class Init:
 	def __init__(self, gen_accounts, gen_skills, gen_missions, gen_comps, gen_world):
 		self.config = configparser.ConfigParser()
-		self.config.read("../luserver.ini")
+		self.config.read(os.path.join(__file__, "..", "..", "luserver.ini")
 
 		while True:
 			try:
 				conn = ZEO.connection(12345, wait_timeout=3)
 				break
 			except ZEO.Exceptions.ClientDisconnected:
-				os.system(r"start runzeo -a 12345 -f ./server_db.db")
+				if os.name == "nt":
+					flags = subprocess.CREATE_NEW_CONSOLE
+				else:
+					flags = 0
+				subprocess.Popen("runzeo -a 12345 -f "+ os.path.join(__file__, "..", "server_db.db"), creationflags=flags)
 				time.sleep(3)
 
 		self.root = conn.root
@@ -61,7 +66,7 @@ class Init:
 		self.root.predef_names = []
 		for name_part in ("first", "middle", "last"):
 			names = []
-			with open(os.path.join(self.config["paths"]["client_path"], "res/names/minifigname_"+name_part+".txt")) as file:
+			with open(os.path.join(self.config["paths"]["client_path"], "res", "names", "minifigname_"+name_part+".txt")) as file:
 				for name in file:
 					names.append(name[:-1])
 

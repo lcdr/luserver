@@ -1,5 +1,6 @@
 import asyncio
 import os
+import subprocess
 
 import pyraknet.server
 from .bitstream import BitStream, c_uint, c_ushort
@@ -107,8 +108,11 @@ class Server(pyraknet.server.Server):
 						continue
 					return server_address
 			# no server found, spawn a new one
-			# todo: os.system probably isn't the best way to do this
-			os.system("start cmd /K \"python __main__.py %i %i && exit || pause && exit\"" % (world_id[0], world_id[2]))
+			command = os.path.join(__file__, "..", "..", "runtime", "__main__.py")+" %i %i" % (world_id[0], world_id[2])
+			if os.name == "nt":
+				subprocess.Popen("cmd /K \"python "+command+" && exit || pause && exit\"", creationflags=subprocess.CREATE_NEW_CONSOLE)
+			else:
+				subprocess.Popen("python3 "+command)
 			if first:
 				await asyncio.sleep(8)
 				first = False

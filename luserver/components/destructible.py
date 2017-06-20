@@ -63,9 +63,7 @@ class DestructibleComponent(Component):
 			if self.object._v_server.world_id[0] % 100 == 0:
 				coins_lost = min(10000, self.object.char.currency//100)
 				self.object.char.set_currency(currency=self.object.char.currency - coins_lost, loot_type=8, position=Vector3.zero)
-			if self.object.char.vehicle_id != 0:
-				self.object._v_server.game_objects[self.object.char.vehicle_id].comp_108.driver_id = 0
-				self.object.char.vehicle_id = 0
+			self.object.char.dismount()
 
 			if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_died"):
 				self.object._v_server.world_control_object.script.player_died(player=self.object)

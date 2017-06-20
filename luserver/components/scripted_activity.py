@@ -13,6 +13,13 @@ class ScriptedActivityComponent(Component):
 		self._flags["activity_values"] = "activity_flag"
 		self.activity_values = {}
 		self.comp_id = comp_id
+		if "transfer_world_id" in set_vars:
+			self.transfer_world_id = set_vars["transfer_world_id"]
+		elif self.comp_id in self.object._v_server.db.activities:
+			activity = self.object._v_server.db.activities[self.comp_id]
+			self.transfer_world_id = activity[0]
+		else:
+			self.transfer_world_id = None
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.activity_flag))
@@ -38,8 +45,7 @@ class ScriptedActivityComponent(Component):
 
 	def message_box_respond(self, player, button:c_int=None, identifier:str=None, user_data:str=None):
 		if identifier == "LobbyReady" and button == 1:
-			activity = self.object._v_server.db.activities[self.comp_id]
-			asyncio.ensure_future(player.char.transfer_to_world((activity[0], 0, 0)))
+			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 
 	@single
 	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:bool=None, weekly:bool=None):

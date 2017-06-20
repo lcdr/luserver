@@ -417,6 +417,15 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			self.object.physics.attr_changed("rotation")
 		await self.transfer_to_world(((self.world[0] // 100)*100, self.world[1], 0))
 
+	def mount(self, vehicle):
+		vehicle.comp_108.driver_id = self.object.object_id
+		self.vehicle_id = vehicle.object_id
+
+	def dismount(self):
+		if self.vehicle_id != 0:
+			self.object._v_server.game_objects[self.vehicle_id].comp_108.driver_id = 0
+			self.vehicle_id = 0
+
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
 	@single

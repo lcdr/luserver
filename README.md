@@ -5,7 +5,7 @@
 
 ### Installation
 #### Dependencies
-luserver requires Python 3.5 .
+luserver requires Python 3.6 .
 To run the server, you must install the dependencies, ZEO and passlib (and their dependencies). If you want to use bcrypt instead of pbkdf2_sha256 you should also install bcrypt.
 Dependency installation should usually work using
 
@@ -22,7 +22,7 @@ luserver should also be added to PYTHONPATH.
 
 #### Database setup
 
-Before the first run of the server, you'll need to initialize the database. Set the paths to the converted cdclient.sqlite and the client's maps directory in `runtime/luserver.ini`, then run
+Before the first run of the server, you'll need to initialize the database. Set the paths to the converted cdclient.sqlite and the client directory in `runtime/luserver.ini`, then run
 `runtime/db/init.py`.
 
 ### Server startup

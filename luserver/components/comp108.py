@@ -23,14 +23,12 @@ class Comp108Component(Component):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
-		self.driver_id = player.object_id
-		player.char.vehicle_id = self.object.object_id
+		player.char.mount(self.object)
 		player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="Use /dismount to dismount.")
 
 	def on_destruction(self):
 		if self.driver_id != 0:
-			self.object._v_server.game_objects[self.driver_id].char.vehicle_id = 0
-			self.driver_id = 0
+			self.object._v_server.game_objects[self.driver_id].char.dismount()
 
 	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash

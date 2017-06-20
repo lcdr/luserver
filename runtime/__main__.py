@@ -2,6 +2,7 @@ import asyncio
 import configparser
 import logging
 import os
+import subprocess
 import sys
 import time
 
@@ -11,7 +12,7 @@ from luserver.auth import AuthServer
 from luserver.world import WorldServer
 
 config = configparser.ConfigParser()
-config.read("luserver.ini")
+config.read(os.path.join(__file__, "..", "luserver.ini"))
 
 logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)
 
@@ -31,12 +32,18 @@ logging.getLogger("ZEO").setLevel(logging.WARNING)
 logging.getLogger("txn").setLevel(logging.WARNING)
 logging.getLogger("luserver.components.skill").setLevel(logging.INFO)
 
+log = logging.getLogger(__file__)
+
 while True:
 	try:
 		conn = ZEO.connection(12345, wait_timeout=3)
 		break
 	except ZEO.Exceptions.ClientDisconnected:
-		os.system(r"start /d db runzeo -a 12345 -f ./server_db.db")
+		if os.name == "nt":
+			flags = subprocess.CREATE_NEW_CONSOLE
+		else:
+			flags = 0
+		subprocess.Popen("runzeo -a 12345 -f "+os.path.join(__file__, "..", "db", "server_db.db"), creationflags=flags)
 		time.sleep(3)
 
 if len(sys.argv) == 1:
@@ -46,7 +53,18 @@ else:
 	if len(sys.argv) == 4:
 		port = int(sys.argv[3])
 	else:
-		port = 0
+		if config["connection"]["port_range"]:
+			port_range = config["connection"]["port_range"]
+			range_start, range_stop = [int(i) for i in port_range.split(",")]
+			for port in range(range_start, range_stop):
+				if (config["connection"]["external_host"], port) not in conn.root.servers:
+					log.info("Using port %i", port)
+					break
+			else:
+				log.error("No open port left!")
+				sys.exit()
+		else:
+			port = 0
 	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn)
 
 loop = asyncio.get_event_loop()
