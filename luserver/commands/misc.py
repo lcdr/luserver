@@ -274,7 +274,7 @@ class SendCommand(ChatCommand):
 		if not args.broadcast and args.address is None:
 			args.address = sender.char.address
 
-		path = os.path.join(__file__, "..", "..", "..", "runtime", "packets", args.directory)
+		path = os.path.normpath(os.path.join(__file__, "..", "..", "..", "runtime", "packets", args.directory))
 		files = os.listdir(path)
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:

@@ -76,7 +76,7 @@ class ChatHandling(ServerModule):
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
 
 		cmds = []
-		cmd_dir = os.path.abspath(os.path.join(__file__, "..", "..", "commands"))
+		cmd_dir = os.path.normpath(os.path.join(__file__, "..", "..", "commands"))
 
 		for filename in os.listdir(cmd_dir):
 			name, ext = os.path.splitext(filename)

@@ -12,7 +12,7 @@ from luserver.auth import AuthServer
 from luserver.world import WorldServer
 
 config = configparser.ConfigParser()
-config.read(os.path.join(__file__, "..", "luserver.ini"))
+config.read(os.path.normpath(os.path.join(__file__, "..", "luserver.ini")))
 
 logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)
 
@@ -43,7 +43,7 @@ while True:
 			flags = subprocess.CREATE_NEW_CONSOLE
 		else:
 			flags = 0
-		subprocess.Popen("runzeo -a 12345 -f "+os.path.join(__file__, "..", "db", "server_db.db"), creationflags=flags)
+		subprocess.Popen("runzeo -a 12345 -f "+os.path.normpath(os.path.join(__file__, "..", "db", "server_db.db")), shell=True, creationflags=flags)
 		time.sleep(3)
 
 if len(sys.argv) == 1:

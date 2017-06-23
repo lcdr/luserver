@@ -163,14 +163,17 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	def serialize(self, out, is_creation):
 		# First index
-		out.write(c_bit(self.vehicle_flag))
-		if self.vehicle_flag:
-			out.write(c_bit(self.vehicle_id_flag))
-			if self.vehicle_id_flag:
+		creation = is_creation and self.vehicle_id != 0
+		out.write(c_bit(creation or self.vehicle_flag))
+		if creation or self.vehicle_flag:
+			out.write(c_bit(creation or self.vehicle_id_flag))
+			if creation or self.vehicle_id_flag:
 				out.write(c_int64(self.vehicle_id))
-				self.vehicle_id_flag = False
+				if not creation:
+					self.vehicle_id_flag = False
 			out.write(c_ubyte(1)) # unknown
-			self.vehicle_flag = False
+			if not creation:
+				self.vehicle_flag = False
 
 		# Second index
 		out.write(c_bit(self.level_flag or is_creation))

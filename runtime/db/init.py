@@ -19,7 +19,10 @@ import scripts
 class Init:
 	def __init__(self, gen_accounts, gen_skills, gen_missions, gen_comps, gen_world):
 		self.config = configparser.ConfigParser()
-		self.config.read(os.path.join(__file__, "..", "..", "luserver.ini")
+		config_dir = os.path.normpath(os.path.join(__file__, "..", ".."))
+		self.config.read(os.path.join(config_dir, "luserver.ini"))
+		self.config["paths"]["cdclient_path"] = os.path.normpath(os.path.join(config_dir, self.config["paths"]["cdclient_path"]))
+		self.config["paths"]["client_path"] = os.path.normpath(os.path.join(config_dir, self.config["paths"]["client_path"]))
 
 		while True:
 			try:
@@ -30,7 +33,7 @@ class Init:
 					flags = subprocess.CREATE_NEW_CONSOLE
 				else:
 					flags = 0
-				subprocess.Popen("runzeo -a 12345 -f "+ os.path.join(__file__, "..", "server_db.db"), creationflags=flags)
+				subprocess.Popen("runzeo -a 12345 -f "+ os.path.normpath(os.path.join(__file__, "..", "server_db.db")), shell=True, creationflags=flags)
 				time.sleep(3)
 
 		self.root = conn.root
@@ -45,7 +48,7 @@ class Init:
 		if gen_comps:
 			self.gen_comps()
 		if gen_world:
-			luz_importer.import_data(self.root, self.config["paths"]["client_path"] + "/res/maps")
+			luz_importer.import_data(self.root, os.path.join(self.config["paths"]["client_path"], "res", "maps"))
 
 		transaction.commit()
 		print("Done initializing database!")

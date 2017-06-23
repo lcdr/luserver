@@ -21,7 +21,7 @@ def import_data(root, maps_path):
 		World.SpiderQueenBattle: "01_live_maps/avant_gardens/property/small/nd_ag_property_small.luz",
 		World.BlockYard: "01_live_maps/avant_gardens/property/small/nd_ag_property_small.luz",
 		World.AvantGrove: "01_live_maps/avant_gardens/property/medium/nd_ag_property_medium.luz",
-		World.AGPropLarge: "2011_Live_Maps/PP_AG_Large/nd_ag_property_large.luz",
+		World.AGPropLarge: "2011_live_maps/pp_ag_large/nd_ag_property_large.luz",
 		World.NimbusStation: "01_live_maps/nimbus_station/nd_nimbus_station.luz",
 		World.PetCove: "01_live_maps/nimbus_station/pet_ranch/nd_ns_pet_ranch.luz",
 		World.VertigoLoop: "01_live_maps/nimbus_station/racetrack/nd_nimbus_station_racetrack.luz",
