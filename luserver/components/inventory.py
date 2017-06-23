@@ -118,9 +118,10 @@ class InventoryComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.inventory = self
-		self.equipped_items_flag = False
+		self._flags["equipped"] = "equipped_items_flag"
 		self.equipped = PersistentList()
 		self.equipped.append(PersistentList()) # current equip state
+		self.attr_changed("equipped")
 		self.items = PersistentList([None]*20)
 		self.bricks = PersistentList()
 		self.temp_items = PersistentList()
@@ -136,12 +137,13 @@ class InventoryComponent(Component):
 					self.equip_inventory(item_to_equip=item.object_id)
 
 	def serialize(self, out, is_creation):
-		out.write(c_bit(self.equipped_items_flag or is_creation))
-		if self.equipped_items_flag or is_creation:
+		out.write(c_bit(is_creation or self.equipped_items_flag))
+		if is_creation or self.equipped_items_flag:
 			out.write(c_uint(len(self.equipped[-1])))
 			for item in self.equipped[-1]:
 				item.serialize(out)
-			self.equipped_items_flag = False
+			if not is_creation:
+				self.equipped_items_flag = False
 		out.write(c_bit(False))
 
 	def inventory_type_to_inventory(self, inventory_type):
@@ -163,7 +165,7 @@ class InventoryComponent(Component):
 
 	def push_equipped_items_state(self):
 		self.equipped.append(self.equipped[-1].copy())
-		self.equipped_items_flag = True
+		self.attr_changed("equipped")
 
 	def pop_equipped_items_state(self):
 		if len(self.equipped) == 1:
@@ -197,7 +199,7 @@ class InventoryComponent(Component):
 				self.un_equip_inventory(item_to_unequip=equipped_item.object_id)
 
 		del self.equipped[-2]
-		self.equipped_items_flag = True
+		self.attr_changed("equipped")
 
 	def move_item_in_inventory(self, dest_inventory_type:c_int=0, object_id:c_int64=None, inventory_type:c_int=None, response_code:c_int=None, slot:c_int=None):
 		assert dest_inventory_type == 0
@@ -366,8 +368,7 @@ class InventoryComponent(Component):
 							break
 
 					self.equipped[-1].append(item)
-					self.equipped_items_flag = True
-					self.object.signal_serialize()
+					self.attr_changed("equipped")
 
 					if hasattr(self.object, "char"):
 						self.object.skill.add_skill_for_item(item)
@@ -404,8 +405,7 @@ class InventoryComponent(Component):
 		for item in self.equipped[-1]:
 			if item.object_id == item_to_unequip:
 				self.equipped[-1].remove(item)
-				self.equipped_items_flag = True
-				self.object.signal_serialize()
+				self.attr_changed("equipped")
 
 				if hasattr(self.object, "char"):
 					self.object.skill.remove_skill_for_item(item)

@@ -46,7 +46,7 @@ class Server(pyraknet.server.Server):
 	def input_loop(self):
 		while True:
 			try:
-				path = os.path.join(__file__, "..", "packets", input())
+				path = os.path.normpath(os.path.join(__file__, "..", "packets", input()))
 				files = os.listdir(path)
 				files.sort(key=natural_keys)
 				for file in files:

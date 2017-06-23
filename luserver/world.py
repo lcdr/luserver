@@ -106,7 +106,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.commit()
 
 	def shutdown(self):
-		self.conn_sync()
 		for address in self.accounts.copy():
 			self.close_connection(address, server.DisconnectReason.ServerShutdown)
 		del self.db.servers[self.external_address]
@@ -122,7 +121,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			console_log = True
 
 		if packetname in self.file_logged_packets:
-			with open(os.path.join(__file__, "..", "..", "runtime", "logs", packetname+str(time.time())+".bin"), "wb") as file:
+			with open(os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "logs", packetname+str(time.time())+".bin")), "wb") as file:
 				file.write(data)
 
 		if console_log:

@@ -108,11 +108,11 @@ class Server(pyraknet.server.Server):
 						continue
 					return server_address
 			# no server found, spawn a new one
-			command = os.path.join(__file__, "..", "..", "runtime", "__main__.py")+" %i %i" % (world_id[0], world_id[2])
+			command = os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "__main__.py"))+" %i %i" % (world_id[0], world_id[2])
 			if os.name == "nt":
 				subprocess.Popen("cmd /K \"python "+command+" && exit || pause && exit\"", creationflags=subprocess.CREATE_NEW_CONSOLE)
 			else:
-				subprocess.Popen("python3 "+command)
+				subprocess.Popen("python3 "+command, shell=True)
 			if first:
 				await asyncio.sleep(8)
 				first = False
