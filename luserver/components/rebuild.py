@@ -3,6 +3,7 @@ import time
 from ..bitstream import c_bit, c_float, c_int, c_uint
 from ..game_object import GameObject
 from ..messages import broadcast
+from ..world import server
 from ..math.vector import Vector3
 from .char import TerminateType
 from .mission import TaskType
@@ -27,10 +28,10 @@ class RebuildComponent(ScriptedActivityComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.rebuild = self
-		self.complete_time = self.object._v_server.db.rebuild_component[comp_id][0]
-		self.smash_time = self.object._v_server.db.rebuild_component[comp_id][1]
-		self.reset_time = self.object._v_server.db.rebuild_component[comp_id][2]
-		self.imagination_cost = self.object._v_server.db.rebuild_component[comp_id][3]
+		self.complete_time = server.db.rebuild_component[comp_id][0]
+		self.smash_time = server.db.rebuild_component[comp_id][1]
+		self.reset_time = server.db.rebuild_component[comp_id][2]
+		self.imagination_cost = server.db.rebuild_component[comp_id][3]
 		self.callback_handles = []
 		self.rebuild_start_time = 0
 		self.last_progress = 0
@@ -44,8 +45,8 @@ class RebuildComponent(ScriptedActivityComponent):
 		if "activity_id" in set_vars:
 			self.activity_id = set_vars["activity_id"]
 		else:
-			self.activity_id = self.object._v_server.db.rebuild_component[comp_id][4]#self.object.lot
-		self.completion_rewards = self.object._v_server.db.activity_rewards.get(self.activity_id, (None, None, None))
+			self.activity_id = server.db.rebuild_component[comp_id][4]#self.object.lot
+		self.completion_rewards = server.db.activity_rewards.get(self.activity_id, (None, None, None))
 
 		if "rebuild_activator_position" in set_vars:
 			self.rebuild_activator_position = set_vars["rebuild_activator_position"]
@@ -53,7 +54,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.rebuild_activator_position = Vector3(self.object.physics.position)
 
 	def on_startup(self):
-		self.object._v_server.spawn_object(ACTIVATOR_LOT, {"parent": self.object, "position": self.rebuild_activator_position})
+		server.spawn_object(ACTIVATOR_LOT, {"parent": self.object, "position": self.rebuild_activator_position})
 		if hasattr(self.object, "ai"):
 			self.object.ai.disable()
 		if hasattr(self.object, "moving_platform"):
@@ -65,7 +66,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	@rebuild_state.setter
 	def rebuild_state(self, value):
-		player = self.object._v_server.get_object(list(self.activity_values)[0])
+		player = server.get_object(list(self.activity_values)[0])
 		self.rebuild_notify_state(self.rebuild_state, value, player)
 		self._rebuild_state = value
 
@@ -124,9 +125,9 @@ class RebuildComponent(ScriptedActivityComponent):
 		player.render.play_animation("rebuild-celebrate")
 
 		for child_id in self.object.children:
-			child = self.object._v_server.game_objects[child_id]
+			child = server.game_objects[child_id]
 			if child.lot == ACTIVATOR_LOT:
-				self.object._v_server.destruct(child)
+				server.destruct(child)
 				break
 		self.callback_handles.append(self.object.call_later(self.smash_time, self.smash_rebuild))
 
@@ -140,7 +141,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0)
-		self.object._v_server.destruct(self.object)
+		server.destruct(self.object)
 
 	def rebuild_cancel(self, early_release:bool=None, user:GameObject=None):
 		if self.rebuild_state == RebuildState.Building:

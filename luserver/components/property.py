@@ -2,6 +2,7 @@ from ..amf3 import AMF3
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..game_object import GameObject
 from ..messages import broadcast, single, Serializable
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 
@@ -195,7 +196,7 @@ class PropertyManagementComponent(Component):
 	def query_property_data(self, player):
 		property = PropertyData()
 		property.owner = player
-		property.path = self.object._v_server.db.property_template[self.object._v_server.world_id[0]]
+		property.path = server.db.property_template[server.world_id[0]]
 
 		self.download_property_data(property, player=player)
 
@@ -209,7 +210,7 @@ class PropertyManagementComponent(Component):
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
 	def set_build_mode(self, start:bool=None, distance_type:c_int=-1, mode_paused:bool=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
-		self.object._v_server.world_control_object.script.on_build_mode(start)
+		server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
 	@broadcast
@@ -231,7 +232,7 @@ class PropertyVendorComponent(Component):
 	def query_property_data(self, player):
 		property = PropertyData()
 		property.owner = player
-		property.path = self.object._v_server.db.property_template[self.object._v_server.world_id[0]]
+		property.path = server.db.property_template[server.world_id[0]]
 
 		self.download_property_data(property, player=player)
 
@@ -243,7 +244,7 @@ class PropertyVendorComponent(Component):
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)
-		self.object._v_server.world_control_object.script.on_property_rented(player)
+		server.world_control_object.script.on_property_rented(player)
 
 	@single
 	def property_rental_response(self, clone_id:c_uint=None, code:c_int=None, property_id:c_int64=None, rentdue:c_int64=None):

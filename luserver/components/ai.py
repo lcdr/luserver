@@ -1,4 +1,5 @@
 from ..bitstream import c_bit
+from ..world import server
 from ..math.quaternion import Quaternion
 from .component import Component
 from .skill import BehaviorTemplate
@@ -17,7 +18,7 @@ class BaseCombatAIComponent(Component):
 
 	def on_startup(self):
 		if self.object.skill.skills:
-			behavior = self.object._v_server.db.skill_behavior[self.object.skill.skills[0]][0]
+			behavior = server.db.skill_behavior[self.object.skill.skills[0]][0]
 			assert behavior.template == BehaviorTemplate.NPCCombatSkill
 			self.skill_range = behavior.max_range
 		self.object.physics.proximity_radius(self.skill_range)
@@ -47,10 +48,10 @@ class BaseCombatAIComponent(Component):
 	def update(self):
 		# todo: move some targeting logic to TacArc
 		self.target = None
-		enemy_factions = self.object._v_server.db.factions.get(self.object.stats.faction, ())
+		enemy_factions = server.db.factions.get(self.object.stats.faction, ())
 		# todo: make distance skill-dependent
 		nearest_dist = self.skill_range**2 # starting distance is maximum distance
-		for obj in self.object._v_server.game_objects.values():
+		for obj in server.game_objects.values():
 			if hasattr(obj, "stats") and obj.stats.faction in enemy_factions:
 				dist = self.object.physics.position.sq_distance(obj.physics.position)
 				if dist < nearest_dist:

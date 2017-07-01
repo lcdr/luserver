@@ -1,8 +1,9 @@
 import luserver.components.script as script
+from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
 	def on_enter(self, player):
-		for obj in self.object._v_server.world_data.objects.values():
+		for obj in server.world_data.objects.values():
 			if obj.lot == 4945 and self.script_vars["teleport_respawn_point_name"] in obj.groups: # respawn point lot
 				player.render.play_animation("teledeath", play_immediate=True, priority=4)
 				self.object.call_later(0.5, self.teleport, player, obj)

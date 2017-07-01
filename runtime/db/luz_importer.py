@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import BTrees
 
+import luserver.world
 from luserver.bitstream import BitStream, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
@@ -13,6 +14,7 @@ from luserver.math.vector import Vector3
 import scripts
 
 def import_data(root, maps_path):
+	luserver.world._server = SimpleNamespace(db=root)
 	luz_paths = {
 		World.VentureExplorer: "01_live_maps/space_ship/nd_space_ship.luz",
 		World.ReturnToTheVentureExplorer: "01_live_maps/space_ship/battle_instance/nd_space_ship_battle_instance.luz",
@@ -306,8 +308,7 @@ class _LUZImporter:
 					continue
 				spawner_vars["spawner_name"] = path_name
 				spawner_vars["spawner_waypoints"] = waypoints
-				spawner = GameObject(SimpleNamespace(db=self.root), 176, object_id, spawner_vars)
-				del spawner._v_server
+				spawner = GameObject(176, object_id, spawner_vars)
 				self.world_data.objects[object_id] = spawner
 
 class _LVLImporter:
@@ -401,6 +402,5 @@ class _LVLImporter:
 					spawner_vars["spawner_waypoints"] = spawned_vars,
 					spawned_vars = spawner_vars
 
-				obj = GameObject(SimpleNamespace(db=self.root), lot, object_id, spawned_vars)
-				del obj._v_server
+				obj = GameObject(lot, object_id, spawned_vars)
 				self.world_data.objects[object_id] = obj

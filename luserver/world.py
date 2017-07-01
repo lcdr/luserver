@@ -1,5 +1,20 @@
 from enum import Enum
 
+# instance singleton
+# can't just use a variable because it can't be updated when using from world import server
+_server = None
+class _Instance:
+	def __getattribute__(self, name):
+		return getattr(_server, name)
+
+	def __setattr__(self, name, value):
+		return setattr(_server, name, value)
+
+	def __delattr__(self, name):
+		return delattr(_server, name)
+
+server = _Instance()
+
 class World(Enum):
 	VentureExplorer = 1000
 	VE = VentureExplorer
@@ -50,7 +65,7 @@ import os.path
 import time
 
 import pyraknet.replicamanager
-from . import server
+from .server import DisconnectReason, Server
 from .game_object import GameObject
 from .messages import WorldServerMsg
 from .modules.char import CharHandling
@@ -65,12 +80,14 @@ BITS_PERSISTENT = 1 << 60
 BITS_LOCAL = 1 << 46
 BITS_SPAWNED = 1 << 58 | BITS_LOCAL
 
-class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
+class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 	PEER_TYPE = WorldServerMsg.header()
 
 	def __init__(self, address, external_host, world_id, max_connections, db_conn):
-		server.Server.__init__(self, address, max_connections, db_conn)
+		Server.__init__(self, address, max_connections, db_conn)
 		pyraknet.replicamanager.ReplicaManager.__init__(self)
+		global _server
+		_server = self
 		self.external_address = external_host, address[1]
 		self.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
@@ -79,11 +96,11 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.modules = []
-		self.char = CharHandling(self)
-		self.chat = ChatHandling(self)
-		self.general = GeneralHandling(self)
-		self.mail = MailHandling(self)
-		self.social = SocialHandling(self)
+		self.char = CharHandling()
+		self.chat = ChatHandling()
+		self.general = GeneralHandling()
+		self.mail = MailHandling()
+		self.social = SocialHandling()
 
 		self.instance_id = self.db.current_instance_id
 		self.db.current_instance_id += 1
@@ -103,11 +120,11 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		await super().init_network()
 		self.external_address = self.external_address[0], self._address[1] # update port (for OS-chosen port)
 		self.db.servers[self.external_address] = self.world_id
-		self.commit()
+		self.conn.transaction_manager.commit()
 
 	def shutdown(self):
 		for address in self.accounts.copy():
-			self.close_connection(address, server.DisconnectReason.ServerShutdown)
+			self.close_connection(address, DisconnectReason.ServerShutdown)
 		del self.db.servers[self.external_address]
 		self.conn.transaction_manager.commit()
 		log.info("Shutdown complete")
@@ -130,23 +147,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			else:
 				log.debug("snd %s", packetname)
 
-	def conn_sync(self):
-		super().conn_sync()
-		self.reset_v_()
-
-	def commit(self):
-		try:
-			self.conn.transaction_manager.commit()
-		finally:
-			self.reset_v_()
-
-	def reset_v_(self):
-		if self.world_id[0] != 0: # char
-			for obj in self.world_data.objects.values():
-				obj._v_server = self
-			for obj in self.game_objects.values():
-				obj._v_server = self
-
 	def set_world_id(self, world_id):
 		self.world_id = world_id[0], 0, world_id[1]
 		if self.world_id[0] != 0: # char
@@ -157,7 +157,6 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 
 			self.spawners = {}
 			self.world_data = self.db.world_data[self.world_id[0]]
-			self.reset_v_()
 			for obj in self.world_data.objects.values():
 				obj.handle("on_startup", silent=True)
 			if self.world_id[2] != 0:
@@ -173,7 +172,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 		spawner_vars = {}
 		spawner_vars["spawntemplate"] = lot
 		spawner_vars["spawner_waypoints"] = spawned_vars,
-		spawner = GameObject(self, 176, spawner_id, set_vars=spawner_vars)
+		spawner = GameObject(176, spawner_id, set_vars=spawner_vars)
 		self.models.append((spawner, spawner.spawner.spawn()))
 
 	def on_disconnect_or_connection_lost(self, data, address):
@@ -185,28 +184,28 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 				self.destruct(player)
 		self.accounts[address].address = None
 		del self.accounts[address]
-		self.commit()
+		self.conn.transaction_manager.commit()
 
 	def on_handshake(self, data, address):
 		super().on_handshake(data, address)
 		self.register_handler(WorldServerMsg.SessionInfo, self.on_session_info, address)
 
 	def on_session_info(self, session_info, address):
-		self.conn_sync()
+		self.conn.sync()
 		username = session_info.read(str, allocated_length=66)
 		session_key = session_info.read(str, allocated_length=66)
 
 		try:
 			if self.db.accounts[username.lower()].session_key != session_key:
 				log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username.lower()].session_key, session_key)
-				self.close_connection(address, reason=server.DisconnectReason.InvalidSessionKey)
+				self.close_connection(address, reason=DisconnectReason.InvalidSessionKey)
 		except KeyError:
 			log.error("User %s not found in database", username.lower())
 			self.close_connection(address)
 		else:
 			account = self.db.accounts[username.lower()]
 			account.address = address
-			self.commit()
+			self.conn.transaction_manager.commit()
 			self.accounts[address] = account
 
 			for module in self.modules:
@@ -229,7 +228,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 	def new_clone_id(self):
 		current = self.db.current_clone_id
 		self.db.current_clone_id += 1
-		self.commit()
+		self.conn.transaction_manager.commit()
 		return current
 
 	def spawn_object(self, lot, set_vars=None, is_world_control=False):
@@ -240,7 +239,7 @@ class WorldServer(server.Server, pyraknet.replicamanager.ReplicaManager):
 			object_id = 70368744177662
 		else:
 			object_id = self.new_spawned_id()
-		obj = GameObject(self, lot, object_id, set_vars)
+		obj = GameObject(lot, object_id, set_vars)
 		self.game_objects[obj.object_id] = obj
 		self.construct(obj)
 		obj.handle("on_startup", silent=True)

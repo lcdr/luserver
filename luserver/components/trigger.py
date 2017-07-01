@@ -2,6 +2,7 @@ import functools
 import logging
 
 from ..bitstream import c_bit
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
@@ -28,7 +29,7 @@ class TriggerComponent(Component):
 				player.skill.cast_skill(int(args[0]))
 			elif command_name == "fireEvent":
 				assert target[0] == "objGroup"
-				objs = self.object._v_server.get_objects_in_group(target[1])
+				objs = server.get_objects_in_group(target[1])
 				for obj in objs:
 					if hasattr(obj, "script"):
 						obj.script.fire_event(args[0])

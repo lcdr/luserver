@@ -1,6 +1,7 @@
 import logging
 
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort
+from ..world import server
 from ..math.vector import Vector3
 
 log = logging.getLogger("luserver.components.skill")
@@ -70,8 +71,8 @@ class TacArc(Behavior):
 
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
-		if behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in self.object._v_server.game_objects:
-			target = self.object._v_server.game_objects[self.picked_target_id]
+		if behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in server.game_objects:
+			target = server.game_objects[self.picked_target_id]
 			# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
 			log.debug("using picked target, not completely working")
 			self.deserialize_behavior(behavior.action, bitstream, target, level+1)
@@ -86,7 +87,7 @@ class TacArc(Behavior):
 			targets = []
 			for _ in range(bitstream.read(c_uint)): # number of targets
 				target_id = bitstream.read(c_int64)
-				targets.append(self.object._v_server.game_objects.get(target_id))
+				targets.append(server.game_objects.get(target_id))
 			for target in targets:
 				log.debug("Target %s", target)
 				self.deserialize_behavior(behavior.action, bitstream, target, level+1)
@@ -118,8 +119,8 @@ class ProjectileAttack(Behavior):
 		bitstream.write(c_int64(target.object_id))
 
 		proj_behavs = []
-		for skill_id, _ in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
-			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
+		for skill_id, _ in server.db.object_skills[int(behavior.projectile_lot)]:
+			proj_behavs.append(server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
 		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
@@ -130,13 +131,13 @@ class ProjectileAttack(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		target_id = bitstream.read(c_int64)
-		if target_id != 0 and target_id in self.object._v_server.game_objects:
-			target = self.object._v_server.game_objects[target_id]
+		if target_id != 0 and target_id in server.game_objects:
+			target = server.game_objects[target_id]
 			log.debug("target %s", target)
 
 		proj_behavs = []
-		for skill_id, _ in self.object._v_server.db.object_skills[int(behavior.projectile_lot)]:
-			proj_behavs.append(self.object._v_server.db.skill_behavior[skill_id][0])
+		for skill_id, _ in server.db.object_skills[int(behavior.projectile_lot)]:
+			proj_behavs.append(server.db.skill_behavior[skill_id][0])
 
 		projectile_count = 1
 		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
@@ -198,7 +199,7 @@ class AreaOfEffect(Behavior):
 		targets = []
 		for _ in range(bitstream.read(c_uint)): # number of targets
 			target_id = bitstream.read(c_int64)
-			targets.append(self.object._v_server.game_objects[target_id])
+			targets.append(server.game_objects[target_id])
 		for target in targets:
 			self.deserialize_behavior(behavior.action, bitstream, target, level+1)
 
@@ -289,7 +290,7 @@ class SpawnObject(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		position = self.object.physics.position + Vector3.forward.rotate(self.object.physics.rotation)*behavior.distance
-		return self.object._v_server.spawn_object(behavior.lot, {"parent": self.object, "position": position})
+		return server.spawn_object(behavior.lot, {"parent": self.object, "position": position})
 
 SpawnQuickbuild = SpawnObject # works the same
 

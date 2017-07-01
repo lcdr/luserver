@@ -11,7 +11,7 @@ from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_ui
 from ..game_object import GameObject
 from ..ldf import LDF, LDFDataType
 from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, Serializable
-from ..world import World
+from ..world import server, World
 from ..components.mission import TaskType
 from .module import ServerModule
 
@@ -53,39 +53,38 @@ checksum = {
 	World.BattleAgainstFrakjaw: 0x9eb00ef}
 
 class GeneralHandling(ServerModule):
-	def __init__(self, server):
-		super().__init__(server)
+	def __init__(self):
+		super().__init__()
 		self.tracked_objects = {}
-		physics_debug_cmd = self.server.chat.commands.add_parser("physicsdebug")
+		physics_debug_cmd = server.chat.commands.add_parser("physicsdebug")
 		physics_debug_cmd.set_defaults(func=self.physics_debug_cmd)
 
 	def physics_debug_cmd(self, args, sender):
-		debug_markers = self.server.get_objects_in_group("physics_debug_marker")
+		debug_markers = server.get_objects_in_group("physics_debug_marker")
 		if not debug_markers:
 			for obj in self.tracked_objects.copy():
 				obj.physics.spawn_debug_marker()
 		else:
 			for marker in debug_markers:
-				self.server.destruct(marker)
+				server.destruct(marker)
 
 	def on_validated(self, address):
-		self.server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete, address)
-		self.server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update, address)
-		self.server.register_handler(WorldServerMsg.GameMessage, self.on_game_message, address)
-		player = self.server.accounts[address].characters.selected()
+		server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete, address)
+		server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update, address)
+		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message, address)
+		player = server.accounts[address].characters.selected()
 		if player is not None:
-			self.server.game_objects[player.object_id] = player
-			player._v_server = self.server
+			server.game_objects[player.object_id] = player
 			player.parent = None
 			player.children = []
 			player.parent_flag = False
 			player.children_flag = False
-			if self.server.world_id[0] != 0:
-				self.send_load_world(self.server.world_id, address)
+			if server.world_id[0] != 0:
+				self.send_load_world(server.world_id, address)
 
 	def send_load_world(self, destination, address):
 		world_id, world_instance, world_clone = destination
-		player = self.server.accounts[address].characters.selected()
+		player = server.accounts[address].characters.selected()
 
 		load_world = BitStream()
 		load_world.write_header(WorldClientMsg.LoadWorld)
@@ -98,12 +97,12 @@ class GeneralHandling(ServerModule):
 		load_world.write(c_float(player.physics.position.y))
 		load_world.write(c_float(player.physics.position.z))
 		load_world.write(bytes(4))
-		self.server.send(load_world, address)
+		server.send(load_world, address)
 
 		player.char.world = destination
 
 	def on_client_load_complete(self, data, address):
-		player = self.server.accounts[address].characters.selected()
+		player = server.accounts[address].characters.selected()
 
 		chardata = BitStream()
 		chardata.write_header(WorldClientMsg.CharacterData)
@@ -196,17 +195,17 @@ class GeneralHandling(ServerModule):
 
 		encoded_ldf = chd_ldf.to_bitstream()
 		chardata.write(encoded_ldf)
-		self.server.send(chardata, address)
+		server.send(chardata, address)
 
-		self.server.add_participant(address) # Add to replica manager sync list
-		self.server.construct(player)
+		server.add_participant(address) # Add to replica manager sync list
+		server.construct(player)
 		player.char.server_done_loading_all_objects()
 
 	def on_position_update(self, message, address):
-		player = self.server.accounts[address].characters.selected()
+		player = server.accounts[address].characters.selected()
 		vehicle = None
 		if player.char.vehicle_id != 0:
-			vehicle = self.server.game_objects[player.char.vehicle_id]
+			vehicle = server.game_objects[player.char.vehicle_id]
 			serialized = player._serialize_scheduled
 			player._serialize_scheduled = True
 		player.physics.position.update(message.read(c_float), message.read(c_float), message.read(c_float))
@@ -261,10 +260,10 @@ class GeneralHandling(ServerModule):
 
 		for object_id in collisions:
 			if object_id not in player.char.last_collisions:
-				self.server.get_object(object_id).handle("on_enter", player)
+				server.get_object(object_id).handle("on_enter", player)
 		for object_id in player.char.last_collisions:
 			if object_id not in collisions:
-				obj = self.server.get_object(object_id)
+				obj = server.get_object(object_id)
 				if obj is not None:
 					obj.handle("on_exit", player, silent=True)
 
@@ -272,7 +271,7 @@ class GeneralHandling(ServerModule):
 
 	def on_game_message(self, message, address):
 		object_id = message.read(c_int64)
-		obj = self.server.get_object(object_id)
+		obj = server.get_object(object_id)
 		if obj is None:
 			return
 
@@ -312,7 +311,7 @@ class GeneralHandling(ServerModule):
 			if kwargs:
 				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
 
-		player = self.server.accounts[address].characters.selected()
+		player = server.accounts[address].characters.selected()
 		for handler in handlers:
 			if hasattr(handler, "__wrapped__"):
 				handler = functools.partial(handler.__wrapped__, handler.__self__)
@@ -348,7 +347,7 @@ class GeneralHandling(ServerModule):
 			# todo: convert to LDF
 			return value
 		if type == GameObject:
-			return self.server.get_object(message.read(c_int64))
+			return server.get_object(message.read(c_int64))
 		if inspect.isclass(type) and issubclass(type, Serializable):
 			return type.deserialize(message)
 		if isinstance(type, tuple):

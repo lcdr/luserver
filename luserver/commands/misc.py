@@ -3,7 +3,7 @@ import logging
 import os
 import re
 
-from ..world import World
+from ..world import server, World
 from ..components.inventory import InventoryType
 from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
@@ -60,7 +60,7 @@ class DestroySpawnedCommand(ChatCommand):
 
 	def run(self, args, sender):
 		for child in sender.children.copy():
-			self.chat.server.destruct(self.chat.server.game_objects[child])
+			server.destruct(server.game_objects[child])
 
 class DismountCommand(ChatCommand):
 	def __init__(self, chat):
@@ -114,11 +114,11 @@ class FilelogCommand(ChatCommand):
 	def run(self, args, sender):
 		args.packetname = " ".join(args.packetname)
 		if args.action == "add":
-			self.chat.server.file_logged_packets.add(args.packetname)
+			server.file_logged_packets.add(args.packetname)
 		elif args.action == "remove":
-			self.chat.server.file_logged_packets.remove(args.packetname)
+			server.file_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			self.chat.sys_msg_sender(self.chat.server.file_logged_packets)
+			self.chat.sys_msg_sender(server.file_logged_packets)
 
 class GlowCommand(ChatCommand):
 	def __init__(self, chat):
@@ -192,10 +192,10 @@ class LocationCommand(ChatCommand):
 
 	def run(self, args, sender):
 		if args.player:
-			for obj in self.chat.server.game_objects.values():
+			for obj in server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.startswith(args.player):
 					self.chat.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
-					if obj.char._world[0] != self.chat.server.world_id[0]:
+					if obj.char._world[0] != server.world_id[0]:
 						self.chat.sys_msg_sender(World(obj.char._world[0]))
 					break
 
@@ -217,11 +217,11 @@ class NoConsoleLogCommand(ChatCommand):
 
 	def run(self, args, sender):
 		if args.action == "add":
-			self.chat.server.not_console_logged_packets.add(args.packetname)
+			server.not_console_logged_packets.add(args.packetname)
 		elif args.action == "remove":
-			self.chat.server.not_console_logged_packets.remove(args.packetname)
+			server.not_console_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			self.chat.sys_msg_sender(self.chat.server.not_console_logged_packets)
+			self.chat.sys_msg_sender(server.not_console_logged_packets)
 
 class PlayCineCommand(ChatCommand):
 	def __init__(self, chat):
@@ -258,8 +258,8 @@ class RestartCommand(ChatCommand):
 		asyncio.ensure_future(self.do_restart(sender))
 
 	async def do_restart(self, sender):
-		self.chat.server.commit()
-		await sender.char.transfer_to_world(self.chat.server.world_id)
+		server.conn.transaction_manager.commit()
+		await sender.char.transfer_to_world(server.world_id)
 		await asyncio.sleep(5)
 		asyncio.get_event_loop().stop()
 
@@ -283,7 +283,7 @@ class SendCommand(ChatCommand):
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
-				self.chat.server.send(data, args.address, args.broadcast)
+				server.send(data, args.address, args.broadcast)
 
 class SetFlagCommand(ChatCommand):
 	def __init__(self, chat):
@@ -301,7 +301,7 @@ class SetGMLevel(ChatCommand):
 		self.command.add_argument("level", type=int)
 
 	def run(self, args, sender):
-		player = self.chat.server.find_player_by_name(args.player)
+		player = server.find_player_by_name(args.player)
 		if player is None:
 			self.chat.sys_msg_sender("player cannot be found: %s" % args.player)
 			return
@@ -338,7 +338,7 @@ class SpawnCommand(ChatCommand):
 		set_vars = {"parent": sender}
 		if args.position is not None:
 			set_vars["position"] = args.position
-		self.chat.server.spawn_object(args.lot, set_vars)
+		server.spawn_object(args.lot, set_vars)
 
 class SpawnPhantomCommand(ChatCommand):
 	def __init__(self, chat):
@@ -362,7 +362,7 @@ class SpawnPhantomCommand(ChatCommand):
 			"scale": args.scale,
 			"parent": sender,
 			"position": sender.physics.position+displacement}
-		obj = self.chat.server.spawn_object(lot, set_vars)
+		obj = server.spawn_object(lot, set_vars)
 		obj.physics.physics_effect_active = True
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
 		obj.physics.physics_effect_amount = args.amount
@@ -376,7 +376,7 @@ class TagsCommand(ChatCommand):
 		self.command.add_argument("--tag", nargs="+")
 
 	def run(self, args, sender):
-		player = self.chat.server.find_player_by_name(args.player)
+		player = server.find_player_by_name(args.player)
 		if player is None:
 			return
 		if args.action == "add":
@@ -418,7 +418,7 @@ class TeleportCommand(ChatCommand):
 
 		elif args.player:
 			args.player = args.player.lower()
-			for obj in self.chat.server.game_objects.values():
+			for obj in server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.lower().startswith(args.player):
 					pos = obj.physics.position
 					break
@@ -450,7 +450,7 @@ class VendorCommand(ChatCommand):
 
 	def run(self, args, sender):
 		if args.items == "clothing":
-			self.chat.server.spawn_object(3917, {"parent": sender})
+			server.spawn_object(3917, {"parent": sender})
 			return
 		if args.items == "items":
 			items = VendorCommand.ALL_ITEMS
@@ -459,7 +459,7 @@ class VendorCommand(ChatCommand):
 		elif args.items == "models":
 			items = VendorCommand.ALL_MODELS
 
-		vendor = self.chat.server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
+		vendor = server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
 		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]
 
 class WaveCommand(ChatCommand):

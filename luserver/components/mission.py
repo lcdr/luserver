@@ -60,13 +60,14 @@ import logging
 from ..bitstream import c_int
 from ..game_object import GameObject
 from ..messages import single
+from ..world import server
 from ..commands.mission import CompleteMissionCommand
 from .component import Component
 
 log = logging.getLogger(__name__)
 
 def check_prereqs(mission_id, player):
-	prereqs = player._v_server.db.missions[mission_id][1]
+	prereqs = server.db.missions[mission_id][1]
 	for prereq_ors in prereqs:
 		for prereq_mission in prereq_ors:
 			if isinstance(prereq_mission, tuple): # prereq requires special mission state
@@ -85,7 +86,7 @@ class MissionNPCComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.mission = self
-		self.missions = self.object._v_server.db.mission_npc_component[comp_id]
+		self.missions = server.db.mission_npc_component[comp_id]
 
 	def serialize(self, out, is_creation):
 		pass

@@ -5,6 +5,7 @@ import luserver.components.script as script
 from luserver.ldf import LDF, LDFDataType
 from luserver.bitstream import c_int
 from luserver.messages import single
+from luserver.world import server
 from luserver.components.mission import TaskType
 from luserver.math.vector import Vector3
 from luserver.math.quaternion import Quaternion
@@ -34,8 +35,8 @@ class ScriptComponent(script.ScriptComponent):
 
 	def set_player_spawn_points(self):
 		for index, player_id in enumerate(self.object.scripted_activity.activity_values):
-			player = self.object._v_server.get_object(player_id)
-			spawn = self.object._v_server.get_objects_in_group("P%i_Spawn" % (index+1))[0]
+			player = server.get_object(player_id)
+			spawn = server.get_objects_in_group("P%i_Spawn" % (index+1))[0]
 			player.char.teleport(ignore_y=False, pos=spawn.physics.position, set_rotation=True, x=spawn.physics.rotation.x, y=spawn.physics.rotation.y, z=spawn.physics.rotation.z, w=spawn.physics.rotation.w)
 
 	def start(self):
@@ -52,7 +53,7 @@ class ScriptComponent(script.ScriptComponent):
 		leaderboard.ldf_set("Result[0].RowCount", LDFDataType.INT32, 0)
 
 		for player_id in self.object.scripted_activity.activity_values:
-			player = self.object._v_server.get_object(player_id)
+			player = server.get_object(player_id)
 			self.object.scripted_activity.send_activity_summary_leaderboard_data(game_id=5, info_type=1, leaderboard_data=leaderboard, throttled=False, weekly=False, player=player)
 
 	def game_over(self, player):
@@ -62,7 +63,7 @@ class ScriptComponent(script.ScriptComponent):
 		self.script_network_vars.clear()
 
 		for player_id, values in self.object.scripted_activity.activity_values.items():
-			player = self.object._v_server.get_object(player_id)
+			player = server.get_object(player_id)
 			player.char.request_resurrect()
 
 			player_time = values[1]
@@ -80,7 +81,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def are_all_players_dead(self):
 		for player_id in self.object.scripted_activity.activity_values:
-			player = self.object._v_server.get_object(player_id)
+			player = server.get_object(player_id)
 			if player.stats.life > 0:
 				return False
 		return True

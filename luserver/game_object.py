@@ -7,6 +7,7 @@ from persistent import Persistent
 
 from .ldf import LDF
 from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort
+from .world import server
 
 log = logging.getLogger(__name__)
 
@@ -15,8 +16,7 @@ class GameObject:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, server, lot, object_id, set_vars={}):
-		self._v_server = server
+	def __init__(self, lot, object_id, set_vars={}):
 		self._flags = {}
 		self._flags["parent_flag"] = "related_objects_flag"
 		self._flags["children_flag"] = "related_objects_flag"
@@ -37,7 +37,7 @@ class GameObject:
 
 		self.scale = set_vars.get("scale", 1)
 
-		if "parent" in set_vars and set_vars["parent"].object_id in self._v_server.game_objects:
+		if "parent" in set_vars and set_vars["parent"].object_id in server.game_objects:
 			self.parent = set_vars["parent"].object_id
 			set_vars["parent"].children.append(self.object_id)
 			set_vars["parent"].attr_changed("children")
@@ -56,7 +56,7 @@ class GameObject:
 
 		comps = OrderedDict()
 
-		comp_ids = list(self._v_server.db.components_registry[self.lot])
+		comp_ids = list(server.db.components_registry[self.lot])
 		if "custom_script" in set_vars:
 			# add custom script if no script is already there
 			for comp in comp_ids:
@@ -79,8 +79,8 @@ class GameObject:
 				if "custom_script" in set_vars and set_vars["custom_script"] is not None:
 					script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
 					comp = script.ScriptComponent,
-				elif component_id is not None and component_id in self._v_server.db.script_component:
-					script = importlib.import_module("luserver.scripts."+self._v_server.db.script_component[component_id])
+				elif component_id is not None and component_id in server.db.script_component:
+					script = importlib.import_module("luserver.scripts."+server.db.script_component[component_id])
 					comp = script.ScriptComponent,
 				else:
 					comp = ScriptComponent,
@@ -114,7 +114,7 @@ class GameObject:
 			self._serialize_scheduled = True
 
 	def do_serialize(self):
-		self._v_server.serialize(self)
+		server.serialize(self)
 		self._serialize_scheduled = False
 
 	def send_construction(self):
@@ -174,20 +174,20 @@ class GameObject:
 	def on_destruction(self):
 		self._serialize_scheduled = True
 		if self.parent is not None:
-			self._v_server.game_objects[self.parent].children.remove(self.object_id)
-			self._v_server.game_objects[self.parent].attr_changed("children")
+			server.game_objects[self.parent].children.remove(self.object_id)
+			server.game_objects[self.parent].attr_changed("children")
 
 		for child in self.children.copy():
-			self._v_server.destruct(self._v_server.game_objects[child])
+			server.destruct(server.game_objects[child])
 
-		if self.object_id in self._v_server.callback_handles:
-			for handle in self._v_server.callback_handles[self.object_id].values():
+		if self.object_id in server.callback_handles:
+			for handle in server.callback_handles[self.object_id].values():
 				handle.cancel()
-			del self._v_server.callback_handles[self.object_id]
+			del server.callback_handles[self.object_id]
 
 		self.handle("on_destruction", silent=True)
 
-		del self._v_server.game_objects[self.object_id]
+		del server.game_objects[self.object_id]
 
 	def handlers(self, func_name, silent=False):
 		"""
@@ -236,25 +236,25 @@ class GameObject:
 		Call a callback in delay seconds. The callback's handle is recorded so that when the object is destructed all pending callbacks are automatically cancelled.
 		Return the callback id to be used for cancel_callback.
 		"""
-		callback_id = self._v_server.last_callback_id
-		self._v_server.callback_handles.setdefault(self.object_id, {})[callback_id] = asyncio.get_event_loop().call_later(delay, self._callback, callback_id, callback, *args)
-		self._v_server.last_callback_id += 1
+		callback_id = server.last_callback_id
+		server.callback_handles.setdefault(self.object_id, {})[callback_id] = asyncio.get_event_loop().call_later(delay, self._callback, callback_id, callback, *args)
+		server.last_callback_id += 1
 		return callback_id
 
 	def _callback(self, callback_id, callback, *args):
 		"""Execute a callback and delete the handle from the list because it won't be cancelled."""
-		del self._v_server.callback_handles[self.object_id][callback_id]
+		del server.callback_handles[self.object_id][callback_id]
 		callback(*args)
 
 	def cancel_callback(self, callback_id):
 		"""Cancel a callback and delete the handle from the list."""
-		if callback_id in self._v_server.callback_handles[self.object_id]:
-			self._v_server.callback_handles[self.object_id][callback_id].cancel()
-			del self._v_server.callback_handles[self.object_id][callback_id]
+		if callback_id in server.callback_handles[self.object_id]:
+			server.callback_handles[self.object_id][callback_id].cancel()
+			del server.callback_handles[self.object_id][callback_id]
 
 class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
-	def __init__(self, server, lot, object_id, set_vars={}):
-		GameObject.__init__(self, server, lot, object_id, set_vars)
+	def __init__(self, lot, object_id, set_vars={}):
+		GameObject.__init__(self, lot, object_id, set_vars)
 		Persistent.__init__(self)
 
 	def __setattr__(self, name, value):
