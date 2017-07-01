@@ -1,3 +1,4 @@
+from ..world import server
 from ..modules.char import EyeStyle, MouthStyle
 from .command import ChatCommand
 
@@ -13,7 +14,7 @@ class _MinifigCommand(ChatCommand):
 		hair_style = sender.char.hair_style
 		mouth_style = sender.char.mouth_style
 		self.sub_run(args, sender)
-		self.chat.server.construct(sender, new=False)
+		server.construct(sender, new=False)
 		if not args.permanent:
 			sender.char.eye_style = eye_style
 			sender.char.eyebrow_style = eyebrow_style

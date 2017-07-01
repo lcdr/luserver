@@ -1,3 +1,20 @@
+
+class DisconnectReason:
+	UnknownServerError = 0
+	DuplicateLogin = 4
+	ServerShutdown = 5
+	UnableToLoadMap = 6
+	InvalidSessionKey = 7
+	AccountNotInPendingList = 8 # Whatever that means
+	CharacterNotFound = 9
+	CharacterCorruption = 10
+	Kick = 11
+	FreeTrialExpired = 13
+	PlayScheduleTimeDone = 14
+
+class NotifyReason:
+	DuplicateDisconnected = 0
+
 import asyncio
 import os
 import subprocess
@@ -5,7 +22,6 @@ import subprocess
 import pyraknet.server
 from .bitstream import BitStream, c_uint, c_ushort
 from .messages import msg_enum, AuthServerMsg, GameMessage, GeneralMsg, Message, SocialMsg, WorldClientMsg, WorldServerMsg
-from .modules.mail import MailID
 
 class Server(pyraknet.server.Server):
 	NETWORK_VERSION = 171022
@@ -19,6 +35,7 @@ class Server(pyraknet.server.Server):
 		self.register_handler(GeneralMsg.Handshake, self.on_handshake)
 
 	def packetname(self, data):
+		from .modules.mail import MailID
 		if data[0] == Message.LUPacket:
 			if data[1] == WorldServerMsg.header() and data[3] == WorldServerMsg.Routing:
 				data = b"\x53"+data[12:]
@@ -95,13 +112,10 @@ class Server(pyraknet.server.Server):
 
 		super().close_connection(address)
 
-	def conn_sync(self):
-		self.conn.sync()
-
 	async def address_for_world(self, world_id, include_self=False):
 		first = True
 		while True:
-			self.conn_sync()
+			self.conn.sync()
 			for server_address, server_world in self.db.servers.items():
 				if server_world == world_id:
 					if not include_self and hasattr(self, "external_address") and server_address == self.external_address:
@@ -118,19 +132,3 @@ class Server(pyraknet.server.Server):
 				first = False
 			else:
 				await asyncio.sleep(30)
-
-class DisconnectReason:
-	UnknownServerError = 0
-	DuplicateLogin = 4
-	ServerShutdown = 5
-	UnableToLoadMap = 6
-	InvalidSessionKey = 7
-	AccountNotInPendingList = 8 # Whatever that means
-	CharacterNotFound = 9
-	CharacterCorruption = 10
-	Kick = 11
-	FreeTrialExpired = 13
-	PlayScheduleTimeDone = 14
-
-class NotifyReason:
-	DuplicateDisconnected = 0

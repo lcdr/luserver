@@ -1,5 +1,6 @@
 from ..bitstream import c_bit, c_int, c_int64
 from ..messages import broadcast
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
@@ -11,7 +12,7 @@ class DestructibleComponent(Component):
 		self.object.destructible = self
 
 	def init(self, set_vars):
-		comp = self.object._v_server.db.destructible_component[self.comp_id]
+		comp = server.db.destructible_component[self.comp_id]
 		self.object.stats.faction = comp[0]
 		self.death_rewards = comp[1]
 		self.object.stats._max_life = comp[2]
@@ -51,28 +52,28 @@ class DestructibleComponent(Component):
 
 		self.object.send_game_message("die", False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer_id, loot_owner_id)
 
-		killer = self.object._v_server.get_object(killer_id)
+		killer = server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
 			killer.char.update_mission_task(TaskType.KillEnemy, self.object.lot)
 
-		loot_owner = self.object._v_server.get_object(loot_owner_id)
+		loot_owner = server.get_object(loot_owner_id)
 		if loot_owner and hasattr(loot_owner, "char"):
 			self.object.physics.drop_rewards(*self.death_rewards, loot_owner)
 
 		if hasattr(self.object, "char"):
-			if self.object._v_server.world_id[0] % 100 == 0:
+			if server.world_id[0] % 100 == 0:
 				coins_lost = min(10000, self.object.char.currency//100)
 				self.object.char.set_currency(currency=self.object.char.currency - coins_lost, loot_type=8, position=Vector3.zero)
 			self.object.char.dismount()
 
-			if self.object._v_server.world_control_object is not None and hasattr(self.object._v_server.world_control_object.script, "player_died"):
-				self.object._v_server.world_control_object.script.player_died(player=self.object)
+			if server.world_control_object is not None and hasattr(server.world_control_object.script, "player_died"):
+				server.world_control_object.script.player_died(player=self.object)
 		else:
 			if not hasattr(self.object, "comp_108"):
 				if self.object.lot == 9632: # hardcode for property guard, generalize this somewhen
-					self.object.call_later(5, lambda: self.object._v_server.destruct(self.object))
+					self.object.call_later(5, lambda: server.destruct(self.object))
 				else:
-					self.object._v_server.destruct(self.object)
+					server.destruct(self.object)
 
 	@broadcast
 	def resurrect(self, resurrect_immediately=False):

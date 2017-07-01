@@ -259,6 +259,7 @@ def send_game_message(mode):
 	If the function has "player" as the first argument, the player that this message will be sent to will be passed to the function as that argument. Note that this only really makes sense to specify in "single" mode.
 	"""
 	def decorator(func):
+		from .world import server
 		@wraps(func)
 		def wrapper(self, *args, **kwargs):
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
@@ -305,11 +306,11 @@ def send_game_message(mode):
 				exclude_address = None
 				if player is not None:
 					exclude_address = player.char.address
-				self.object._v_server.send(out, address=exclude_address, broadcast=True)
+				server.send(out, address=exclude_address, broadcast=True)
 			elif mode == "single":
 				if player is None:
 					player = self.object
-				self.object._v_server.send(out, address=player.char.address)
+				server.send(out, address=player.char.address)
 			if func.__name__ not in ("drop_client_loot", "script_network_var_update"): # todo: don't hardcode this
 				if len(bound_args.arguments) > 1:
 					log.debug(", ".join("%s=%s" % (key, value) for key, value in list(bound_args.arguments.items())[1:]))

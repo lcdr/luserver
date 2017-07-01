@@ -5,6 +5,7 @@ import random
 from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
 from ..ldf import LDF, LDFDataType
 from ..messages import broadcast
+from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
@@ -28,21 +29,21 @@ class PhysicsComponent(Component):
 			self.rotation.update(set_vars["parent"].physics.rotation)
 
 	def on_destruction(self):
-		if self.object in self.object._v_server.general.tracked_objects:
-			del self.object._v_server.general.tracked_objects[self.object]
+		if self.object in server.general.tracked_objects:
+			del server.general.tracked_objects[self.object]
 
 	def proximity_radius(self, radius):
 		for comp in self.object.components:
 			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
-				self.object._v_server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
-				if self.object._v_server.get_objects_in_group("physics_debug_marker"):
+				server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
+				if server.get_objects_in_group("physics_debug_marker"):
 					self.spawn_debug_marker()
 				break
 
 	def spawn_debug_marker(self):
-		if self.object not in self.object._v_server.general.tracked_objects:
+		if self.object not in server.general.tracked_objects:
 			return
-		coll = self.object._v_server.general.tracked_objects[self.object]
+		coll = server.general.tracked_objects[self.object]
 		set_vars = {"groups": ("physics_debug_marker",), "parent": self.object, "rotation": Quaternion.identity}
 		if isinstance(coll, AABB):
 			config = LDF()
@@ -53,11 +54,11 @@ class PhysicsComponent(Component):
 
 			set_vars["position"] = Vector3((coll.min.x+coll.max.x)/2, coll.min.y, (coll.min.z+coll.max.z)/2)
 			set_vars["config"] = config
-			self.object._v_server.spawn_object(14510, set_vars)
+			server.spawn_object(14510, set_vars)
 		elif isinstance(coll, CollisionSphere):
 			set_vars["position"] = coll.position
 			set_vars["scale"] = math.sqrt(coll.sq_radius)/5
-			self.object._v_server.spawn_object(6548, set_vars)
+			server.spawn_object(6548, set_vars)
 
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
@@ -74,7 +75,7 @@ class PhysicsComponent(Component):
 
 	def drop_loot(self, lot, owner):
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
-		object_id = self.object._v_server.new_spawned_id()
+		object_id = server.new_spawned_id()
 		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(use_position=True, spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
@@ -337,8 +338,8 @@ class PhantomPhysicsComponent(PhysicsComponent):
 					if not hasattr(self, "respawn_data"):
 						continue
 				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
-					self.object._v_server.general.tracked_objects[self.object] = AABB(self.object)
-					if self.object._v_server.get_objects_in_group("physics_debug_marker"):
+					server.general.tracked_objects[self.object] = AABB(self.object)
+					if server.get_objects_in_group("physics_debug_marker"):
 						self.spawn_debug_marker()
 					break
 

@@ -43,7 +43,7 @@ class AuthServer(server.Server):
 		self.register_handler(AuthServerMsg.LoginRequest, self.on_login_request, address)
 
 	async def on_login_request(self, request, address):
-		self.conn_sync()
+		self.conn.sync()
 		username = request.read(str, allocated_length=66)
 		password = request.read(str, allocated_length=82)
 

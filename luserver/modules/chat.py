@@ -7,6 +7,7 @@ import os
 
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
+from ..world import server
 from ..commands.command import ChatCommand
 from .module import ServerModule
 
@@ -70,8 +71,8 @@ class CustomArgumentParser(argparse.ArgumentParser):
 				super()._check_value(action, value)
 
 class ChatHandling(ServerModule):
-	def __init__(self, server):
-		super().__init__(server)
+	def __init__(self):
+		super().__init__()
 		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
 
@@ -91,9 +92,9 @@ class ChatHandling(ServerModule):
 			cmd(self)
 
 	def on_validated(self, address):
-		self.server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message, address)
-		self.server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message, address)
-		self.server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check, address)
+		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message, address)
+		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message, address)
+		server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check, address)
 
 	def on_moderation_string_check(self, request, address):
 		request.skip_read(1) # super chat level
@@ -105,12 +106,12 @@ class ChatHandling(ServerModule):
 		response.write(bytes(2))
 		response.write(c_ubyte(request_id))
 
-		self.server.send(response, address)
+		server.send(response, address)
 
 	def on_general_chat_message(self, message, address):
 		message.skip_read(3)
 		text = message.read(str, length_type=c_uint)[:-1]
-		self.send_general_chat_message(self.server.accounts[address].characters.selected(), text)
+		self.send_general_chat_message(server.accounts[address].characters.selected(), text)
 
 	def send_general_chat_message(self, sender, text):
 		chat_channel = 4
@@ -128,7 +129,7 @@ class ChatHandling(ServerModule):
 		message.write(encoded_text)
 		message.write(bytes(2)) # null terminator
 
-		self.server.send(message, broadcast=True)
+		server.send(message, broadcast=True)
 
 	def system_message(self, text, address=None, broadcast=True, log_level=logging.INFO):
 		if text:
@@ -147,15 +148,15 @@ class ChatHandling(ServerModule):
 			message.write(encoded_text)
 			message.write(bytes(2)) # null terminator
 
-			self.server.send(message, address, broadcast)
+			server.send(message, address, broadcast)
 
 	def on_private_chat_message(self, message, address):
 		log.warning("TODO: urgently needs refactoring")
 		message.skip_read(90)
 		recipient_name = message.read(str, allocated_length=66)
 
-		recipient = self.server.find_player_by_name(recipient_name)
-		sender = self.server.accounts[address].characters.selected()
+		recipient = server.find_player_by_name(recipient_name)
+		sender = server.accounts[address].characters.selected()
 
 		for address, return_code in ((recipient.char.address, 3), (address, 0)):
 			relayed_message = BitStream()
@@ -167,7 +168,7 @@ class ChatHandling(ServerModule):
 			relayed_message.write(c_ubyte(return_code))
 			relayed_message.write(message[87+71:])
 
-			self.server.send(relayed_message, address)
+			server.send(relayed_message, address)
 
 	def parse_command(self, command, sender):
 		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)

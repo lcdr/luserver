@@ -1,5 +1,6 @@
 import random
 
+from ..world import server
 from .component import Component
 
 class SpawnerComponent(Component):
@@ -19,7 +20,7 @@ class SpawnerComponent(Component):
 
 	def on_startup(self):
 		if self.name is not None:
-			self.object._v_server.spawners[self.name] = self.object
+			server.spawners[self.name] = self.object
 		if self.active and not self.spawned_on_smash:
 			for _ in range(min(self.unknown[2], len(self.waypoints))):
 				self.spawn()
@@ -29,7 +30,7 @@ class SpawnerComponent(Component):
 			return
 		spawned_vars = self.waypoints[self.last_waypoint_index].copy()
 		spawned_vars["spawner"] = self.object
-		spawned = self.object._v_server.spawn_object(self.spawntemplate, spawned_vars)
+		spawned = server.spawn_object(self.spawntemplate, spawned_vars)
 		if self.last_waypoint_index == len(self.waypoints)-1:
 			self.last_waypoint_index = 0
 		else:
@@ -41,6 +42,6 @@ class SpawnerComponent(Component):
 
 	def destroy(self):
 		self.deactivate()
-		for obj in self.object._v_server.game_objects.copy().values():
+		for obj in server.game_objects.copy().values():
 			if obj.spawner_object == self.object:
-				self.object._v_server.destruct(obj)
+				server.destruct(obj)

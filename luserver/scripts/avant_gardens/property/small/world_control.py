@@ -3,6 +3,7 @@ from luserver.bitstream import c_int64
 from luserver.game_object import GameObject
 from luserver.ldf import LDFDataType
 from luserver.messages import single
+from luserver.world import server
 from luserver.components.mission import MissionState, TaskType
 FLAG_DEFEATED_SPIDER = 71
 
@@ -17,11 +18,11 @@ class ScriptComponent(script.ScriptComponent):
 			return
 
 		for spawner in ("BirdFX", "SunBeam", "Instancer"):
-			self.object._v_server.spawners[spawner].spawner.destroy()
+			server.spawners[spawner].spawner.destroy()
 
 		self.set_network_var("unclaimed", LDFDataType.BOOLEAN, True)
 
-		fx = self.object._v_server.get_objects_in_group("FXObject")[0]
+		fx = server.get_objects_in_group("FXObject")[0]
 		fx.render.play_f_x_effect(name=b"TornadoDebris", effect_type="debrisOn")
 		fx.render.play_f_x_effect(name=b"TornadoVortex", effect_type="VortexOn")
 		fx.render.play_f_x_effect(name=b"silhouette", effect_type="onSilhouette")
@@ -30,39 +31,39 @@ class ScriptComponent(script.ScriptComponent):
 
 	def clear_maelstrom(self, player):
 		for spawner in ("AggroVol", "FXObject", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderBoss", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
-			self.object._v_server.spawners[spawner].spawner.destroy()
+			server.spawners[spawner].spawner.destroy()
 		for i in range(5):
-			self.object._v_server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
+			server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
 		for i in range(1, 9):
-			self.object._v_server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
+			server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
 
 		if 320 in player.char.missions:
-			self.object._v_server.spawners["PropertyGuard"].spawner.destroy()
+			server.spawners["PropertyGuard"].spawner.destroy()
 
 	def on_spider_defeated(self):
-		player = [obj for obj in self.object._v_server.game_objects.values() if obj.lot == 1][0]
+		player = [obj for obj in server.game_objects.values() if obj.lot == 1][0]
 		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
 			return
-		self.object._v_server.spawners["SpiderBoss"].spawner.deactivate()
+		server.spawners["SpiderBoss"].spawner.deactivate()
 		for spawner in ("AggroVol", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
-			self.object._v_server.spawners[spawner].spawner.destroy()
+			server.spawners[spawner].spawner.destroy()
 		for i in range(5):
-			self.object._v_server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
+			server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
 		for i in range(1, 9):
-			self.object._v_server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
+			server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
 		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"DestroyMaelstrom", param_obj=None)
 		player.char.set_flag(True, FLAG_DEFEATED_SPIDER)
 		self.object.call_later(0.5, self.tornado_off)
 
 	def tornado_off(self):
-		fx = self.object._v_server.get_objects_in_group("FXObject")[0]
+		fx = server.get_objects_in_group("FXObject")[0]
 		fx.render.stop_f_x_effect(name=b"TornadoDebris")
 		fx.render.stop_f_x_effect(name=b"TornadoVortex")
 		fx.render.stop_f_x_effect(name=b"silhouette")
 		self.object.call_later(2, self.show_clear_effects)
 
 	def show_clear_effects(self):
-		fx = self.object._v_server.get_objects_in_group("FXObject")[0]
+		fx = server.get_objects_in_group("FXObject")[0]
 		fx.render.play_f_x_effect(name=b"beam", effect_type="beamOn")
 		self.object.call_later(1.5, self.turn_sky_off)
 		self.object.call_later(7, self.show_vendor)
@@ -75,9 +76,9 @@ class ScriptComponent(script.ScriptComponent):
 		self.notify_client_object(name="vendorOn", param1=0, param2=0, param_str=b"", param_obj=None)
 
 	def kill_fx_object(self):
-		fx = self.object._v_server.get_objects_in_group("FXObject")[0]
+		fx = server.get_objects_in_group("FXObject")[0]
 		fx.render.stop_f_x_effect(name=b"beam")
-		self.object._v_server.spawners["FXObject"].spawner.destroy()
+		server.spawners["FXObject"].spawner.destroy()
 
 	def on_property_rented(self, player):
 		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"ShowProperty", param_obj=None)

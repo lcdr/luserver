@@ -58,6 +58,7 @@ import persistent.wref
 from ..bitstream import BitStream, c_int64, c_bool, c_ubyte, c_uint, c_ushort
 from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
+from ..world import server
 from .module import ServerModule
 
 log = logging.getLogger(__name__)
@@ -92,19 +93,19 @@ pants_lot = {
 
 class CharHandling(ServerModule):
 	def on_validated(self, address):
-		self.server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request, address)
-		self.server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request, address)
-		self.server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request, address)
-		self.server.register_handler(WorldServerMsg.EnterWorld, self.on_enter_world, address)
+		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request, address)
+		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request, address)
+		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request, address)
+		server.register_handler(WorldServerMsg.EnterWorld, self.on_enter_world, address)
 
 	def on_character_list_request(self, data, address):
-		selected = self.server.accounts[address].characters.selected()
+		selected = server.accounts[address].characters.selected()
 
-		if self.server.world_id[0] != 0:
-			self.server.destruct(selected)
+		if server.world_id[0] != 0:
+			server.destruct(selected)
 
-		self.server.conn_sync()
-		characters = self.server.accounts[address].characters
+		server.conn.sync()
+		characters = server.accounts[address].characters
 		log.info("sending %i characters", len(characters))
 		character_list = [i[1] for i in sorted(characters.items(), key=lambda x: x[0])]
 
@@ -155,7 +156,7 @@ class CharHandling(ServerModule):
 			for item in char.inventory.equipped[-1]:
 				response.write(c_uint(item.lot))
 
-		self.server.send(response, address)
+		server.send(response, address)
 
 	def on_character_create_request(self, request, address):
 		char_name = request.read(str, allocated_length=66)
@@ -166,7 +167,7 @@ class CharHandling(ServerModule):
 
 		return_code = CharacterCreateReturnCode.Success
 
-		all_characters = [j for i in self.server.db.accounts.values() for j in i.characters.values()]
+		all_characters = [j for i in server.db.accounts.values() for j in i.characters.values()]
 		for char in all_characters:
 			if char.name == char_name:
 				return_code = CharacterCreateReturnCode.CustomNameInUse
@@ -174,7 +175,7 @@ class CharHandling(ServerModule):
 
 		try:
 			if return_code == CharacterCreateReturnCode.Success:
-				new_char = PersistentObject(self.server, 1, self.server.new_object_id())
+				new_char = PersistentObject(1, server.new_object_id())
 				new_char.name = char_name
 				new_char.char.address = address
 
@@ -194,52 +195,51 @@ class CharHandling(ServerModule):
 				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
 				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
 
-				characters = self.server.accounts[address].characters
+				characters = server.accounts[address].characters
 				characters[char_name] = new_char
 				characters.selected = persistent.wref.WeakRef(new_char)
-				self.server.commit()
+				server.conn.transaction_manager.commit()
 		except Exception:
 			import traceback
 			traceback.print_exc()
 			return_code = CharacterCreateReturnCode.GeneralFailure
-			self.server.conn_sync()
+			server.conn.sync()
 
 		response = BitStream()
 		response.write_header(WorldClientMsg.CharacterCreateResponse)
 		response.write(c_ubyte(return_code))
-		self.server.send(response, address)
+		server.send(response, address)
 
 		if return_code == CharacterCreateReturnCode.Success:
 			self.on_character_list_request(b"", address)
 
 	def on_character_delete_request(self, request, address):
-		characters = self.server.accounts[address].characters
+		characters = server.accounts[address].characters
 		char_id = request.read(c_int64)
 
 		for char in characters:
 			if characters[char].object_id == char_id:
 				del characters[char]
-				self.server.commit()
+				server.conn.transaction_manager.commit()
 				break
 
 		response = BitStream()
 		response.write_header(WorldClientMsg.CharacterDeleteResponse)
 		response.write(c_ubyte(CharacterDeleteReturnCode.Success))
-		self.server.send(response, address)
+		server.send(response, address)
 
 		# todo: delete property
 
 	def on_enter_world(self, request, address):
 		char_id = request.read(c_int64)
 
-		characters = self.server.accounts[address].characters
+		characters = server.accounts[address].characters
 		selected_char = [i for i in characters.values() if i.object_id == char_id][0]
 		characters.selected = persistent.wref.WeakRef(selected_char)
 		selected_char.char.address = address
-		selected_char._v_server = self.server
 		selected_char.char.online = True
 
-		self.server.commit()
+		server.conn.transaction_manager.commit()
 
 		if selected_char.char.world[0] == 0:
 			selected_char.char.world = 1000, 0, 0
@@ -264,7 +264,7 @@ class CharHandling(ServerModule):
 
 	def character_create_color_index(self, color):
 		index = 0
-		sorted_colors = [i for i in sorted(self.server.db.colors.items(), key=lambda x: x[0])]
+		sorted_colors = [i for i in sorted(server.db.colors.items(), key=lambda x: x[0])]
 		for col, valid_characters in sorted_colors:
 			if col == color:
 				break
@@ -275,6 +275,6 @@ class CharHandling(ServerModule):
 	def predef_to_name(self, predef_name_ids):
 		name = ""
 		for name_type, name_id in enumerate(predef_name_ids):
-			name += self.server.db.predef_names[name_type][name_id]
+			name += server.db.predef_names[name_type][name_id]
 
 		return name

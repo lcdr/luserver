@@ -1,11 +1,4 @@
-import time
 from enum import IntEnum
-
-import persistent
-
-from ..bitstream import BitStream, c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
-from ..messages import WorldClientMsg, WorldServerMsg
-from .module import ServerModule
 
 class MailID(IntEnum):
 	MailSend = 0
@@ -21,6 +14,15 @@ class MailID(IntEnum):
 	MailReadResponse = 10
 	MailNotificationRequest = 11
 
+import time
+
+import persistent
+
+from ..bitstream import BitStream, c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
+from ..messages import WorldClientMsg, WorldServerMsg
+from ..world import server
+from .module import ServerModule
+
 class MailSendReturnCode:
 	Success = 0
 	ItemCannotBeMailed = 3
@@ -30,11 +32,11 @@ class MailSendReturnCode:
 
 class MailHandling(ServerModule):
 	def on_validated(self, address):
-		self.server.register_handler(WorldServerMsg.Mail, self.on_mail, address)
+		server.register_handler(WorldServerMsg.Mail, self.on_mail, address)
 
 	def on_mail(self, message, address):
 		mail_id = message.read(c_uint)
-		player = self.server.accounts[address].characters.selected()
+		player = server.accounts[address].characters.selected()
 		if mail_id == MailID.MailSend:
 			self.on_mail_send(message, player)
 		elif mail_id == MailID.MailDataRequest:
@@ -59,14 +61,14 @@ class MailHandling(ServerModule):
 		return_code = MailSendReturnCode.Success
 		try:
 			if attachment_item_count != 0:
-				self.server.chat.system_message("Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
+				server.chat.system_message("Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
 				return_code = MailSendReturnCode.ItemCannotBeMailed
 				return
 			if recipient_name == player.name:
 				return_code = MailSendReturnCode.CannotMailYourself
 				return
 			try:
-				recipient = self.server.find_player_by_name(recipient_name)
+				recipient = server.find_player_by_name(recipient_name)
 			except KeyError:
 				return_code = MailSendReturnCode.RecipientNotFound
 				return
@@ -80,10 +82,10 @@ class MailHandling(ServerModule):
 			out.write_header(WorldClientMsg.Mail)
 			out.write(c_uint(MailID.MailSendResponse))
 			out.write(c_uint(return_code))
-			self.server.send(out, player.char.address)
+			server.send(out, player.char.address)
 
 	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
-		mail = Mail(self.server.new_object_id(), sender_name, subject, body, attachment)
+		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		recipient.char.mails.append(mail)
 		self.send_mail_notification(recipient)
 
@@ -117,7 +119,7 @@ class MailHandling(ServerModule):
 			mails.write(bytes(1))
 			mails.write(bytes(2))
 			mails.write(bytes(4))
-		self.server.send(mails, player.char.address)
+		server.send(mails, player.char.address)
 
 	def on_mail_attachment_collect(self, data, player):
 		data.skip_read(4) # ???
@@ -131,7 +133,7 @@ class MailHandling(ServerModule):
 				out.write(c_uint(MailID.MailAttachmentCollectResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				self.server.send(out, player.char.address)
+				server.send(out, player.char.address)
 				break
 
 	def on_mail_delete(self, data, player):
@@ -145,7 +147,7 @@ class MailHandling(ServerModule):
 				out.write(c_uint(MailID.MailDeleteResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				self.server.send(out, player.char.address)
+				server.send(out, player.char.address)
 				break
 
 	def on_mail_read(self, data, player):
@@ -159,7 +161,7 @@ class MailHandling(ServerModule):
 				out.write(c_uint(MailID.MailReadResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				self.server.send(out, player.char.address)
+				server.send(out, player.char.address)
 				break
 
 	def send_mail_notification(self, player):
@@ -173,7 +175,7 @@ class MailHandling(ServerModule):
 		notification.write(bytes(32))
 		notification.write(c_uint(unread_mails_amount))
 		notification.write(bytes(4))
-		self.server.send(notification, player.char.address)
+		server.send(notification, player.char.address)
 
 class Mail(persistent.Persistent):
 	def __init__(self, id, sender, subject, body, attachment=None):

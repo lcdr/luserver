@@ -2,6 +2,7 @@ import logging
 
 from ..bitstream import c_bit, c_int, c_int64, c_uint
 from ..messages import single
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType
@@ -12,8 +13,8 @@ class VendorComponent(Component):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.vendor = self
 		self.items_for_sale = []
-		for row in self.object._v_server.db.vendor_component[comp_id]:
-			self.items_for_sale.extend(self.object._v_server.db.loot_table[row[0]])
+		for row in server.db.vendor_component[comp_id]:
+			self.items_for_sale.extend(server.db.loot_table[row[0]])
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))

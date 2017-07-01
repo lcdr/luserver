@@ -5,6 +5,7 @@ from ..bitstream import c_int, c_int64
 from ..game_object import GameObject
 from ..ldf import LDF
 from ..messages import broadcast
+from ..world import server
 from .component import Component
 
 log = logging.getLogger(__name__)
@@ -12,8 +13,8 @@ log = logging.getLogger(__name__)
 class LaunchpadComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
-		self.default_world_id = self.object._v_server.db.launchpad_component[comp_id][0]
-		self.respawn_point_name = self.object._v_server.db.launchpad_component[comp_id][1]
+		self.default_world_id = server.db.launchpad_component[comp_id][0]
+		self.respawn_point_name = server.db.launchpad_component[comp_id][1]
 		if "respawn_point_name" in set_vars:
 			self.respawn_point_name = set_vars["respawn_point_name"]
 

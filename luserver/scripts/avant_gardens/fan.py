@@ -1,4 +1,5 @@
 import luserver.components.script as script
+from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
@@ -14,8 +15,8 @@ class ScriptComponent(script.ScriptComponent):
 			self.enable_fx(False)
 
 	def enable_fx(self, enable=None):
-		fx_obj = self.object._v_server.get_objects_in_group(self.object.groups[0]+"fx")[0]
-		objs = self.object._v_server.get_objects_in_group(self.object.groups[0])
+		fx_obj = server.get_objects_in_group(self.object.groups[0]+"fx")[0]
+		objs = server.get_objects_in_group(self.object.groups[0])
 		for obj in objs:
 			if obj.lot == 5958:
 				if enable is None:

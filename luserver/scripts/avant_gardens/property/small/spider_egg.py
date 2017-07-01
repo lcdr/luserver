@@ -1,4 +1,5 @@
 import luserver.components.script as script
+from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
 	def spawn_spider(self):
@@ -8,5 +9,5 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.call_later(1.8, self.spawn)
 
 	def spawn(self):
-		self.object._v_server.spawn_object(16197, {"position": self.object.physics.position, "rotation": self.object.physics.rotation})
+		server.spawn_object(16197, {"position": self.object.physics.position, "rotation": self.object.physics.rotation})
 		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=0, loot_owner_id=0)

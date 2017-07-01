@@ -1,6 +1,7 @@
 import luserver.components.script as script
 from luserver.bitstream import c_int
 from luserver.game_object import GameObject
+from luserver.world import server
 from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 
@@ -14,6 +15,6 @@ class ScriptComponent(script.ScriptComponent):
 				player.inventory.remove_item_from_inv(InventoryType.Items, lot=14592)
 			else:
 				return
-			for obj in self.object._v_server.game_objects.values():
+			for obj in server.game_objects.values():
 				if obj.lot == 14718:
 					obj.script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=None, param_str=b"")

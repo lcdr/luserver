@@ -1,4 +1,5 @@
 from ..bitstream import c_bit, c_float, c_int, c_uint
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 
@@ -40,7 +41,7 @@ class MovingPlatformComponent(Component):
 		self.callbacks = []
 
 		if "attached_path" in set_vars:
-			self.path = Path(*self.object._v_server.world_data.paths[set_vars["attached_path"]])
+			self.path = Path(*server.world_data.paths[set_vars["attached_path"]])
 			assert len(self.path.waypoints) > 1
 			self.start_pathing()
 

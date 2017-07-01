@@ -2,6 +2,7 @@ import asyncio
 
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
 from ..game_object import GameObject
+from ..world import server
 from ..ldf import LDF
 from ..messages import broadcast, single
 from .component import Component
@@ -15,8 +16,8 @@ class ScriptedActivityComponent(Component):
 		self.comp_id = comp_id
 		if "transfer_world_id" in set_vars:
 			self.transfer_world_id = set_vars["transfer_world_id"]
-		elif self.comp_id in self.object._v_server.db.activities:
-			activity = self.object._v_server.db.activities[self.comp_id]
+		elif self.comp_id in server.db.activities:
+			activity = server.db.activities[self.comp_id]
 			self.transfer_world_id = activity[0]
 		else:
 			self.transfer_world_id = None

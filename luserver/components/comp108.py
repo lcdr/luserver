@@ -1,5 +1,6 @@
 from ..bitstream import c_bit, c_int, c_int64
 from ..ldf import LDF
+from ..world import server
 from .component import Component
 
 class Comp108Component(Component):
@@ -28,7 +29,7 @@ class Comp108Component(Component):
 
 	def on_destruction(self):
 		if self.driver_id != 0:
-			self.object._v_server.game_objects[self.driver_id].char.dismount()
+			server.game_objects[self.driver_id].char.dismount()
 
 	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash

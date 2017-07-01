@@ -4,6 +4,7 @@ import enum
 
 from ..bitstream import BitStream, c_bit, c_int, c_int64, c_uint, c_uint64
 from ..messages import broadcast, single
+from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
@@ -138,7 +139,7 @@ class SkillComponent(Component):
 		self.last_ui_handle = 0
 		self.last_ui_skill_handle = self.last_ui_handle
 		self.everlasting = False
-		self.skills = [skill_id for skill_id, _ in self.object._v_server.db.object_skills.get(self.object.lot, [])]
+		self.skills = [skill_id for skill_id, _ in server.db.object_skills.get(self.object.lot, [])]
 
 	def serialize(self, out, is_creation):
 		if is_creation:
@@ -157,7 +158,7 @@ class SkillComponent(Component):
 		self.last_ui_handle += 1
 
 		bitstream = BitStream()
-		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
+		behavior = server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
 		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
 
@@ -174,7 +175,7 @@ class SkillComponent(Component):
 
 	def cast_projectile(self, proj_behavs, target):
 		bitstream = BitStream()
-		proj_id = self.object._v_server.new_spawned_id()
+		proj_id = server.new_spawned_id()
 		for behav in proj_behavs:
 			self.original_target_id = target.object_id
 			self.serialize_behavior(behav, bitstream, target)
@@ -204,13 +205,13 @@ class SkillComponent(Component):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
 
 		if optional_target_id != 0:
-			if optional_target_id not in self.object._v_server.game_objects:
+			if optional_target_id not in server.game_objects:
 				return
-			target = self.object._v_server.game_objects[optional_target_id]#self.object
+			target = server.game_objects[optional_target_id]#self.object
 		else:
 			target = self.object
 		self.picked_target_id = optional_target_id
-		behavior, imagination_cost = self.object._v_server.db.skill_behavior[skill_id]
+		behavior, imagination_cost = server.db.skill_behavior[skill_id]
 		self.object.stats.imagination -= imagination_cost
 		self.original_target_id = target.object_id
 		self.deserialize_behavior(behavior, bitstream, target)
@@ -255,9 +256,9 @@ class SkillComponent(Component):
 			behavior_id = bitstream.read(c_uint)
 			target_id = bitstream.read(c_uint64)
 			if behavior_id != 0:
-				behavior = self.object._v_server.db.behavior[behavior_id]
+				behavior = server.db.behavior[behavior_id]
 			if target_id != 0:
-				target = self.object._v_server.game_objects[target_id]
+				target = server.game_objects[target_id]
 
 		if behavior is not None: # no, this is not an "else" from above
 			self.original_target_id = target.object_id
@@ -271,10 +272,10 @@ class SkillComponent(Component):
 		if target_id == 0:
 			target = self.object
 		else:
-			if target_id not in self.object._v_server.game_objects:
+			if target_id not in server.game_objects:
 				log.debug("Projectile Target %i not in game objects", target_id)
 				return
-			target = self.object._v_server.game_objects[target_id]
+			target = server.game_objects[target_id]
 
 		for behav in self.projectile_behaviors[local_id]:
 			self.original_target_id = target.object_id
@@ -299,7 +300,7 @@ class SkillComponent(Component):
 
 	def undo_behavior(self, behavior, params=None):
 		if behavior.template == BehaviorTemplate.SpawnObject:
-			self.object._v_server.destruct(params)
+			server.destruct(params)
 		elif behavior.template == BehaviorTemplate.Buff:
 			if hasattr(behavior, "life"):
 				self.object.stats.max_life -= behavior.life
@@ -311,9 +312,9 @@ class SkillComponent(Component):
 			self.object.char.set_jet_pack_mode(enable=False)
 
 	def add_skill_for_item(self, item, add_buffs=True):
-		if item.lot in self.object._v_server.db.object_skills:
-			for skill_id, cast_on_type in self.object._v_server.db.object_skills[item.lot]:
-				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
+		if item.lot in server.db.object_skills:
+			for skill_id, cast_on_type in server.db.object_skills[item.lot]:
+				behavior = server.db.skill_behavior[skill_id][0]
 				if cast_on_type == CastType.AddSkill:
 					slot_id = SkillSlot.RightHand
 					if item.item_type == ItemType.Hat:
@@ -330,9 +331,9 @@ class SkillComponent(Component):
 		self.cast_skill(skill_id, cast_type=CastType.Cast)
 
 	def remove_skill_for_item(self, item):
-		if item.lot in self.object._v_server.db.object_skills:
-			for skill_id, cast_on_type in self.object._v_server.db.object_skills[item.lot]:
-				behavior = self.object._v_server.db.skill_behavior[skill_id][0]
+		if item.lot in server.db.object_skills:
+			for skill_id, cast_on_type in server.db.object_skills[item.lot]:
+				behavior = server.db.skill_behavior[skill_id][0]
 				if behavior.template in PASSIVE_BEHAVIORS:
 					assert cast_on_type == 1
 					self.undo_behavior(behavior)
@@ -340,6 +341,6 @@ class SkillComponent(Component):
 					self.remove_skill(skill_id=skill_id)
 
 	def remove_skill_server(self, skill_id):
-		behavior = self.object._v_server.db.skill_behavior[skill_id][0]
+		behavior = server.db.skill_behavior[skill_id][0]
 		if behavior.template in PASSIVE_BEHAVIORS:
 			self.undo_behavior(behavior)

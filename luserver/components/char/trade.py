@@ -2,6 +2,7 @@ from ...math.vector import Vector3
 from ...bitstream import c_int64, c_uint, c_uint64
 from ...game_object import GameObject
 from ...messages import single
+from ...world import server
 from ..inventory import InventoryType, LootType, Stack
 
 class TradeInviteResult:
@@ -48,13 +49,13 @@ class CharTrade:
 	def client_trade_update(self, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
 		self.trade.currency_offered = currency
 		self.trade.items_offered = items
-		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_update(currency=currency, items=items)
 
 	@single
 	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
 		if about_to_perform:
-			trade_player = self.object._v_server.game_objects[self.trade.other_player]
+			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:
 				trade_player.char.set_currency(currency=trade_player.char.currency + self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=self.object)
 				self.set_currency(currency=self.currency - self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=trade_player)
@@ -66,13 +67,13 @@ class CharTrade:
 	def client_trade_cancel(self):
 		if self.trade is None:
 			return
-		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_cancel()
 		self.trade = None
 
 	def client_trade_accept(self, first:bool=False):
 		self.trade.accepted = not first
-		trade_player = self.object._v_server.game_objects[self.trade.other_player]
+		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_accept(first)
 
 	@single
@@ -83,6 +84,6 @@ class CharTrade:
 	def server_trade_accept(self, first:bool=False):
 		if not first:
 			if self.trade.accepted:
-				trade_player = self.object._v_server.game_objects[self.trade.other_player]
+				trade_player = server.game_objects[self.trade.other_player]
 				trade_player.char.server_trade_update(True, 0, {})
 				self.server_trade_update(True, 0, {})

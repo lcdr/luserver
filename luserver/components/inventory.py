@@ -46,6 +46,7 @@ from persistent.list import PersistentList
 from ..bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
 from ..ldf import LDF, LDFDataType
 from ..messages import broadcast, single, Serializable
+from ..world import server
 from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
@@ -130,8 +131,8 @@ class InventoryComponent(Component):
 		self.temp_models = PersistentList()
 		self.mission_objects = PersistentList()
 
-		if comp_id in self.object._v_server.db.inventory_component:
-			for item_lot, equip in self.object._v_server.db.inventory_component[comp_id]:
+		if comp_id in server.db.inventory_component:
+			for item_lot, equip in server.db.inventory_component[comp_id]:
 				item = self.add_item_to_inventory(item_lot, persistent=False, notify_client=False)
 				if equip:
 					self.equip_inventory(item_to_equip=item.object_id)
@@ -214,9 +215,9 @@ class InventoryComponent(Component):
 				break
 
 	def add_item_to_inventory(self, lot, amount=1, module_lots=None, inventory_type=None, source_type=0, show_flying_loot=True, persistent=True, notify_client=True):
-		for component_type, component_id in self.object._v_server.db.components_registry[lot]:
+		for component_type, component_id in server.db.components_registry[lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
-				item_type, stack_size = self.object._v_server.db.item_component[component_id][1:3]
+				item_type, stack_size = server.db.item_component[component_id][1:3]
 				break
 		else:
 			raise ValueError("lot", lot)
@@ -262,16 +263,16 @@ class InventoryComponent(Component):
 
 			if new_stack:
 				if persistent:
-					object_id = self.object._v_server.new_object_id()
+					object_id = server.new_object_id()
 				else:
-					object_id = self.object._v_server.new_spawned_id()
+					object_id = server.new_spawned_id()
 
 				if stack_size == 0:
 					added_amount = amount
 				else:
 					added_amount = min(stack_size, amount)
 				amount -= added_amount
-				stack = Stack(self.object._v_server.db, object_id, lot, added_amount)
+				stack = Stack(server.db, object_id, lot, added_amount)
 				if module_lots:
 					stack.module_lots = module_lots
 
@@ -285,7 +286,7 @@ class InventoryComponent(Component):
 							break
 					else:
 						log.info("no space left, sending item by mail")
-						self.object._v_server.mail.send_mail("%[MAIL_SYSTEM_NOTIFICATION]", "%[MAIL_ACHIEVEMENT_OVERFLOW_HEADER]", "%[MAIL_ACHIEVEMENT_OVERFLOW_BODY]", self.object, stack)
+						server.mail.send_mail("%[MAIL_SYSTEM_NOTIFICATION]", "%[MAIL_ACHIEVEMENT_OVERFLOW_HEADER]", "%[MAIL_ACHIEVEMENT_OVERFLOW_BODY]", self.object, stack)
 						continue
 
 			if hasattr(self.object, "char") and notify_client:
@@ -373,7 +374,7 @@ class InventoryComponent(Component):
 					if hasattr(self.object, "char"):
 						self.object.skill.add_skill_for_item(item)
 
-						for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in self.object._v_server.db.item_sets:
+						for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in server.db.item_sets:
 							if item.lot in set_items:
 								set_items_equipped = 0
 								for eq_item in self.equipped[-1]:
@@ -410,7 +411,7 @@ class InventoryComponent(Component):
 				if hasattr(self.object, "char"):
 					self.object.skill.remove_skill_for_item(item)
 
-					for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in self.object._v_server.db.item_sets:
+					for set_items, skill_set_with_2, skill_set_with_3, skill_set_with_4, skill_set_with_5, skill_set_with_6 in server.db.item_sets:
 						if item.lot in set_items:
 							set_items_equipped = 1
 							for eq_item in self.equipped[-1]:

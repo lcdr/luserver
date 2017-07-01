@@ -1,5 +1,6 @@
 import asyncio
 
+from ..world import server
 from ..components.mission import MissionProgress, MissionState
 from .command import ChatCommand, toggle_bool
 
@@ -47,7 +48,7 @@ class CompleteMissionCommand(ChatCommand):
 
 	def find_prereqs(self, mission_id):
 		missions = set()
-		prereqs = self.chat.server.db.missions[mission_id][1]
+		prereqs = server.db.missions[mission_id][1]
 		for prereq_ors in prereqs:
 			for prereq_mission in prereq_ors:
 				if isinstance(prereq_mission, tuple): # prereq requires special mission state
@@ -97,7 +98,7 @@ class ResetMissionsCommand(ChatCommand):
 	def run(self, args, sender):
 		sender.char.missions.clear()
 		# add achievements
-		for mission_id, data in self.chat.server.db.missions.items():
+		for mission_id, data in server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
 				sender.char.missions[mission_id] = MissionProgress(mission_id, data)

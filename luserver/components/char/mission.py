@@ -1,8 +1,10 @@
 from persistent.mapping import PersistentMapping
 
 from ...bitstream import c_int, c_int64, c_ubyte
+
 from ...game_object import GameObject
 from ...messages import single
+from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
 from ..mission import check_prereqs, MissionProgress, MissionState, TaskType
@@ -12,13 +14,13 @@ class CharMission:
 		self.autocomplete_missions = False
 		self.missions = PersistentMapping()
 		# add achievements
-		for mission_id, data in self.object._v_server.db.missions.items():
+		for mission_id, data in server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
 				self.missions[mission_id] = MissionProgress(mission_id, data)
 
 	def add_mission(self, mission_id):
-		mission_progress = MissionProgress(mission_id, self.object._v_server.db.missions[mission_id])
+		mission_progress = MissionProgress(mission_id, server.db.missions[mission_id])
 		self.missions[mission_id] = mission_progress
 		self.notify_mission(mission_id, mission_state=mission_progress.state, sending_rewards=False)
 		# obtain item task: update according to items already in inventory
@@ -123,14 +125,14 @@ class CharMission:
 
 		self.update_mission_task(TaskType.MissionComplete, mission_id)
 
-		if mission_id in self.object._v_server.db.mission_mail:
-			for id, attachment_lot in self.object._v_server.db.mission_mail[mission_id]:
+		if mission_id in server.db.mission_mail:
+			for id, attachment_lot in server.db.mission_mail[mission_id]:
 				if attachment_lot is not None:
-					object_id = self.object._v_server.new_object_id()
-					attachment = Stack(self.object._v_server.db, object_id, attachment_lot)
+					object_id = server.new_object_id()
+					attachment = Stack(server.db, object_id, attachment_lot)
 				else:
 					attachment = None
-				self.object._v_server.mail.send_mail("%[MissionEmail_{id}_senderName]".format(id=id), "%[MissionEmail_{id}_subjectText]".format(id=id), "%[MissionEmail_{id}_bodyText]".format(id=id), self.object, attachment)
+				server.mail.send_mail("%[MissionEmail_{id}_senderName]".format(id=id), "%[MissionEmail_{id}_subjectText]".format(id=id), "%[MissionEmail_{id}_bodyText]".format(id=id), self.object, attachment)
 
 	@single
 	def offer_mission(self, mission_id:c_int=None, offerer:GameObject=None):
