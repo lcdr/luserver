@@ -74,6 +74,7 @@ class GeneralHandling(ServerModule):
 		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message, address)
 		player = server.accounts[address].characters.selected()
 		if player is not None:
+			player.char.address = address
 			server.game_objects[player.object_id] = player
 			player.parent = None
 			player.children = []

@@ -122,7 +122,7 @@ class Server(pyraknet.server.Server):
 						continue
 					return server_address
 			# no server found, spawn a new one
-			command = os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "__main__.py"))+" %i %i" % (world_id[0], world_id[2])
+			command = "\"%s\" %i %i" % (os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "__main__.py")), world_id[0], world_id[2])
 			if os.name == "nt":
 				subprocess.Popen("cmd /K \"python "+command+" && exit || pause && exit\"", creationflags=subprocess.CREATE_NEW_CONSOLE)
 			else:

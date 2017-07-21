@@ -298,7 +298,7 @@ class InventoryComponent(Component):
 		return stack
 
 	@single
-	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False,  bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:bool=True, slot_id:c_int=None):
+	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False, bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:bool=True, slot_id:c_int=None):
 		pass
 
 	def remove_item_from_inv(self, inventory_type, item=None, object_id=0, lot=0, amount=1):
@@ -362,12 +362,6 @@ class InventoryComponent(Component):
 		for inv in (self.items, self.temp_items, self.models):
 			for item in inv:
 				if item is not None and item.object_id == item_to_equip:
-					# unequip any items of the same type
-					for other_item in self.equipped[-1]:
-						if other_item.item_type == item.item_type:
-							self.un_equip_inventory(item_to_unequip=other_item.object_id)
-							break
-
 					self.equipped[-1].append(item)
 					self.attr_changed("equipped")
 
@@ -398,6 +392,12 @@ class InventoryComponent(Component):
 					for sub_item in item.sub_items:
 						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems)
 						self.equip_inventory(item_to_equip=sub.object_id)
+
+					# unequip any items of the same type
+					for other_item in self.equipped[-1]:
+						if other_item.item_type == item.item_type and other_item.object_id != item.object_id:
+							self.un_equip_inventory(item_to_unequip=other_item.object_id)
+							break
 					return
 
 	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):

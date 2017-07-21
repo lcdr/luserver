@@ -11,4 +11,4 @@ class ScriptComponent(script.ScriptComponent):
 				self.set_network_var("blooming", LDFDataType.BOOLEAN, True)
 				for mission_id in FLOWER_MISSIONS:
 					caster.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
-				self.object.call_later(16, lambda: self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=caster.object_id, loot_owner_id=0))
+				self.object.call_later(16, lambda: self.object.destructible.simply_die(killer=caster))

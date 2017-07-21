@@ -8,6 +8,7 @@ SCRIPTS = {
 	544: "general.flower",
 	586: "lego_club.ambient",
 	625: "venture_explorer.bob",
+	688: "gnarled_forest.bomb_crate",
 	791: "venture_explorer.imagination_smashable",
 	815: "avant_gardens.stromling_mech",
 	816: "avant_gardens.turret",

@@ -140,7 +140,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.object.ai.enable()
 
 	def smash_rebuild(self):
-		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=0)
+		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)
 		server.destruct(self.object)
 
 	def rebuild_cancel(self, early_release:bool=None, user:GameObject=None):

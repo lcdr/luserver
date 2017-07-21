@@ -3,11 +3,15 @@ import logging
 import os
 import re
 
+from ..bitstream import BitStream, c_bool, c_int64, c_ushort
+from ..messages import WorldClientMsg
 from ..world import server, World
 from ..components.inventory import InventoryType
 from ..components.physics import PhysicsEffect
 from ..math.vector import Vector3
 from .command import ChatCommand, normal_bool, toggle_bool
+
+log = logging.getLogger(__name__)
 
 def toggle(obj, attr_name, toggle):
 	if toggle is None:
@@ -16,8 +20,8 @@ def toggle(obj, attr_name, toggle):
 		setattr(obj, attr_name, toggle)
 
 class AddItemCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "additem")
+	def __init__(self):
+		super().__init__("additem")
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--amount", type=int, default=1)
 
@@ -25,61 +29,61 @@ class AddItemCommand(ChatCommand):
 		sender.inventory.add_item_to_inventory(args.lot, args.amount)
 
 class BuildCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "build")
+	def __init__(self):
+		super().__init__("build")
 		self.command.add_argument("type", type=int)
 
 	def run(self, args, sender):
 		sender.char.activate_brick_mode(build_type=args.type)
 
 class CheckForLeaksCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "checkforleaks")
+	def __init__(self):
+		super().__init__("checkforleaks")
 
 	def run(self, args, sender):
 		sender.char.check_for_leaks(fullcheck=True)
 
 class CurrencyCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "currency")
+	def __init__(self):
+		super().__init__("currency")
 		self.command.add_argument("amount", type=int)
 
 	def run(self, args, sender):
 		sender.char.set_currency(currency=sender.char.currency + args.amount, position=Vector3.zero)
 
 class DanceCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "dance")
+	def __init__(self):
+		super().__init__("dance")
 
 	def run(self, args, sender):
 		pass # client-side
 
 class DestroySpawnedCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "destroyspawned")
+	def __init__(self):
+		super().__init__("destroyspawned")
 
 	def run(self, args, sender):
 		for child in sender.children.copy():
 			server.destruct(server.game_objects[child])
 
 class DismountCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "dismount")
+	def __init__(self):
+		super().__init__("dismount")
 
 	def run(self, args, sender):
 		sender.char.dismount()
 
 class EverlastingCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "everlasting")
+	def __init__(self):
+		super().__init__("everlasting")
 		self.command.add_argument("--enable", type=toggle_bool)
 
 	def run(self, args, sender):
 		toggle(sender.skill, "everlasting", args.enable)
 
 class ExtendInventoryCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "extendinv")
+	def __init__(self):
+		super().__init__("extendinv")
 		self.command.add_argument("amount", type=int)
 
 	def run(self, args, sender):
@@ -87,16 +91,16 @@ class ExtendInventoryCommand(ChatCommand):
 		sender.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(sender.inventory.items)+args.amount)
 
 class FactionCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "faction")
+	def __init__(self):
+		super().__init__("faction")
 		self.command.add_argument("faction", type=int)
 
 	def run(self, args, sender):
 		sender.stats.faction = args.faction
 
 class FactionTokensCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "factiontokens")
+	def __init__(self):
+		super().__init__("factiontokens")
 
 	def run(self, args, sender):
 		sender.inventory.add_item_to_inventory(8318, 100)
@@ -106,8 +110,8 @@ class FactionTokensCommand(ChatCommand):
 
 
 class FilelogCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "filelog", description="Change which packets are logged to file")
+	def __init__(self):
+		super().__init__("filelog", description="Change which packets are logged to file")
 		self.command.add_argument("action", choices=("add", "remove", "show"), default="show")
 		self.command.add_argument("packetname", nargs="+")
 
@@ -118,11 +122,11 @@ class FilelogCommand(ChatCommand):
 		elif args.action == "remove":
 			server.file_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			self.chat.sys_msg_sender(server.file_logged_packets)
+			server.chat.sys_msg_sender(server.file_logged_packets)
 
 class GlowCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "glow")
+	def __init__(self):
+		super().__init__("glow")
 
 	def run(self, args, sender):
 		if sender.char.rebuilding == 0:
@@ -131,23 +135,23 @@ class GlowCommand(ChatCommand):
 			sender.char.rebuilding = 0
 
 class GravityCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "gravity")
+	def __init__(self):
+		super().__init__("gravity")
 		self.command.add_argument("--scale", type=float, default=1)
 
 	def run(self, args, sender):
 		sender.char.set_gravity_scale(args.scale)
 
 class HelpCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "help")
+	def __init__(self):
+		super().__init__("help")
 
 	def run(self, args, sender):
-		self.chat.sys_msg_sender("Please use -h / --help for help.")
+		server.chat.sys_msg_sender("Please use -h / --help for help.")
 
 class HighStatsCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "highstats")
+	def __init__(self):
+		super().__init__("highstats")
 
 	def run(self, args, sender):
 		sender.stats.max_life = 99
@@ -156,15 +160,15 @@ class HighStatsCommand(ChatCommand):
 		RefillStatsCommand.run(args, sender)
 
 class InvisibilityCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "invisibility", aliases=("invis",))
+	def __init__(self):
+		super().__init__("invisibility", aliases=("invis",))
 
 	def run(self, args, sender):
 		sender.char.toggle_g_m_invis()
 
 class JetpackCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "jetpack")
+	def __init__(self):
+		super().__init__("jetpack")
 		self.command.add_argument("enable", type=normal_bool)
 		self.command.add_argument("--hover", action="store_true")
 		self.command.add_argument("--bypass-checks", type=normal_bool, default=True)
@@ -177,41 +181,41 @@ class JetpackCommand(ChatCommand):
 		sender.char.set_jet_pack_mode(args.enable, args.hover, args.bypass_checks, args.effect_id, args.air_speed, args.max_air_speed, args.vertical_velocity)
 
 class LevelCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "level", description="Set player level.")
+	def __init__(self):
+		super().__init__("level", description="Set player level.")
 		self.command.add_argument("--level", type=int, default=45)
 
 	def run(self, args, sender):
 		sender.char.level = args.level
-		self.chat.sys_msg_sender("Level will appear set on next login.")
+		server.chat.sys_msg_sender("Level will appear set on next login.")
 
 class LocationCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "location", aliases=("locate", "loc"), description="Print your location.")
+	def __init__(self):
+		super().__init__("location", aliases=("locate", "loc"), description="Print your location.")
 		self.command.add_argument("--player")
 
 	def run(self, args, sender):
 		if args.player:
 			for obj in server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.startswith(args.player):
-					self.chat.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
+					server.chat.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
 					if obj.char._world[0] != server.world_id[0]:
-						self.chat.sys_msg_sender(World(obj.char._world[0]))
+						server.chat.sys_msg_sender(World(obj.char._world[0]))
 					break
 
 class LogCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "log", description="Set log level.")
+	def __init__(self):
+		super().__init__("log", description="Set log level.")
 		self.command.add_argument("logger")
 		self.command.add_argument("level")
 
 	def run(self, args, sender):
 		logging.getLogger(args.logger).setLevel(args.level.upper())
-		self.chat.sys_msg_sender("%s set to %s." % (args.logger, args.level))
+		server.chat.sys_msg_sender("%s set to %s." % (args.logger, args.level))
 
 class NoConsoleLogCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "noconsolelog", description="Change which packets are logged to console. Adding a packet removes it from logging and vice versa.")
+	def __init__(self):
+		super().__init__("noconsolelog", description="Change which packets are logged to console. Adding a packet removes it from logging and vice versa.")
 		self.command.add_argument("action", choices=("add", "remove", "show"), default="show")
 		self.command.add_argument("packetname")
 
@@ -221,19 +225,19 @@ class NoConsoleLogCommand(ChatCommand):
 		elif args.action == "remove":
 			server.not_console_logged_packets.remove(args.packetname)
 		elif args.action == "show":
-			self.chat.sys_msg_sender(server.not_console_logged_packets)
+			server.chat.sys_msg_sender(server.not_console_logged_packets)
 
 class PlayCineCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "playcine")
+	def __init__(self):
+		super().__init__("playcine")
 		self.command.add_argument("name")
 
 	def run(self, args, sender):
 		sender.char.play_cinematic(path_name=args.name, start_time_advance=0)
 
 class PlaySoundCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "playsound")
+	def __init__(self):
+		super().__init__("playsound")
 		self.command.add_argument("id")
 
 	def run(self, args, sender):
@@ -241,8 +245,8 @@ class PlaySoundCommand(ChatCommand):
 
 
 class RefillStatsCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "refillstats")
+	def __init__(self):
+		super().__init__("refillstats")
 
 	@staticmethod
 	def run(args, sender):
@@ -251,24 +255,33 @@ class RefillStatsCommand(ChatCommand):
 		sender.stats.imagination = sender.stats.max_imagination
 
 class RestartCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "restart", aliases=("r",))
+	def __init__(self):
+		super().__init__("restart", aliases=("r",))
+		self.command.add_argument("--show_message", action="store_true")
 
 	def run(self, args, sender):
-		asyncio.ensure_future(self.do_restart(sender))
+		asyncio.ensure_future(self.do_restart(args, sender))
 
-	async def do_restart(self, sender):
+	async def do_restart(self, args, sender):
 		server.conn.transaction_manager.commit()
-		await sender.char.transfer_to_world(server.world_id)
+		server_address = await server.address_for_world(server.world_id, include_self=False)
+		log.info("Sending redirect to world %s", server_address)
+		redirect = BitStream()
+		redirect.write_header(WorldClientMsg.Redirect)
+		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
+		redirect.write(c_ushort(server_address[1]))
+		redirect.write(c_bool(args.show_message))
+		for address in server.accounts:
+			server.send(redirect, address)
 		await asyncio.sleep(5)
-		asyncio.get_event_loop().stop()
+		server.shutdown()
 
 class SendCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "send", description="This will manually send packets")
+	def __init__(self):
+		super().__init__("send", description="This will manually send packets")
 		self.command.add_argument("directory", help="Name of subdirectory of ./packets/ which contains the packets you want to send")
 		self.command.add_argument("--address")
-		self.command.add_argument("--broadcast", default=False)
+		self.command.add_argument("--broadcast", action="store_true", default=False)
 
 	def run(self, args, sender):
 		if not args.broadcast and args.address is None:
@@ -279,15 +292,15 @@ class SendCommand(ChatCommand):
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:
 			with open(os.path.join(path, file), "rb") as content:
-				self.chat.sys_msg_sender("sending "+str(file))
+				server.chat.sys_msg_sender("sending "+str(file))
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
 				server.send(data, args.address, args.broadcast)
 
 class SetFlagCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "setflag")
+	def __init__(self):
+		super().__init__("setflag")
 		self.command.add_argument("flag_id", type=int)
 		self.command.add_argument("--value", type=normal_bool, default=True)
 
@@ -295,31 +308,31 @@ class SetFlagCommand(ChatCommand):
 		sender.char.set_flag(args.value, args.flag_id)
 
 class SetGMLevel(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "setgmlevel")
+	def __init__(self):
+		super().__init__("setgmlevel")
 		self.command.add_argument("player")
 		self.command.add_argument("level", type=int)
 
 	def run(self, args, sender):
 		player = server.find_player_by_name(args.player)
 		if player is None:
-			self.chat.sys_msg_sender("player cannot be found: %s" % args.player)
+			server.chat.sys_msg_sender("player cannot be found: %s" % args.player)
 			return
 		if player == sender and args.level == 0:
-			self.chat.sys_msg_sender("You don't want to lose privileges. To appear as a player, use /showgmstatus off")
+			server.chat.sys_msg_sender("You don't want to lose privileges. To appear as a player, use /showgmstatus off")
 			return
 		player.char.gm_level = args.level
 
 class SetRespawnCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "setrespawn")
+	def __init__(self):
+		super().__init__("setrespawn")
 
 	def run(self, args, sender):
 		sender.char.player_reached_respawn_checkpoint(sender.physics.position, sender.physics.rotation)
 
 class ShowGMStatusCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "showgmstatus", description="Change whether you appear as 'Mythran' to other players.")
+	def __init__(self):
+		super().__init__("showgmstatus", description="Change whether you appear as 'Mythran' to other players.")
 		self.command.add_argument("--enable", type=toggle_bool)
 
 	def run(self, args, sender):
@@ -328,9 +341,16 @@ class ShowGMStatusCommand(ChatCommand):
 			return
 		toggle(sender.char, "show_gm_status", args.enable)
 
+class ShutdownCommand(ChatCommand):
+	def __init__(self):
+		super().__init__("shutdown")
+
+	def run(self, args, sender):
+		server.shutdown()
+
 class SpawnCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "spawn", description="Spawn an object")
+	def __init__(self):
+		super().__init__("spawn", description="Spawn an object")
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--position", nargs=3, type=float)
 
@@ -341,8 +361,8 @@ class SpawnCommand(ChatCommand):
 		server.spawn_object(args.lot, set_vars)
 
 class SpawnPhantomCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "spawnphantom")
+	def __init__(self):
+		super().__init__("spawnphantom")
 		self.command.add_argument("--type", choices=("wall", "cube"), default="cube")
 		self.command.add_argument("--effect", choices=("push", "attract", "repulse", "gravity", "friction"), default="push")
 		self.command.add_argument("--amount", type=float, default=500)
@@ -369,8 +389,8 @@ class SpawnPhantomCommand(ChatCommand):
 		obj.physics.physics_effect_direction = args.direction*args.amount
 
 class TagsCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "tags")
+	def __init__(self):
+		super().__init__("tags")
 		self.command.add_argument("player")
 		self.command.add_argument("--action", choices=("add", "clear", "remove", "show"), default="show")
 		self.command.add_argument("--tag", nargs="+")
@@ -381,11 +401,11 @@ class TagsCommand(ChatCommand):
 			return
 		if args.action == "add":
 			if args.tag is None:
-				self.chat.sys_msg_sender("specify --tag")
+				server.chat.sys_msg_sender("specify --tag")
 				return
 			args.tag = " ".join(args.tag)
 			if len(", ".join(player.char.tags)+", "+args.tag) > 255:
-				self.chat.sys_msg_sender("tags too long")
+				server.chat.sys_msg_sender("tags too long")
 				return
 			player.char.tags.append(args.tag)
 			player.char.attr_changed("tags")
@@ -396,18 +416,18 @@ class TagsCommand(ChatCommand):
 
 		elif args.action == "remove":
 			if args.tag is None:
-				self.chat.sys_msg_sender("specify --tag")
+				server.chat.sys_msg_sender("specify --tag")
 				return
 			args.tag = " ".join(args.tag)
 			player.char.tags.remove(args.tag)
 			player.char.attr_changed("tags")
 
 		elif args.action == "show":
-			self.chat.sys_msg_sender(player.char.tags)
+			server.chat.sys_msg_sender(player.char.tags)
 
 class TeleportCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "teleport", aliases=("tp",))
+	def __init__(self):
+		super().__init__("teleport", aliases=("tp",))
 		self.command.add_argument("--position", nargs=3, type=float)
 		self.command.add_argument("--player")
 		self.command.add_argument("--y", action="store_false")
@@ -423,7 +443,7 @@ class TeleportCommand(ChatCommand):
 					pos = obj.physics.position
 					break
 			else:
-				self.chat.sys_msg_sender("no player found")
+				server.chat.sys_msg_sender("no player found")
 				return
 		else:
 			pos = Vector3(sender.physics.position.x, 100000, sender.physics.position.z)
@@ -431,8 +451,8 @@ class TeleportCommand(ChatCommand):
 		sender.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
 
 class UnlockEmoteCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "unlockemote")
+	def __init__(self):
+		super().__init__("unlockemote")
 		self.command.add_argument("id", type=int)
 
 	def run(self, args, sender):
@@ -444,8 +464,8 @@ class VendorCommand(ChatCommand):
 	ALL_MODELS = 6027, 6028, 6029, 6030, 6031, 6032, 6033, 6034, 6035, 6036, 6037, 6039, 6040, 6041, 6043, 6044, 6045, 6053, 6054, 6055, 6056, 6058, 6060, 6064, 6065, 6066, 6068, 6071, 6072, 6518, 6519, 6520, 6521, 6522, 6523, 6524, 6525, 6526, 6774, 6776, 6778, 6779, 6781, 6782, 6836, 6839, 6840, 6841, 6869, 6870, 6906, 6908, 6941, 6942, 7057, 7059, 7060, 7061, 7122, 7123, 7124, 7125, 7126, 7127, 7134, 7135, 7758, 7759, 7761, 7766, 7767, 7768, 7769, 7770, 7771, 7773, 7774, 7775, 7808, 7812, 7813, 7818, 7822, 7825, 7826, 7827, 7828, 7829, 7830, 7832, 7970, 7971, 7974, 8049, 8050, 8051, 8055, 8066, 8067, 8068, 8069, 8073, 8077, 8170, 8270, 8401, 9484, 9485, 9486, 9488, 9489, 9490, 9491, 9492, 9493, 9495, 9496, 9497, 9535, 9537, 9538, 9540, 9545, 9546, 9547, 9548, 9549, 9550, 9551, 9552, 9553, 9554, 9555, 9557, 9559, 9561, 9564, 9565, 9567, 9568, 9570, 9574, 9575, 9576, 9577, 9578, 9579, 9580, 9581, 9582, 9583, 9584, 9585, 9586, 9587, 9590, 9591, 9596, 9597, 9598, 9599, 9600, 9601, 9602, 9604, 9605, 9606, 9607, 9608, 9629, 9646, 9647, 9648, 9649, 9650, 9651, 9652, 9653, 9654, 9655, 9656, 9657, 9658, 9659, 9660, 9661, 9662, 9663, 9664, 9665, 9666, 9667, 9668, 9669, 9670, 9671, 9672, 9673, 9674, 9675, 9676, 9677, 9678, 9721, 9722, 9723, 9724, 9725, 9726, 9773, 9775, 9776, 9811, 9812, 9813, 9814, 9908, 9909, 9910, 9911, 9912, 9913, 9914, 9915, 9916, 9917, 9918, 9919, 9920, 9921, 9922, 9923, 9924, 10069, 10070, 10071, 10072, 10073, 10074, 10075, 10076, 10077, 10078, 10079, 10080, 10081, 10082, 10083, 10084, 10085, 10086, 10087, 10088, 10089, 10090, 10091, 10092, 10093, 10094, 10280, 10289, 10316, 10318, 10319, 10320, 10321, 10322, 10323, 10324, 10325, 10326, 10327, 10328, 10329, 10330, 10331, 10332, 10333, 10334, 10335, 10336, 10337, 10338, 10339, 10340, 10341, 10342, 10343, 10344, 10345, 10346, 10347, 10348, 10349, 10350, 10351, 10352, 10353, 10354, 10355, 10356, 10357, 10358, 10359, 10360, 10361, 10362, 10363, 10364, 10365, 10366, 10367, 10368, 10369, 10370, 10371, 10372, 10373, 10374, 10375, 10385, 10396, 10397, 10398, 10399, 10400, 10401, 10417, 10513, 10514, 10515, 10516, 10700, 10705, 10706, 10707, 10708, 10709, 10710, 10750, 10751, 10752, 10753, 10754, 10755, 10756, 10757, 10758, 10759, 10760, 10761, 10762, 10763, 10764, 10765, 10766, 10767, 10768, 10769, 10770, 10771, 10772, 10773, 10774, 10775, 10776, 10777, 10778, 10779, 10780, 10781, 10782, 10783, 10788, 10789, 10790, 10791, 10792, 10793, 10794, 10795, 10796, 10797, 10798, 10799, 10800, 10801, 10802, 10803, 10804, 10805, 10806, 10807, 10808, 10809, 10810, 10811, 10812, 10813, 10814, 10815, 10816, 10817, 10818, 10819, 10820, 10821, 10822, 10823, 10824, 10825, 10826, 10827, 10828, 10829, 10830, 10831, 10832, 10833, 10834, 10835, 10836, 10837, 10838, 10839, 10840, 10841, 10842, 10843, 10844, 10845, 10846, 10847, 10848, 10849, 10850, 10851, 10852, 10853, 10854, 10855, 10856, 10857, 10858, 10859, 10860, 10861, 10862, 10864, 10865, 10866, 10867, 10868, 10869, 10870, 10871, 10872, 10873, 10874, 10875, 10876, 10877, 10878, 10879, 10880, 10882, 10883, 10884, 10887, 10888, 10889, 10890, 10999, 11001, 11005, 11007, 11009, 11011, 11111, 11116, 11160, 11161, 11162, 11197, 11198, 11199, 11200, 11201, 11526, 11527, 11528, 11529, 11530, 11531, 11532, 11533, 11534, 11535, 11536, 11537, 11538, 11539, 11540, 11541, 11542, 11543, 11544, 11545, 11546, 11547, 11548, 11549, 11550, 11551, 11552, 11553, 11554, 11555, 11556, 11557, 11558, 11559, 11560, 11561, 11562, 11563, 11564, 11565, 11566, 11567, 11568, 11569, 11570, 11571, 11572, 11573, 11574, 11575, 11576, 11577, 11578, 11579, 11580, 11581, 11582, 11583, 11584, 11585, 11586, 11587, 11588, 11589, 11590, 11591, 11592, 11593, 11594, 11595, 11596, 11597, 11598, 11599, 11600, 11601, 11602, 11603, 11604, 11605, 11606, 11607, 11608, 11609, 11610, 11611, 11612, 11613, 11614, 11615, 11616, 11617, 11618, 11619, 11620, 11621, 11622, 11623, 11624, 11625, 11626, 11627, 11628, 11629, 11630, 11631, 11632, 11633, 11634, 11635, 11636, 11637, 11638, 11639, 11640, 11641, 11642, 11643, 11644, 11645, 11646, 11647, 11648, 11649, 11650, 11651, 11652, 11653, 11654, 11655, 11656, 11657, 11658, 11659, 11660, 11661, 11662, 11663, 11664, 11665, 11666, 11667, 11668, 11669, 11670, 11671, 11672, 11673, 11674, 11675, 11676, 11677, 11678, 11679, 11680, 11681, 11682, 11683, 11684, 11685, 11686, 11687, 11688, 11689, 11690, 11691, 11692, 11693, 11694, 11695, 11696, 11697, 11698, 11699, 11700, 11701, 11702, 11703, 11704, 11705, 11706, 11707, 11708, 11709, 11710, 11711, 11712, 11713, 11714, 11715, 11716, 11717, 11718, 11719, 11720, 11721, 11722, 11723, 11724, 11725, 11726, 11727, 11728, 11729, 11730, 11731, 11732, 11733, 11734, 11735, 11736, 11737, 11738, 11739, 11740, 11741, 11742, 11743, 11744, 11745, 11746, 11747, 11748, 11749, 11750, 11751, 11752, 11753, 11754, 11755, 11756, 11757, 11758, 11759, 11760, 11761, 11762, 11763, 11764, 11765, 11766, 11767, 11768, 11769, 11770, 11771, 11772, 11773, 11774, 11775, 11776, 11777, 11778, 11779, 11780, 11781, 11782, 11783, 11784, 11785, 11786, 11787, 11788, 11789, 11790, 11791, 11792, 11793, 11794, 11795, 11796, 11797, 11798, 11799, 11800, 11801, 11802, 11803, 11804, 11805, 11806, 11807, 11808, 11809, 11810, 11811, 11812, 11813, 11814, 11815, 11816, 11817, 11818, 11819, 11820, 11821, 11822, 11823, 11824, 11825, 11826, 11827, 11828, 11829, 11830, 11831, 11832, 11833, 11834, 11835, 11836, 11837, 11838, 11839, 11840, 11841, 11842, 11843, 11844, 11845, 11846, 11847, 11848, 11849, 11850, 11851, 11852, 11853, 11854, 11855, 11856, 11857, 11858, 11859, 11860, 11861, 11862, 11863, 11864, 11865, 11866, 11867, 11868, 11869, 11870, 11871, 11872, 11873, 11874, 11875, 11876, 11877, 11878, 11879, 11880, 11881, 11882, 11883, 11884, 11885, 11886, 11887, 11888, 11889, 11890, 11891, 11892, 11893, 12231, 12282, 12348, 12349, 12350, 12351, 12352, 12353, 12354, 12355, 12356, 12357, 12495, 12496, 12497, 12498, 12499, 12500, 12501, 12502, 12503, 12504, 12505, 12506, 12507, 12508, 12521, 12522, 12523, 12524, 12525, 12526, 12527, 12528, 12529, 12557, 12558, 12559, 12560, 12818, 13002, 13003, 13004, 13117, 13151, 13152, 13153, 13154, 13155, 13156, 13157, 13158, 13159, 13160, 13161, 13427, 13604, 13623, 13624, 13625, 13639, 13640, 13641, 13642, 13643, 13644, 13645, 13646, 13647, 13648, 13649, 13650, 13651, 13652, 13653, 13654, 13655, 13656, 13657, 13658, 13659, 13660, 13661, 13662, 13663, 13664, 13665, 13666, 13667, 13668, 13669, 13670, 13671, 13672, 13673, 13674, 13675, 13676, 13677, 13678, 13679, 13680, 13681, 13682, 13683, 13684, 13685, 13686, 13687, 13688, 13689, 13690, 13691, 13692, 13693, 13694, 13695, 13696, 13697, 13698, 13699, 13700, 13701, 13702, 13703, 13704, 13705, 13706, 13707, 13708, 13709, 13710, 13711, 13712, 13713, 13714, 13715, 13716, 13717, 13718, 13719, 13720, 13721, 13722, 13723, 13724, 13725, 13726, 13727, 13728, 14203, 14766, 15949, 15950, 15951, 15952, 16247, 16248, 16249, 16250, 16517, 16518, 16519, 16520, 16521, 16523, 16524, 16525, 16526, 16527, 16528, 16529, 16530, 16531, 16532, 16533, 16534, 16535, 16536, 16537, 16538, 16539, 16540, 16541, 16542, 16543, 16544, 16545, 16546, 16565, 16566, 16567, 16568, 16569, 16570, 16571, 16572, 16573, 16574, 16575, 16576, 16577, 16578, 16579, 16580, 16581, 16582, 16583, 16584, 16585
 	MOD_ITEMS = 1727, 2243, 3293, 5873, 6407, 13424
 
-	def __init__(self, chat):
-		super().__init__(chat, "vendor")
+	def __init__(self):
+		super().__init__("vendor")
 		self.command.add_argument("--items", choices=("clothing", "items", "mod", "models"), default="items")
 
 	def run(self, args, sender):
@@ -463,15 +483,15 @@ class VendorCommand(ChatCommand):
 		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]
 
 class WaveCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "wave")
+	def __init__(self):
+		super().__init__("wave")
 
 	def run(self, args, sender):
 		pass # client-side
 
 class WhisperCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "whisper", aliases=("w", "tell"), description="Private message")
+	def __init__(self):
+		super().__init__("whisper", aliases=("w", "tell"), description="Private message")
 		self.command.add_argument("name")
 		self.command.add_argument("text", nargs="+")
 
@@ -479,8 +499,8 @@ class WhisperCommand(ChatCommand):
 		pass # client-side
 
 class WorldCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "world", description="Go to world")
+	def __init__(self):
+		super().__init__("world", description="Go to world")
 		self.command.add_argument("name")
 
 	def run(self, args, sender):

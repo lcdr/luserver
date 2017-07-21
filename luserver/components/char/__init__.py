@@ -446,7 +446,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
 
 	@single
-	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:GameObject=0, source_trade_id:GameObject=0, source_type:c_int=0):
+	def set_currency(self, currency:c_int64=None, loot_type:c_int=0, position:Vector3=None, source_lot:c_int=-1, source_object:GameObject=0, source_trade:GameObject=0, source_type:c_int=0):
 		self.currency = currency
 
 	def pickup_currency(self, currency:c_uint=None, position:Vector3=None):
@@ -535,7 +535,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque_id:GameObject=0, response:c_int=0, rotation:Quaternion=Quaternion.identity):
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=0, response:c_int=0, rotation:Quaternion=Quaternion.identity):
 		pass
 
 	@broadcast
@@ -683,7 +683,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				server.mail.send_mail(self.object.name, "Bug Report: "+selection.decode(), body, char)
 
 	def request_smash_player(self):
-		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
+		self.object.destructible.simply_die(killer=self.object)
 
 	@broadcast
 	def toggle_g_m_invis(self, state_out:c_bit=False):

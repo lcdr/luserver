@@ -59,6 +59,7 @@ class World(Enum):
 	BattleAgainstFrakjaw = 2001
 	FVSiege = 58001
 
+import asyncio
 import atexit
 import logging
 import os.path
@@ -115,6 +116,7 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 		self.set_world_id(world_id)
 		self.accounts = {}
 		atexit.register(self.shutdown)
+		asyncio.get_event_loop().call_later(60*60, self.check_shutdown)
 
 	async def init_network(self):
 		await super().init_network()
@@ -122,11 +124,21 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 		self.db.servers[self.external_address] = self.world_id
 		self.conn.transaction_manager.commit()
 
+	def check_shutdown(self):
+		# shut down instances with no players every 60 minutes
+		if not self.accounts:
+			self.shutdown()
+		else:
+			asyncio.get_event_loop().call_later(60*60, self.check_shutdown)
+
+
 	def shutdown(self):
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
-		del self.db.servers[self.external_address]
+		if self.external_address in self.db.servers:
+			del self.db.servers[self.external_address]
 		self.conn.transaction_manager.commit()
+		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
 
 	def log_packet(self, data, address, received):
