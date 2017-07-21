@@ -3,8 +3,8 @@ from ..modules.char import EyeStyle, MouthStyle
 from .command import ChatCommand
 
 class _MinifigCommand(ChatCommand):
-	def __init__(self, chat, name):
-		super().__init__(chat, name)
+	def __init__(self, name):
+		super().__init__(name)
 		self.command.add_argument("--permanent", action="store_true", default=False)
 
 	def run(self, args, sender):
@@ -26,43 +26,43 @@ class _MinifigCommand(ChatCommand):
 		raise NotImplementedError
 
 class EyebrowsCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "eyebrows")
+	def __init__(self):
+		super().__init__("eyebrows")
 		self.command.add_argument("value", type=int)
 
 	def sub_run(self, args, sender):
 		sender.char.eyebrow_style = args.value
 
 class EyesCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "eyes")
+	def __init__(self):
+		super().__init__("eyes")
 		self.command.add_argument("value", type=int)
 
 	def sub_run(self, args, sender):
 		sender.char.eye_style = args.value
 
 class HairColorCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "haircolor")
+	def __init__(self):
+		super().__init__("haircolor")
 		self.command.add_argument("value", type=int)
 
 	def sub_run(self, args, sender):
 		sender.char.hair_color = args.value
 
 class HairStyleCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "hairstyle")
+	def __init__(self):
+		super().__init__("hairstyle")
 		self.command.add_argument("value", type=int)
 
 	def sub_run(self, args, sender):
 		if args.value > 10:
-			self.chat.sys_msg_sender("invalid style")
+			server.chat.sys_msg_sender("invalid style")
 			return
 		sender.char.hair_style = args.value
 
 class MouthCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "mouth")
+	def __init__(self):
+		super().__init__("mouth")
 		self.command.add_argument("value", type=int)
 
 	def sub_run(self, args, sender):
@@ -74,8 +74,8 @@ class StyleCommand(_MinifigCommand):
 		"robot": (0, EyeStyle.Robot, MouthStyle.Robot),
 		"security": (4, EyeStyle.Sunglasses, MouthStyle.HeadSet)}
 
-	def __init__(self, chat):
-		super().__init__(chat, "style")
+	def __init__(self):
+		super().__init__("style")
 		self.command.add_argument("style", choices=tuple(self.styles))
 
 	def sub_run(self, args, sender):
@@ -87,8 +87,8 @@ class StyleCommand(_MinifigCommand):
 
 # for internal builds only - due to name change this will cause bugs when used incorrectly!
 class LCDRCommand(_MinifigCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "lcdr")
+	def __init__(self):
+		super().__init__("lcdr")
 
 	def sub_run(self, args, sender):
 		sender.name = "lcdr"

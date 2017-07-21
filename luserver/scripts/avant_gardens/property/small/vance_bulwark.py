@@ -22,5 +22,5 @@ class ScriptComponent(script.ScriptComponent):
 					player.inventory.remove_item_from_inv(InventoryType.Items, lot=lot)
 
 	def die_vacuum(self):
-		self.object.destructible.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=0, killer_id=self.object.object_id, loot_owner_id=0)
+		self.object.destructible.simply_die(killer=self.object)
 		server.spawners["PropertyGuard"].spawner.deactivate()

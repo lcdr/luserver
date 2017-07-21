@@ -5,8 +5,8 @@ from ..components.mission import MissionProgress, MissionState
 from .command import ChatCommand, toggle_bool
 
 class AddMissionCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "addmission")
+	def __init__(self):
+		super().__init__("addmission")
 		self.command.add_argument("mission")
 
 	def run(self, args, sender):
@@ -17,8 +17,8 @@ class AddMissionCommand(ChatCommand):
 			sender.char.add_mission(int(args.mission))
 
 class AutocompleteMissionsCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "autocompletemissions")
+	def __init__(self):
+		super().__init__("autocompletemissions")
 		self.command.add_argument("--enable", type=toggle_bool)
 
 	def run(self, args, sender):
@@ -28,8 +28,8 @@ class AutocompleteMissionsCommand(ChatCommand):
 			sender.char.autocomplete_missions = args.enable
 
 class CompleteMissionCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "completemission")
+	def __init__(self):
+		super().__init__("completemission")
 		self.command.add_argument("mission")
 		self.command.add_argument("--upto", action="store_true")
 		self.command.add_argument("--fully", action="store_true")
@@ -80,20 +80,20 @@ class CompleteMissionCommand(ChatCommand):
 					sender.char.update_mission_task(task.type, target, parameter, increment=task.target_value, mission_id=mission_id)
 
 class RemoveMissionCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "removemission")
+	def __init__(self):
+		super().__init__("removemission")
 		self.command.add_argument("id", type=int)
 
 	def run(self, args, sender):
 		if args.id in sender.char.missions:
 			del sender.char.missions[args.id]
-			self.chat.sys_msg_sender("Mission removed")
+			server.chat.sys_msg_sender("Mission removed")
 		else:
-			self.chat.sys_msg_sender("Mission not found")
+			server.chat.sys_msg_sender("Mission not found")
 
 class ResetMissionsCommand(ChatCommand):
-	def __init__(self, chat):
-		super().__init__(chat, "resetmissions")
+	def __init__(self):
+		super().__init__("resetmissions")
 
 	def run(self, args, sender):
 		sender.char.missions.clear()

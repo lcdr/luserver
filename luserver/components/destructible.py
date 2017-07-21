@@ -1,4 +1,5 @@
 from ..bitstream import c_bit, c_int, c_int64
+from ..game_object import GameObject
 from ..messages import broadcast
 from ..world import server
 from ..math.vector import Vector3
@@ -36,13 +37,19 @@ class DestructibleComponent(Component):
 		self.object.handle("on_hit", damage, dealer, silent=True)
 
 		if damage > self.object.stats.armor:
+			if damage >= self.object.stats.armor + self.object.stats.life:
+				self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=dealer, loot_owner=dealer)
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
-		if self.object.stats.life == 0:
-			self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer_id=dealer.object_id, loot_owner_id=dealer.object_id)
+	def simply_die(self, death_type:str="", kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=0):
+		"""Shorthand for request_die with default values."""
+		self.request_die(unknown_bool=False, death_type=death_type, direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=killer, loot_owner=loot_owner)
 
-	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer_id:c_int64=None, loot_owner_id:c_int64=None):
+	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=0):
+		if self.object.stats.life == 0:
+			# already dead
+			return
 		if self.object.stats.armor != 0:
 			self.object.stats.armor = 0
 		if self.object.stats.life != 0:
@@ -50,13 +57,11 @@ class DestructibleComponent(Component):
 		if self.object.stats.imagination != 0:
 			self.object.stats.imagination = 0
 
-		self.object.send_game_message("die", False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer_id, loot_owner_id)
+		self.object.send_game_message("die", False, True, death_type, direction_relative_angle_xz, direction_relative_angle_y, direction_relative_force, kill_type, killer, loot_owner)
 
-		killer = server.get_object(killer_id)
 		if killer and hasattr(killer, "char"):
 			killer.char.update_mission_task(TaskType.KillEnemy, self.object.lot)
 
-		loot_owner = server.get_object(loot_owner_id)
 		if loot_owner and hasattr(loot_owner, "char"):
 			self.object.physics.drop_rewards(*self.death_rewards, loot_owner)
 

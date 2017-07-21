@@ -93,7 +93,7 @@ class ScriptComponent(script.ScriptComponent):
 			else:
 				all_dead = b"false"
 			self.object.scripted_activity.activity_values[player.object_id][1] = time.time()-self.start_time
-			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.time()-self.start_time), param2=0, param_str=all_dead, param_obj=player.object_id)
+			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.time()-self.start_time), param2=0, param_str=all_dead, param_obj=player)
 			self.game_over(player)
 		else:
 			player.char.request_resurrect()

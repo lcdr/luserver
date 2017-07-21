@@ -57,8 +57,8 @@ class CharTrade:
 		if about_to_perform:
 			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:
-				trade_player.char.set_currency(currency=trade_player.char.currency + self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=self.object)
-				self.set_currency(currency=self.currency - self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade_id=trade_player)
+				trade_player.char.set_currency(currency=trade_player.char.currency + self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade=self.object)
+				self.set_currency(currency=self.currency - self.trade.currency_offered, position=Vector3.zero, source_type=LootType.Trade, source_trade=trade_player)
 			for item in self.trade.items_offered.values():
 				trade_player.inventory.add_item_to_inventory(item.lot, item.amount, source_type=LootType.Trade)
 				self.object.inventory.remove_item_from_inv(InventoryType.Max, object_id=item.object_id, amount=item.amount)

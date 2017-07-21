@@ -6,19 +6,17 @@
 ### Installation
 #### Dependencies
 luserver requires Python 3.6 .
-To run the server, you must install the dependencies, ZEO and passlib (and their dependencies). If you want to use bcrypt instead of pbkdf2_sha256 you should also install bcrypt.
-Dependency installation should usually work using
+Install the dependencies using
 
-	pip install passlib ZEO
+	pip install -r requirements.txt
 
 or
 
-	python -m pip install passlib ZEO
+	python -m pip install -r requirements.txt
 
 If you want the server logs to be colorful you can additionally install colorlog.
 
-luserver also requires pyraknet, which you can download from https://bitbucket.org/lcdr/pyraknet/ . Add its installation directory to the PYTHONPATH environment variable so python can find it.
-luserver should also be added to PYTHONPATH.
+luserver should be added to PYTHONPATH so python can find it.
 
 #### Database setup
 

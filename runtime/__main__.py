@@ -27,6 +27,17 @@ else:
 	logger = logging.getLogger()
 	logger.handlers[0] = handler
 
+
+if len(sys.argv) == 1:
+	instance_id = "auth"
+else:
+	instance_id = sys.argv[1]+" "+sys.argv[2]
+
+log_path = os.path.normpath(os.path.join(__file__, "..", "logs", "luserver %s.log" % instance_id))
+file_handler = logging.FileHandler(log_path)
+file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s: %(message)s"))
+logging.getLogger().addHandler(file_handler)
+
 #logging.getLogger().handlers[0].addFilter(logging.Filter("luserver"))
 logging.getLogger("ZEO").setLevel(logging.WARNING)
 logging.getLogger("txn").setLevel(logging.WARNING)

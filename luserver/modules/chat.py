@@ -43,14 +43,13 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=True, chat=None, **kwargs):
-		self.chat = chat
+	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=True, **kwargs):
 		super().__init__(*args, usage=usage, formatter_class=formatter_class, add_help=False, **kwargs)
 		if add_help:
 			self.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
 
 	def _print_message(self, message, *args, **kwargs):
-		self.chat.sys_msg_sender(message)
+		server.chat.sys_msg_sender(message)
 
 	def exit(self, status=0, message=None):
 		"""Modified to raise exception instead of exiting."""
@@ -73,8 +72,9 @@ class CustomArgumentParser(argparse.ArgumentParser):
 class ChatHandling(ServerModule):
 	def __init__(self):
 		super().__init__()
-		self.chat_parser = CustomArgumentParser(chat=self, prog="server command line")
-		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, chat=self, **kwargs))
+		server.chat = self
+		self.chat_parser = CustomArgumentParser(prog="server command line")
+		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
 
 		cmds = []
 		cmd_dir = os.path.normpath(os.path.join(__file__, "..", "..", "commands"))
@@ -89,7 +89,7 @@ class ChatHandling(ServerModule):
 						cmds.append(var)
 
 		for cmd in cmds:
-			cmd(self)
+			cmd()
 
 	def on_validated(self, address):
 		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message, address)
