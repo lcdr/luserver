@@ -353,11 +353,14 @@ class SpawnCommand(ChatCommand):
 		super().__init__("spawn", description="Spawn an object")
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--position", nargs=3, type=float)
+		self.command.add_argument("--name", nargs="+")
 
 	def run(self, args, sender):
 		set_vars = {"parent": sender}
 		if args.position is not None:
 			set_vars["position"] = args.position
+		if args.name is not None:
+			set_vars["name"] = " ".join(args.name)
 		server.spawn_object(args.lot, set_vars)
 
 class SpawnPhantomCommand(ChatCommand):
@@ -387,6 +390,23 @@ class SpawnPhantomCommand(ChatCommand):
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
 		obj.physics.physics_effect_amount = args.amount
 		obj.physics.physics_effect_direction = args.direction*args.amount
+
+class SpeakCommand(ChatCommand):
+	def __init__(self):
+		super().__init__("speak")
+		self.command.add_argument("object")
+
+	def run(self, args, sender):
+		for obj in server.game_objects.values():
+			if obj.name == args.object:
+				obj.add_handler("on_private_chat_message", SpeakCommand.speak)
+				server.chat.send_private_chat_message("!"+args.object, "Everything you type will be spoken by the selected object.", sender)
+				return
+		server.chat.sys_msg_sender("Object not found")
+
+	@staticmethod
+	def speak(self, sender, text):
+		server.chat.send_general_chat_message(self, text)
 
 class TagsCommand(ChatCommand):
 	def __init__(self):

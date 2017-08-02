@@ -5,10 +5,10 @@ import inspect
 import logging
 import os
 
-from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint
+from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
-from ..commands.command import ChatCommand
+from ..commands.command import ChatCommand, object_selector
 from .module import ServerModule
 
 log = logging.getLogger(__file__)
@@ -122,10 +122,13 @@ class ChatHandling(ServerModule):
 		message.write(bytes(8))
 		message.write(c_ubyte(chat_channel))
 		message.write(c_uint(len(encoded_text)))
-		message.write(sender.name, allocated_length=66)
+		message.write(sender.name, allocated_length=33)
 		message.write(c_int64(sender.object_id))
 		message.write(bytes(2))
-		message.write(c_bool(sender.char.show_gm_status))
+		if hasattr(sender, "char"):
+			message.write(c_bool(sender.char.show_gm_status))
+		else:
+			message.write(c_bool(False))
 		message.write(encoded_text)
 		message.write(bytes(2)) # null terminator
 
@@ -143,32 +146,72 @@ class ChatHandling(ServerModule):
 			message.write(bytes(8))
 			message.write(c_ubyte(chat_channel))
 			message.write(c_uint(len(encoded_text)))
-			message.write("", allocated_length=66)
+			message.write("", allocated_length=33)
 			message.write(bytes(11))
 			message.write(encoded_text)
 			message.write(bytes(2)) # null terminator
 
 			server.send(message, address, broadcast)
 
-	def on_private_chat_message(self, message, address):
-		log.warning("TODO: urgently needs refactoring")
-		message.skip_read(90)
-		recipient_name = message.read(str, allocated_length=66)
+	def send_private_chat_message(self, sender, text, recipient):
+		participants = []
+		if hasattr(sender, "char"):
+			participants.append((sender.char.address, 0))
+		if hasattr(recipient, "char"):
+			participants.append((recipient.char.address, 3))
 
-		recipient = server.find_player_by_name(recipient_name)
+		for address, return_code in participants:
+			message = BitStream()
+			message.write_header(SocialMsg.PrivateChatMessage)
+			message.write(c_int64(0))
+			message.write(c_ubyte(7))
+			message.write(c_uint(len(text)))
+			if isinstance(sender, str):
+				message.write(sender, allocated_length=33)
+				message.write(c_int64(0))
+			else:
+				message.write(sender.name, allocated_length=33)
+				message.write(c_int64(sender.object_id))
+			message.write(c_ushort(0))
+			if hasattr(sender, "char"):
+				message.write(c_bool(sender.char.show_gm_status))
+			else:
+				message.write(c_bool(False))
+			message.write(recipient.name, allocated_length=33)
+			if hasattr(recipient, "char"):
+				message.write(c_bool(recipient.char.show_gm_status))
+			else:
+				message.write(c_bool(False))
+			message.write(c_ubyte(return_code))
+			message.write(text, allocated_length=(len(text)+1))
+
+			server.send(message, address)
+
+	def on_private_chat_message(self, message, address):
+		assert message.read(c_int64) == 0 # unknown
+		assert message.read(c_ubyte) == 7 # chat channel
+		text_length = message.read(c_uint)
+		message.skip_read(66) # seems unused?
+		sender_id = message.read(c_int64)
+		assert sender_id == 0
+		assert message.read(c_ushort) == 0
+		message.read(c_bool) # is sender mythran
+		recipient_name = message.read(str, allocated_length=33)
+		message.read(c_bool) # is recipient mythran
+		return_code = message.read(c_ubyte)
+		print("return code", return_code)
+		text = message.read(str, allocated_length=text_length)
+		assert message.all_read()
+
 		sender = server.accounts[address].characters.selected()
 
-		for address, return_code in ((recipient.char.address, 3), (address, 0)):
-			relayed_message = BitStream()
-			relayed_message.write_header(SocialMsg.PrivateChatMessage)
-			relayed_message.write(message[:13])
-			relayed_message.write(sender.name, allocated_length=66)
-			relayed_message.write(c_int64(sender.object_id))
-			relayed_message.write(message[87:87+70])
-			relayed_message.write(c_ubyte(return_code))
-			relayed_message.write(message[87+71:])
-
-			server.send(relayed_message, address)
+		if recipient_name.startswith("!"):
+			recipients = object_selector(recipient_name)
+			for recipient in recipients:
+				recipient.handle("on_private_chat_message", sender, text)
+		else:
+			recipient = server.find_player_by_name(recipient_name)
+			self.send_private_chat_message(sender, text, recipient)
 
 	def parse_command(self, command, sender):
 		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)

@@ -47,13 +47,13 @@ class SocialHandling(ServerModule):
 			friends_list.write(c_ushort(friend.char.world[1]))
 			friends_list.write(c_uint(friend.char.world[2]))
 			friends_list.write(c_int64(friend.object_id))
-			friends_list.write(friend.name, allocated_length=66)
+			friends_list.write(friend.name, allocated_length=33)
 			friends_list.write(bytes(6)) # ???
 		server.send(friends_list, address)
 
 	def on_add_friend_request(self, request, address):
 		assert request.read(c_int64) == 0
-		requested_friend_name = request.read(str, allocated_length=66)
+		requested_friend_name = request.read(str, allocated_length=33)
 		is_best_friend_request = request.read(c_bool)
 
 		try:
@@ -61,7 +61,7 @@ class SocialHandling(ServerModule):
 			# relay request to friend
 			relayed_request = BitStream()
 			relayed_request.write_header(WorldClientMsg.AddFriendRequest)
-			relayed_request.write(server.accounts[address].characters.selected().name, allocated_length=66)
+			relayed_request.write(server.accounts[address].characters.selected().name, allocated_length=33)
 			relayed_request.write(c_bool(is_best_friend_request))
 			server.send(relayed_request, requested_friend.char.address)
 		except KeyError:
@@ -74,14 +74,14 @@ class SocialHandling(ServerModule):
 		response.write(c_ubyte(return_code))
 		if friend is not None:
 			response.write(c_bool(friend.char.online))
-			response.write(friend.name, allocated_length=66)
+			response.write(friend.name, allocated_length=33)
 			response.write(c_int64(friend.object_id))
 			response.write(c_ushort(friend.char.world[0]))
 			response.write(c_ushort(friend.char.world[1]))
 			response.write(c_uint(friend.char.world[2]))
 		else:
 			response.write(bytes(1))
-			response.write(requested_name, allocated_length=66)
+			response.write(requested_name, allocated_length=33)
 			response.write(bytes(16))
 
 		response.write(c_bool(False)) # is best friend (not implemented)
@@ -91,7 +91,7 @@ class SocialHandling(ServerModule):
 	def on_add_friend_response(self, response, address):
 		assert response.read(c_int64) == 0
 		request_declined = response.read(c_bool)
-		requester_name = response.read(str, allocated_length=66)
+		requester_name = response.read(str, allocated_length=33)
 
 		# should anything be sent if the responder declines?
 		if not request_declined:
@@ -107,7 +107,7 @@ class SocialHandling(ServerModule):
 
 	def on_remove_friend(self, request, address):
 		assert request.read(c_int64) == 0
-		requested_friend_name = request.read(str, allocated_length=66)
+		requested_friend_name = request.read(str, allocated_length=33)
 
 		requester = server.accounts[address].characters.selected()
 		requested_friend_ref = [i for i in requester.char.friends if i().name == requested_friend_name][0]
@@ -121,19 +121,19 @@ class SocialHandling(ServerModule):
 			remove_message = BitStream()
 			remove_message.write_header(WorldClientMsg.RemoveFriendResponse)
 			remove_message.write(c_bool(True)) # Successful
-			remove_message.write(player2_ref().name, allocated_length=66)
+			remove_message.write(player2_ref().name, allocated_length=33)
 			server.send(remove_message, player1_ref().char.address)
 
 	def on_team_invite(self, invite, address):
 		assert invite.read(c_int64) == 0
-		invitee_name = invite.read(str, allocated_length=66)
+		invitee_name = invite.read(str, allocated_length=33)
 
 		sender = server.accounts[address].characters.selected()
 		invitee = server.find_player_by_name(invitee_name)
 
 		relayed_invite = BitStream()
 		relayed_invite.write_header(WorldClientMsg.TeamInvite)
-		relayed_invite.write(sender.name, allocated_length=66)
+		relayed_invite.write(sender.name, allocated_length=33)
 		relayed_invite.write(c_int64(sender.object_id))
 		server.send(relayed_invite, invitee.char.address)
 		# todo: error cases and response

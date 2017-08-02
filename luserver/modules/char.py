@@ -128,8 +128,8 @@ class CharHandling(ServerModule):
 			response.write(c_int64(char.object_id))
 			response.write(bytes(4))
 
-			response.write(char.name, allocated_length=66)
-			response.write(pending_name, allocated_length=66)
+			response.write(char.name, allocated_length=33)
+			response.write(pending_name, allocated_length=33)
 			response.write(c_bool(name_rejected))
 			response.write(c_bool(is_ftp))
 			response.write(bytes(10))
@@ -159,7 +159,7 @@ class CharHandling(ServerModule):
 		server.send(response, address)
 
 	def on_character_create_request(self, request, address):
-		char_name = request.read(str, allocated_length=66)
+		char_name = request.read(str, allocated_length=33)
 		predef_name_ids = request.read(c_uint), request.read(c_uint), request.read(c_uint)
 
 		if char_name == "":
