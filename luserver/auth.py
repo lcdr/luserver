@@ -44,8 +44,8 @@ class AuthServer(server.Server):
 
 	async def on_login_request(self, request, address):
 		self.conn.sync()
-		username = request.read(str, allocated_length=66)
-		password = request.read(str, allocated_length=82)
+		username = request.read(str, allocated_length=33)
+		password = request.read(str, allocated_length=41)
 
 		return_code = LoginReturnCode.Success
 		if username.lower() not in self.db.accounts:
@@ -89,7 +89,7 @@ class AuthServer(server.Server):
 		first_time_with_subscription = False # not implemented
 		is_ftp = False # not implemented
 
-		response.write(session_key, allocated_length=66)
+		response.write(session_key, allocated_length=33)
 		response.write(redirect_host.encode("latin1"), allocated_length=33)
 		response.write(bytes(33))
 		response.write(c_ushort(redirect_port))

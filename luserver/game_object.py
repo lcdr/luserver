@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import importlib
 import logging
 from collections import OrderedDict
@@ -17,6 +18,7 @@ class GameObject:
 		super().__setattr__(name, value)
 
 	def __init__(self, lot, object_id, set_vars={}):
+		self._handlers = {}
 		self._flags = {}
 		self._flags["parent_flag"] = "related_objects_flag"
 		self._flags["children_flag"] = "related_objects_flag"
@@ -26,6 +28,8 @@ class GameObject:
 		self.lot = lot
 		self.object_id = object_id
 		self.name = set_vars.get("name", "")
+		if len(self.name) > 32:
+			raise ValueError("Due to a client bug, names can't be longer than 32 chars")
 		self.config = set_vars.get("config", LDF())
 
 		if "spawner" in set_vars:
@@ -189,16 +193,21 @@ class GameObject:
 
 		del server.game_objects[self.object_id]
 
-	def handlers(self, func_name, silent=False):
+	def add_handler(self, event_name, handler):
+		self._handlers.setdefault(event_name, []).append(functools.partial(handler, self))
+
+	def handlers(self, event_name, silent=False):
 		"""
-		Return matching component handlers for a function.
+		Return matching handlers for an event.
 		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
 		"""
 		handlers = []
 		script_handler = None
+		if event_name in self._handlers:
+			handlers.extend(self._handlers[event_name])
 		for comp in self.components:
-			if hasattr(comp, func_name):
-				handler = getattr(comp, func_name)
+			if hasattr(comp, event_name):
+				handler = getattr(comp, event_name)
 				if isinstance(comp, ScriptComponent):
 					script_handler = handler
 				else:
@@ -207,16 +216,16 @@ class GameObject:
 			handlers.append(script_handler)
 
 		if not handlers and not silent:
-			log.info("Object %s has no handlers for %s", self, func_name)
+			log.info("Object %s has no handlers for %s", self, event_name)
 
 		return handlers
 
-	def handle(self, func_name, *args, silent=False, **kwargs):
+	def handle(self, event_name, *args, silent=False, **kwargs):
 		"""
-		Calls component handlers for a function. See handlers() for the order of handlers.
+		Calls handlers for an event. See handlers() for the order of handlers.
 		If a handler returns True, it's assumed that the handler has sufficiently handled the event and no further handlers will be called.
 		"""
-		for handler in self.handlers(func_name, silent):
+		for handler in self.handlers(event_name, silent):
 			if handler(*args, **kwargs):
 				break
 

@@ -51,9 +51,9 @@ class MailHandling(ServerModule):
 			self.send_mail_notification(player)
 
 	def on_mail_send(self, data, player):
-		subject = data.read(str, allocated_length=100)
-		body = data.read(str, allocated_length=800)
-		recipient_name = data.read(str, allocated_length=64)
+		subject = data.read(str, allocated_length=50)
+		body = data.read(str, allocated_length=400)
+		recipient_name = data.read(str, allocated_length=32)
 		assert data.read(c_uint64) == 0
 		attachment_item_object_id = data.read(c_int64)
 		attachment_item_count = data.read(c_ushort)
@@ -98,9 +98,9 @@ class MailHandling(ServerModule):
 		mails.write(bytes(2)) # unknown
 		for mail in player.char.mails:
 			mails.write(c_int64(mail.id))
-			mails.write(mail.subject, allocated_length=100)
-			mails.write(mail.body, allocated_length=800)
-			mails.write(mail.sender, allocated_length=64)
+			mails.write(mail.subject, allocated_length=50)
+			mails.write(mail.body, allocated_length=400)
+			mails.write(mail.sender, allocated_length=32)
 			mails.write(bytes(12))
 			if mail.attachment is None:
 				mails.write(c_int64(0)) # attachment object id

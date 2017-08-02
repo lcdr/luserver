@@ -299,7 +299,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		update_notify = BitStream()
 		update_notify.write_header(WorldClientMsg.FriendUpdateNotify)
 		update_notify.write(c_ubyte(update_type))
-		update_notify.write(self.object.name, allocated_length=66)
+		update_notify.write(self.object.name, allocated_length=33)
 		update_notify.write(c_ushort(self.world[0]))
 		update_notify.write(c_ushort(self.world[1]))
 		update_notify.write(c_uint(self.world[2]))

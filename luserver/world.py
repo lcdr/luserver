@@ -204,8 +204,8 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 
 	def on_session_info(self, session_info, address):
 		self.conn.sync()
-		username = session_info.read(str, allocated_length=66)
-		session_key = session_info.read(str, allocated_length=66)
+		username = session_info.read(str, allocated_length=33)
+		session_key = session_info.read(str, allocated_length=33)
 
 		try:
 			if self.db.accounts[username.lower()].session_key != session_key:

@@ -21,3 +21,11 @@ def normal_bool(str_):
 	if str_ in ("false", "off"):
 		return False
 	raise ValueError
+
+def object_selector(str_):
+	selected = []
+	for obj in server.game_objects.values():
+		if str_.startswith("!"):
+			if obj.name == str_[1:]:
+				selected.append(obj)
+	return selected
