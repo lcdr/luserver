@@ -37,10 +37,7 @@ class AuthServer(server.Server):
 		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
-
-	def on_handshake(self, data, address):
-		super().on_handshake(data, address)
-		self.register_handler(AuthServerMsg.LoginRequest, self.on_login_request, address)
+		self.register_handler(AuthServerMsg.LoginRequest, self.on_login_request)
 
 	async def on_login_request(self, request, address):
 		self.conn.sync()

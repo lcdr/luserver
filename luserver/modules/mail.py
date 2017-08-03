@@ -31,8 +31,9 @@ class MailSendReturnCode:
 	UnknownFailure = 7
 
 class MailHandling(ServerModule):
-	def on_validated(self, address):
-		server.register_handler(WorldServerMsg.Mail, self.on_mail, address)
+	def __init__(self):
+		super().__init__()
+		server.register_handler(WorldServerMsg.Mail, self.on_mail)
 
 	def on_mail(self, message, address):
 		mail_id = message.read(c_uint)

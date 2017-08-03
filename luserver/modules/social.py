@@ -19,13 +19,14 @@ class FriendUpdateType:
 	WorldChange = 2
 
 class SocialHandling(ServerModule):
-	def on_validated(self, address):
-		server.register_handler(SocialMsg.GetFriendsList, self.on_get_friends_list, address)
-		server.register_handler(SocialMsg.AddFriendRequest, self.on_add_friend_request, address)
-		server.register_handler(SocialMsg.AddFriendResponse, self.on_add_friend_response, address)
-		server.register_handler(SocialMsg.RemoveFriend, self.on_remove_friend, address)
-		server.register_handler(SocialMsg.TeamInvite, self.on_team_invite, address)
-		server.register_handler(SocialMsg.TeamInviteResponse, self.on_team_invite_response, address)
+	def __init__(self):
+		super().__init__()
+		server.register_handler(SocialMsg.GetFriendsList, self.on_get_friends_list)
+		server.register_handler(SocialMsg.AddFriendRequest, self.on_add_friend_request)
+		server.register_handler(SocialMsg.AddFriendResponse, self.on_add_friend_response)
+		server.register_handler(SocialMsg.RemoveFriend, self.on_remove_friend)
+		server.register_handler(SocialMsg.TeamInvite, self.on_team_invite)
+		server.register_handler(SocialMsg.TeamInviteResponse, self.on_team_invite_response)
 
 	def on_get_friends_list(self, data, address):
 		assert sum(data) == 0 # seem to always be 0?
