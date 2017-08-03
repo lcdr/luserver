@@ -71,12 +71,12 @@ class Server(pyraknet.server.Server):
 			return data[8:]
 		return super().handler_data(data)
 
-	def register_handler(self, packet_id, callback, origin=None):
+	def register_handler(self, packet_id, handler):
 		if isinstance(packet_id, (GeneralMsg, AuthServerMsg, SocialMsg, WorldServerMsg, WorldClientMsg)):
 			header = type(packet_id).header()
 			subheader = packet_id
 			packet_id = header, subheader
-		return super().register_handler(packet_id, callback, origin)
+		super().register_handler(packet_id, handler)
 
 	def send_handshake(self, address):
 		out = BitStream()

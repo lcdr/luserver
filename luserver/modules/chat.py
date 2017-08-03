@@ -91,10 +91,9 @@ class ChatHandling(ServerModule):
 		for cmd in cmds:
 			cmd()
 
-	def on_validated(self, address):
-		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message, address)
-		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message, address)
-		server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check, address)
+		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message)
+		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message)
+		server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check)
 
 	def on_moderation_string_check(self, request, address):
 		request.skip_read(1) # super chat level

@@ -59,6 +59,10 @@ class GeneralHandling(ServerModule):
 		physics_debug_cmd = server.chat.commands.add_parser("physicsdebug")
 		physics_debug_cmd.set_defaults(func=self.physics_debug_cmd)
 
+		server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete)
+		server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update)
+		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message)
+
 	def physics_debug_cmd(self, args, sender):
 		debug_markers = server.get_objects_in_group("physics_debug_marker")
 		if not debug_markers:
@@ -69,9 +73,6 @@ class GeneralHandling(ServerModule):
 				server.destruct(marker)
 
 	def on_validated(self, address):
-		server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete, address)
-		server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update, address)
-		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message, address)
 		player = server.accounts[address].characters.selected()
 		if player is not None:
 			player.char.address = address

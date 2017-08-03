@@ -118,6 +118,8 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60*60, self.check_shutdown)
 
+		self.register_handler(WorldServerMsg.SessionInfo, self.on_session_info)
+
 	async def init_network(self):
 		await super().init_network()
 		self.external_address = self.external_address[0], self._address[1] # update port (for OS-chosen port)
@@ -198,10 +200,6 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 		del self.accounts[address]
 		self.conn.transaction_manager.commit()
 
-	def on_handshake(self, data, address):
-		super().on_handshake(data, address)
-		self.register_handler(WorldServerMsg.SessionInfo, self.on_session_info, address)
-
 	def on_session_info(self, session_info, address):
 		self.conn.sync()
 		username = session_info.read(str, allocated_length=33)
@@ -220,8 +218,7 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 			self.conn.transaction_manager.commit()
 			self.accounts[address] = account
 
-			for module in self.modules:
-				module.on_validated(address)
+			self.general.on_validated(address)
 
 	def construct(self, obj, recipients=None, new=True):
 		pyraknet.replicamanager.ReplicaManager.construct(self, obj, recipients, new)

@@ -92,11 +92,12 @@ pants_lot = {
 	Color.DarkRed: 2527}
 
 class CharHandling(ServerModule):
-	def on_validated(self, address):
-		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request, address)
-		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request, address)
-		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request, address)
-		server.register_handler(WorldServerMsg.EnterWorld, self.on_enter_world, address)
+	def __init__(self):
+		super().__init__()
+		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request)
+		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request)
+		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request)
+		server.register_handler(WorldServerMsg.EnterWorld, self.on_enter_world)
 
 	def on_character_list_request(self, data, address):
 		selected = server.accounts[address].characters.selected()
