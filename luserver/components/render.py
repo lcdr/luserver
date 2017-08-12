@@ -44,3 +44,7 @@ class RenderComponent(Component):
 	@broadcast
 	def play_n_d_audio_emitter(self, callback_message_data:c_int64=0, emitter_id:c_int=0, event_guid:bytes=None, meta_event_name:bytes=None, result:bool=False, target_object_id_for_ndaudio_callback_messages:c_int64=0):
 		pass
+
+	@broadcast
+	def freeze_animation(self, do_freeze:bool=None, duration:float=-1, startup_delay:float=0):
+		pass

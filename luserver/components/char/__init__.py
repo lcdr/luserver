@@ -70,6 +70,10 @@ class RewardType:
 	Item = 0
 	InventorySpace = 4
 
+class CyclingMode:
+	AllowCycleTeammates = 0
+	DisallowCycling = 1
+
 class CharacterComponent(Component, CharMission, CharTrade):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -499,6 +503,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				self.update_mission_task(TaskType.UseConsumable, item.lot)
 				break
 
+	@single
+	def set_user_ctrl_comp_pause(self, paused:bool=None):
+		pass
+
 	def get_flag(self, flag_id):
 		return bool(self.flags & (1 << flag_id))
 
@@ -594,6 +602,14 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	def set_ghost_reference_position(self, position:Vector3=None):
+		pass
+
+	@single
+	def add_camera_effect(self, config:LDF=None, duration:float=-1, effect_id:str=None, effect_type:str=None):
+		pass
+
+	@single
+	def remove_all_camera_effects(self):
 		pass
 
 	def update_model_from_client(self, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
@@ -764,6 +780,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	@single
 	def server_done_loading_all_objects(self):
+		pass
+
+	@broadcast
+	def force_camera_target_cycle(self, force_cycling:bool=False, cycling_mode:c_uint=CyclingMode.AllowCycleTeammates, optional_target:GameObject=None):
 		pass
 
 	def notify_server_level_processing_complete(self):

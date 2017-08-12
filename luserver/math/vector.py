@@ -26,6 +26,9 @@ class Vector3(Serializable):
 	def __repr__(self):
 		return "Vector3(%g, %g, %g)" % (self.x, self.y, self.z)
 
+	def __neg__(self):
+		return Vector3(-self.x, -self.y, -self.z)
+
 	def __eq__(self, other):
 		if isinstance(other, Vector3):
 			return other.x == self.x and other.y == self.y and other.z == self.z

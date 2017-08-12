@@ -121,6 +121,10 @@ class Init:
 					behavior.imagination = int(behavior.imag)
 					del behavior.imag
 
+			elif template_id == BehaviorTemplate.Jetpack:
+				if hasattr(behavior, "warning_effect_id"):
+					behavior.warning_effect_id = int(behavior.warning_effect_id)
+
 			elif template_id == BehaviorTemplate.Chain:
 				behavs = []
 				for num in range(1, 5):
