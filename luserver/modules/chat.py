@@ -91,6 +91,11 @@ class ChatHandling(ServerModule):
 		for cmd in cmds:
 			cmd()
 
+		clientside_cmds = "dance", "talk", "tell", "wave", "w", "whisper"
+		for cmd in clientside_cmds:
+			parser = self.commands.add_parser(cmd)
+			parser.add_argument("args", nargs="*")
+
 		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message)
 		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message)
 		server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check)

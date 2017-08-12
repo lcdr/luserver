@@ -136,6 +136,7 @@ class GameMessage(Enum):
 	ActivityStart = 407
 	VendorStatusUpdate = 417
 	ClientItemConsumed = 428
+	SetUserCtrlCompPause = 466
 	SetFlag = 471
 	HasBeenCollected = 486
 	PlayerLoaded = 505
@@ -167,6 +168,8 @@ class GameMessage(Enum):
 	ToggleGhostReferenceOverride = 767
 	SetGhostReferencePosition = 768
 	FireEventServerSide = 770
+	AddCameraEffect = 773
+	RemoveAllCameraEffects = 775
 	ScriptNetworkVarUpdate = 781
 	UpdateModelFromClient = 793
 	DeleteModelFromClient = 794
@@ -231,8 +234,10 @@ class GameMessage(Enum):
 	ClientRailMovementReady = 1476
 	GetHotPropertyData = 1511
 	PropertyEntranceBegin = 1553
+	FreezeAnimation = 1579
 	StartCelebrationEffect = 1618
 	ServerDoneLoadingAllObjects = 1642
+	ForceCameraTargetCycle = 1678
 	NotifyServerLevelProcessingComplete = 1734
 	NotifyLevelRewards = 1735
 

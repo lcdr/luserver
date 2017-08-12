@@ -4,7 +4,7 @@ from ..world import server
 from ..components.mission import MissionProgress, MissionState
 from .command import ChatCommand, toggle_bool
 
-class AddMissionCommand(ChatCommand):
+class AddMission(ChatCommand):
 	def __init__(self):
 		super().__init__("addmission")
 		self.command.add_argument("mission")
@@ -16,7 +16,7 @@ class AddMissionCommand(ChatCommand):
 		else:
 			sender.char.add_mission(int(args.mission))
 
-class AutocompleteMissionsCommand(ChatCommand):
+class AutocompleteMissions(ChatCommand):
 	def __init__(self):
 		super().__init__("autocompletemissions")
 		self.command.add_argument("--enable", type=toggle_bool)
@@ -27,7 +27,7 @@ class AutocompleteMissionsCommand(ChatCommand):
 		else:
 			sender.char.autocomplete_missions = args.enable
 
-class CompleteMissionCommand(ChatCommand):
+class CompleteMission(ChatCommand):
 	def __init__(self):
 		super().__init__("completemission")
 		self.command.add_argument("mission")
@@ -79,7 +79,7 @@ class CompleteMissionCommand(ChatCommand):
 						parameter = None
 					sender.char.update_mission_task(task.type, target, parameter, increment=task.target_value, mission_id=mission_id)
 
-class RemoveMissionCommand(ChatCommand):
+class RemoveMission(ChatCommand):
 	def __init__(self):
 		super().__init__("removemission")
 		self.command.add_argument("id", type=int)
@@ -91,7 +91,7 @@ class RemoveMissionCommand(ChatCommand):
 		else:
 			server.chat.sys_msg_sender("Mission not found")
 
-class ResetMissionsCommand(ChatCommand):
+class ResetMissions(ChatCommand):
 	def __init__(self):
 		super().__init__("resetmissions")
 

@@ -25,7 +25,7 @@ class _MinifigCommand(ChatCommand):
 	def sub_run(self, args, sender):
 		raise NotImplementedError
 
-class EyebrowsCommand(_MinifigCommand):
+class Eyebrows(_MinifigCommand):
 	def __init__(self):
 		super().__init__("eyebrows")
 		self.command.add_argument("value", type=int)
@@ -33,7 +33,7 @@ class EyebrowsCommand(_MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.eyebrow_style = args.value
 
-class EyesCommand(_MinifigCommand):
+class Eyes(_MinifigCommand):
 	def __init__(self):
 		super().__init__("eyes")
 		self.command.add_argument("value", type=int)
@@ -41,7 +41,7 @@ class EyesCommand(_MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.eye_style = args.value
 
-class HairColorCommand(_MinifigCommand):
+class HairColor(_MinifigCommand):
 	def __init__(self):
 		super().__init__("haircolor")
 		self.command.add_argument("value", type=int)
@@ -49,7 +49,7 @@ class HairColorCommand(_MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.hair_color = args.value
 
-class HairStyleCommand(_MinifigCommand):
+class HairStyle(_MinifigCommand):
 	def __init__(self):
 		super().__init__("hairstyle")
 		self.command.add_argument("value", type=int)
@@ -60,7 +60,7 @@ class HairStyleCommand(_MinifigCommand):
 			return
 		sender.char.hair_style = args.value
 
-class MouthCommand(_MinifigCommand):
+class Mouth(_MinifigCommand):
 	def __init__(self):
 		super().__init__("mouth")
 		self.command.add_argument("value", type=int)
@@ -68,7 +68,7 @@ class MouthCommand(_MinifigCommand):
 	def sub_run(self, args, sender):
 		sender.char.mouth_style = args.value
 
-class StyleCommand(_MinifigCommand):
+class Style(_MinifigCommand):
 	styles = {
 		"creepy": (8, EyeStyle.RedEyes, MouthStyle.LargeSmile),
 		"robot": (0, EyeStyle.Robot, MouthStyle.Robot),
@@ -86,7 +86,7 @@ class StyleCommand(_MinifigCommand):
 
 
 # for internal builds only - due to name change this will cause bugs when used incorrectly!
-class LCDRCommand(_MinifigCommand):
+class LCDR(_MinifigCommand):
 	def __init__(self):
 		super().__init__("lcdr")
 

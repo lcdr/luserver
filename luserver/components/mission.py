@@ -61,7 +61,7 @@ from ..bitstream import c_int
 from ..game_object import GameObject
 from ..messages import single
 from ..world import server
-from ..commands.mission import CompleteMissionCommand
+from ..commands.mission import CompleteMission
 from .component import Component
 
 log = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ class MissionNPCComponent(Component):
 			assert not is_complete
 			player.char.add_mission(mission_id)
 			if player.char.autocomplete_missions:
-				asyncio.get_event_loop().call_soon(CompleteMissionCommand.async_complete_mission, CompleteMissionCommand, mission_id, False, player)
+				asyncio.get_event_loop().call_soon(CompleteMission.async_complete_mission, CompleteMission, mission_id, False, player)
 
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
