@@ -127,7 +127,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		for child_id in self.object.children:
 			child = server.game_objects[child_id]
 			if child.lot == ACTIVATOR_LOT:
-				server.destruct(child)
+				server.replica_manager.destruct(child)
 				break
 		self.callback_handles.append(self.object.call_later(self.smash_time, self.smash_rebuild))
 
@@ -141,7 +141,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)
-		server.destruct(self.object)
+		server.replica_manager.destruct(self.object)
 
 	def rebuild_cancel(self, early_release:bool=None, user:GameObject=None):
 		if self.rebuild_state == RebuildState.Building:

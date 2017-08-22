@@ -118,10 +118,10 @@ class GameObject:
 			self._serialize_scheduled = True
 
 	def do_serialize(self):
-		server.serialize(self)
+		server.replica_manager.serialize(self)
 		self._serialize_scheduled = False
 
-	def send_construction(self):
+	def write_construction(self):
 		out = BitStream()
 		out.write(c_int64(self.object_id))
 		out.write(c_int(self.lot))
@@ -182,7 +182,7 @@ class GameObject:
 			server.game_objects[self.parent].attr_changed("children")
 
 		for child in self.children.copy():
-			server.destruct(server.game_objects[child])
+			server.replica_manager.destruct(server.game_objects[child])
 
 		if self.object_id in server.callback_handles:
 			for handle in server.callback_handles[self.object_id].values():

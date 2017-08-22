@@ -30,14 +30,18 @@ class Vector3(Serializable):
 		return Vector3(-self.x, -self.y, -self.z)
 
 	def __eq__(self, other):
-		if isinstance(other, Vector3):
-			return other.x == self.x and other.y == self.y and other.z == self.z
-		return NotImplemented
+		if not isinstance(other, Vector3):
+			return NotImplemented
+		return other.x == self.x and other.y == self.y and other.z == self.z
 
 	def __add__(self, other):
+		if not isinstance(other, Vector3):
+			return NotImplemented
 		return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
 
 	def __sub__(self, other):
+		if not isinstance(other, Vector3):
+			return NotImplemented
 		return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
 	def __mul__(self, other):
@@ -83,7 +87,7 @@ class Vector3(Serializable):
 	def distance(self, other):
 		return math.sqrt(self.sq_distance(other))
 
-	def rotate(self, quaternion):
+	def rotated(self, quaternion):
 		quatvector = Vector3(quaternion.x, quaternion.y, quaternion.z)
 		scalar = quaternion.w
 

@@ -641,7 +641,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		elif reason == DeleteReason.ReturningModelToInventory:
 			server.world_control_object.script.on_model_put_away(self.object)
 
-		server.destruct(server.game_objects[model_id])
+		server.replica_manager.destruct(server.game_objects[model_id])
 		for spawner, model in server.models:
 			if model.object_id == model_id:
 				server.models.remove((spawner, model))
@@ -656,7 +656,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				break
 
 	def parse_chat_message(self, client_state:c_int, text:str):
-		if text[0] == "/":
+		if text.startswith("/"):
 			server.chat.parse_command(text[1:], self.object)
 
 	def ready_for_updates(self, object_id:c_int64=None):
@@ -694,6 +694,11 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
 	def report_bug(self, body:str=None, client_version:bytes=None, other_player_id:bytes=None, selection:bytes=None):
+		# The chat text input has limited length, this one doesn't
+		# So this makes use of that to allow longer chat commands
+		if selection == b"%[UI_HELP_IN_GAME]" and body.startswith("/"):
+			self.parse_chat_message(0, body)
+			return
 		for account in server.accounts.values():
 			for char in account.characters.values():
 				server.mail.send_mail(self.object.name, "Bug Report: "+selection.decode(), body, char)

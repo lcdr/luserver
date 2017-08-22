@@ -21,7 +21,6 @@ import persistent
 from ..bitstream import BitStream, c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
-from .module import ServerModule
 
 class MailSendReturnCode:
 	Success = 0
@@ -30,9 +29,9 @@ class MailSendReturnCode:
 	RecipientNotFound = 5
 	UnknownFailure = 7
 
-class MailHandling(ServerModule):
+class MailHandling:
 	def __init__(self):
-		super().__init__()
+		server.mail = self
 		server.register_handler(WorldServerMsg.Mail, self.on_mail)
 
 	def on_mail(self, message, address):
@@ -185,5 +184,7 @@ class Mail(persistent.Persistent):
 		self.is_read = False
 		self.sender = sender
 		self.subject = subject
+		if len(body) >= 400:
+			raise ValueError("Body too long")
 		self.body = body
 		self.attachment = attachment

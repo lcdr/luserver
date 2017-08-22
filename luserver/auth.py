@@ -66,17 +66,19 @@ class AuthServer(server.Server):
 
 		redirect_host, redirect_port = "", 0
 		if return_code == LoginReturnCode.Success:
+			"""
 			if account.address is not None and account.address != address:
 				log.info("Disconnecting duplicate at %s", account.address)
-				#self.close_connection(account.address, server.DisconnectReason.DuplicateLogin)
+				self.close_connection(account.address, server.DisconnectReason.DuplicateLogin)
 
-				#duplicate_notify = BitStream()
-				#duplicate_notify.write_header(GeneralMsg.GeneralNotify)
-				#duplicate_notify.write(c_uint(server.NotifyReason.DuplicateDisconnected))
-				#self.send(duplicate_notify, address)
+				duplicate_notify = BitStream()
+				duplicate_notify.write_header(GeneralMsg.GeneralNotify)
+				duplicate_notify.write(c_uint(server.NotifyReason.DuplicateDisconnected))
+				self.send(duplicate_notify, address)
+			"""
 
 			session_key = hex(random.getrandbits(128))[2:]
-			account.address = address
+			#account.address = address
 			account.session_key = session_key
 			self.conn.transaction_manager.commit()
 			redirect_host, redirect_port = await self.address_for_world((0, 0, 0))

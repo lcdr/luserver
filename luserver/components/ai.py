@@ -17,6 +17,8 @@ class BaseCombatAIComponent(Component):
 		self.update_handle = None
 
 	def on_startup(self):
+		if not hasattr(self.object, "skill"):
+			return
 		if self.object.skill.skills:
 			behavior = server.db.skill_behavior[self.object.skill.skills[0]][0]
 			assert behavior.template == BehaviorTemplate.NPCCombatSkill

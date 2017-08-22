@@ -289,7 +289,7 @@ class RepairArmor(Behavior):
 class SpawnObject(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
-		position = self.object.physics.position + Vector3.forward.rotate(self.object.physics.rotation)*behavior.distance
+		position = self.object.physics.position + Vector3.forward.rotated(self.object.physics.rotation)*behavior.distance
 		return server.spawn_object(behavior.lot, {"parent": self.object, "position": position})
 
 SpawnQuickbuild = SpawnObject # works the same

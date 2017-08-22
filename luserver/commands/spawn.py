@@ -9,7 +9,7 @@ class DestroySpawned(ChatCommand):
 
 	def run(self, args, sender):
 		for child in sender.children.copy():
-			server.destruct(server.game_objects[child])
+			server.replica_manager.destruct(server.game_objects[child])
 
 class Spawn(ChatCommand):
 	def __init__(self):

@@ -32,6 +32,7 @@ SCRIPTS = {
 	1094: "forbidden_valley.candle",
 	1118: "nimbus_station.racetrack.world_control",
 	1136: "avant_gardens.property.small.world_control",
+	1161: "gnarled_forest.banana_cluster",
 	1167: "avant_gardens.wisp_lee",
 	1195: "general.wishing_well",
 	1206: "forbidden_valley.brickmaster_clang",
