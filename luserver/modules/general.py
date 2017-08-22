@@ -13,7 +13,6 @@ from ..ldf import LDF, LDFDataType
 from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, Serializable
 from ..world import server, World
 from ..components.mission import TaskType
-from .module import ServerModule
 
 log = logging.getLogger(__name__)
 
@@ -52,9 +51,9 @@ checksum = {
 	World.NinjagoMonastery: 0x4d692c74,
 	World.BattleAgainstFrakjaw: 0x9eb00ef}
 
-class GeneralHandling(ServerModule):
+class GeneralHandling:
 	def __init__(self):
-		super().__init__()
+		server.general = self
 		self.tracked_objects = {}
 		physics_debug_cmd = server.chat.commands.add_parser("physicsdebug")
 		physics_debug_cmd.set_defaults(func=self.physics_debug_cmd)
@@ -70,7 +69,7 @@ class GeneralHandling(ServerModule):
 				obj.physics.spawn_debug_marker()
 		else:
 			for marker in debug_markers:
-				server.destruct(marker)
+				server.replica_manager.destruct(marker)
 
 	def on_validated(self, address):
 		player = server.accounts[address].characters.selected()
@@ -199,8 +198,8 @@ class GeneralHandling(ServerModule):
 		chardata.write(encoded_ldf)
 		server.send(chardata, address)
 
-		server.add_participant(address) # Add to replica manager sync list
-		server.construct(player)
+		server.replica_manager.add_participant(address) # Add to replica manager sync list
+		server.replica_manager.construct(player)
 		player.char.server_done_loading_all_objects()
 
 	def on_position_update(self, message, address):

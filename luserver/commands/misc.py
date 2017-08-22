@@ -3,6 +3,7 @@ import logging
 import os
 import re
 
+from ..amf3 import AMF3
 from ..bitstream import BitStream, c_bool, c_int64, c_ushort
 from ..messages import WorldClientMsg
 from ..world import server, World
@@ -62,6 +63,14 @@ class Faction(ChatCommand):
 
 	def run(self, args, sender):
 		sender.stats.faction = args.faction
+
+class FlashingText(ChatCommand):
+	def __init__(self):
+		super().__init__("flashingtext", aliases=("ftext",))
+		self.command.add_argument("text", nargs="+")
+
+	def run(self, args, sender):
+		sender.char.u_i_message_server_to_single_client(str_message_name=b"ToggleFlashingText", args=AMF3({"text": " ".join(args.text)}))
 
 class Freeze(ChatCommand):
 	def __init__(self):
@@ -395,6 +404,21 @@ class Teleport(ChatCommand):
 			pos = Vector3(sender.physics.position.x, 100000, sender.physics.position.z)
 
 		sender.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
+
+class Text(ChatCommand):
+	def __init__(self):
+		super().__init__("text")
+		self.command.add_argument("text", nargs="+")
+
+	def run(self, args, sender):
+		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"text": " ".join(args.text)}}))
+
+class MultiPageText(ChatCommand):
+	def __init__(self):
+		super().__init__("multipagetext")
+
+	def run(self, args, sender):
+		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"bScroll": True, "PAGE0": "First page", "PAGE1": "More text", "PAGE2": "There's no more text after this"}}))
 
 class UnlockEmote(ChatCommand):
 	def __init__(self):

@@ -300,7 +300,7 @@ class SkillComponent(Component):
 
 	def undo_behavior(self, behavior, params=None):
 		if behavior.template == BehaviorTemplate.SpawnObject:
-			server.destruct(params)
+			server.replica_manager.destruct(params)
 		elif behavior.template == BehaviorTemplate.Buff:
 			if hasattr(behavior, "life"):
 				self.object.stats.max_life -= behavior.life

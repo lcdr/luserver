@@ -3,7 +3,6 @@ import persistent.wref
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
-from .module import ServerModule
 
 class AddFriendReturnCode:
 	Success = 0
@@ -18,9 +17,9 @@ class FriendUpdateType:
 	Login = 1
 	WorldChange = 2
 
-class SocialHandling(ServerModule):
+class SocialHandling:
 	def __init__(self):
-		super().__init__()
+		server.social = self
 		server.register_handler(SocialMsg.GetFriendsList, self.on_get_friends_list)
 		server.register_handler(SocialMsg.AddFriendRequest, self.on_add_friend_request)
 		server.register_handler(SocialMsg.AddFriendResponse, self.on_add_friend_response)

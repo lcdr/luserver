@@ -65,7 +65,7 @@ import logging
 import os.path
 import time
 
-import pyraknet.replicamanager
+from pyraknet.replicamanager import ReplicaManager
 from .server import DisconnectReason, Server
 from .game_object import GameObject
 from .messages import WorldServerMsg
@@ -81,12 +81,12 @@ BITS_PERSISTENT = 1 << 60
 BITS_LOCAL = 1 << 46
 BITS_SPAWNED = 1 << 58 | BITS_LOCAL
 
-class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
+class WorldServer(Server):
 	PEER_TYPE = WorldServerMsg.header()
 
 	def __init__(self, address, external_host, world_id, max_connections, db_conn):
 		Server.__init__(self, address, max_connections, db_conn)
-		pyraknet.replicamanager.ReplicaManager.__init__(self)
+		self.replica_manager = ReplicaManager(self)
 		global _server
 		_server = self
 		self.external_address = external_host, address[1]
@@ -96,12 +96,11 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 		self.not_console_logged_packets.add("GameMessage/PickupItem")
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
-		self.modules = []
-		self.char = CharHandling()
-		self.chat = ChatHandling()
-		self.general = GeneralHandling()
-		self.mail = MailHandling()
-		self.social = SocialHandling()
+		CharHandling()
+		ChatHandling()
+		GeneralHandling()
+		MailHandling()
+		SocialHandling()
 
 		self.instance_id = self.db.current_instance_id
 		self.db.current_instance_id += 1
@@ -137,9 +136,10 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 	def shutdown(self):
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
+		self.conn.transaction_manager.commit()
 		if self.external_address in self.db.servers:
 			del self.db.servers[self.external_address]
-		self.conn.transaction_manager.commit()
+			self.conn.transaction_manager.commit()
 		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
 
@@ -191,11 +191,10 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 
 	def on_disconnect_or_connection_lost(self, data, address):
 		super().on_disconnect_or_connection_lost(data, address)
-		pyraknet.replicamanager.ReplicaManager.on_disconnect_or_connection_lost(self, data, address)
 		if self.world_id[0] != 0:
 			player = self.accounts[address].characters.selected()
-			if player in self._network_ids: # might already be destructed if "switch character" is selected:
-				self.destruct(player)
+			if player in self.replica_manager._network_ids: # might already be destructed if "switch character" is selected:
+				self.replica_manager.destruct(player)
 		self.accounts[address].address = None
 		del self.accounts[address]
 		self.conn.transaction_manager.commit()
@@ -214,17 +213,11 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 			self.close_connection(address)
 		else:
 			account = self.db.accounts[username.lower()]
-			account.address = address
+			#account.address = address
 			self.conn.transaction_manager.commit()
 			self.accounts[address] = account
 
 			self.general.on_validated(address)
-
-	def construct(self, obj, recipients=None, new=True):
-		pyraknet.replicamanager.ReplicaManager.construct(self, obj, recipients, new)
-
-	def destruct(self, obj):
-		pyraknet.replicamanager.ReplicaManager.destruct(self, obj)
 
 	def new_spawned_id(self):
 		self.current_spawned_id += 1
@@ -250,7 +243,7 @@ class WorldServer(Server, pyraknet.replicamanager.ReplicaManager):
 			object_id = self.new_spawned_id()
 		obj = GameObject(lot, object_id, set_vars)
 		self.game_objects[obj.object_id] = obj
-		self.construct(obj)
+		self.replica_manager.construct(obj)
 		obj.handle("on_startup", silent=True)
 		return obj
 

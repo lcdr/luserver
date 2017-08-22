@@ -9,7 +9,6 @@ from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..commands.command import ChatCommand, object_selector
-from .module import ServerModule
 
 log = logging.getLogger(__file__)
 
@@ -69,9 +68,8 @@ class CustomArgumentParser(argparse.ArgumentParser):
 			else:
 				super()._check_value(action, value)
 
-class ChatHandling(ServerModule):
+class ChatHandling:
 	def __init__(self):
-		super().__init__()
 		server.chat = self
 		self.chat_parser = CustomArgumentParser(prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))

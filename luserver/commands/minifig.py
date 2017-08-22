@@ -14,7 +14,7 @@ class _MinifigCommand(ChatCommand):
 		hair_style = sender.char.hair_style
 		mouth_style = sender.char.mouth_style
 		self.sub_run(args, sender)
-		server.construct(sender, new=False)
+		server.replica_manager.construct(sender, new=False)
 		if not args.permanent:
 			sender.char.eye_style = eye_style
 			sender.char.eyebrow_style = eyebrow_style

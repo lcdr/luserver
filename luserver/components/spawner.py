@@ -44,4 +44,4 @@ class SpawnerComponent(Component):
 		self.deactivate()
 		for obj in server.game_objects.copy().values():
 			if obj.spawner_object == self.object:
-				server.destruct(obj)
+				server.replica_manager.destruct(obj)

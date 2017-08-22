@@ -59,7 +59,6 @@ from ..bitstream import BitStream, c_int64, c_bool, c_ubyte, c_uint, c_ushort
 from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
-from .module import ServerModule
 
 log = logging.getLogger(__name__)
 
@@ -91,9 +90,9 @@ pants_lot = {
 	Color.ReddishBrown: 2526,
 	Color.DarkRed: 2527}
 
-class CharHandling(ServerModule):
+class CharHandling:
 	def __init__(self):
-		super().__init__()
+		server.char = self
 		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request)
 		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request)
 		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request)
@@ -103,7 +102,7 @@ class CharHandling(ServerModule):
 		selected = server.accounts[address].characters.selected()
 
 		if server.world_id[0] != 0:
-			server.destruct(selected)
+			server.replica_manager.destruct(selected)
 
 		server.conn.sync()
 		characters = server.accounts[address].characters

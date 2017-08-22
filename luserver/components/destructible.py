@@ -76,9 +76,9 @@ class DestructibleComponent(Component):
 		else:
 			if not hasattr(self.object, "comp_108"):
 				if self.object.lot == 9632: # hardcode for property guard, generalize this somewhen
-					self.object.call_later(5, lambda: server.destruct(self.object))
+					self.object.call_later(5, lambda: server.replica_manager.destruct(self.object))
 				else:
-					server.destruct(self.object)
+					server.replica_manager.destruct(self.object)
 
 	@broadcast
 	def resurrect(self, resurrect_immediately=False):
