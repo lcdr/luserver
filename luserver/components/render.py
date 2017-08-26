@@ -25,7 +25,7 @@ class RenderComponent(Component):
 		self.effects.clear()
 
 	@broadcast
-	def play_animation(self, animation_id:str=None, expect_anim_to_exist:bool=True, play_immediate:bool=False, trigger_on_complete_msg:bool=False, priority:float=2, f_scale:float=1):
+	def play_animation(self, animation_id:str=None, expect_anim_to_exist:bool=True, play_immediate:bool=False, trigger_on_complete_msg:bool=False, priority:float=2, scale:float=1):
 		pass
 
 	@broadcast

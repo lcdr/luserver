@@ -138,6 +138,8 @@ class RebuildComponent(ScriptedActivityComponent):
 
 		if hasattr(self.object, "ai"):
 			self.object.ai.enable()
+		if hasattr(self.object, "moving_platform"):
+			self.object.moving_platform.start_pathing()
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)

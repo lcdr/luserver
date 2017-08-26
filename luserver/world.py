@@ -195,7 +195,7 @@ class WorldServer(Server):
 			player = self.accounts[address].characters.selected()
 			if player in self.replica_manager._network_ids: # might already be destructed if "switch character" is selected:
 				self.replica_manager.destruct(player)
-		self.accounts[address].address = None
+		#self.accounts[address].address = None
 		del self.accounts[address]
 		self.conn.transaction_manager.commit()
 

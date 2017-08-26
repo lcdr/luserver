@@ -3,6 +3,10 @@ import code
 import transaction
 import ZEO
 
+from luserver.auth import AuthServer
+from luserver.world import WorldServer
+
+
 conn = ZEO.connection(12345)
 root = conn.root
 c = transaction.commit
