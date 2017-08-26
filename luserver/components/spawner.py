@@ -21,7 +21,7 @@ class SpawnerComponent(Component):
 	def on_startup(self):
 		if self.name is not None:
 			server.spawners[self.name] = self.object
-		if self.active and not self.spawned_on_smash:
+		if self.active:# and not self.spawned_on_smash:
 			for _ in range(min(self.unknown[2], len(self.waypoints))):
 				self.spawn()
 

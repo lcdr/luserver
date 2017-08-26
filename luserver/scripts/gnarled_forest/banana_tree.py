@@ -25,5 +25,5 @@ class ScriptComponent(script.ScriptComponent):
 		pos = self.object.physics.position
 		return pos + offset.rotated(self.object.physics.rotation)
 
-	def on_banana_death(self, banana, damage, attacker):
+	def on_banana_death(self, banana):
 		self.object.call_later(30, self.spawn_banana)
