@@ -5,6 +5,7 @@ from luserver.ldf import LDFDataType
 from luserver.messages import single
 from luserver.world import server
 from luserver.components.mission import MissionState, TaskType
+
 FLAG_DEFEATED_SPIDER = 71
 
 class ScriptComponent(script.ScriptComponent):

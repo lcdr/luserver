@@ -112,7 +112,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def drain_imagination(self, player):
 		if player.stats.imagination == 0:
-			self.rebuild_cancel(early_release=False, user_id=player.object_id)
+			self.rebuild_cancel(early_release=False, user=player)
 		player.stats.imagination -= 1
 
 	def complete_rebuild(self, player):
