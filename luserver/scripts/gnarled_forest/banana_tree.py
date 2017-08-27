@@ -10,7 +10,7 @@ class ScriptComponent(script.ScriptComponent):
 	def spawn_banana(self):
 		if self.banana is None:
 			self.banana = server.spawn_object(6909, {"position": self.banana_pos(), "rotation": self.object.physics.rotation})
-			self.banana.add_handler("on_destrucition", self.on_banana_death)
+			self.banana.add_handler("on_destruction", self.on_banana_death)
 
 	def on_hit(self, damage, attacker):
 		self.object.stats.life = self.object.stats.max_life # indestructible
