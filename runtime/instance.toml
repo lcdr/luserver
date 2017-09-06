@@ -1,0 +1,4 @@
+[connection]
+internal_host="0.0.0.0"
+external_host="localhost"
+port_range=[]

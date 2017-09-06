@@ -41,6 +41,7 @@ class World(Enum):
 	ChanteyShanty = 1350
 	ForbiddenValley = 1400
 	FV = ForbiddenValley
+	FVSiege = 1401
 	ForbiddenValleyDragonBattle = 1402
 	DragonmawChasm = 1403
 	RavenBluff = 1450
@@ -57,7 +58,6 @@ class World(Enum):
 	NinjagoMonastery = 2000
 	Ninjago = NinjagoMonastery
 	BattleAgainstFrakjaw = 2001
-	FVSiege = 58001
 
 import asyncio
 import atexit
@@ -136,7 +136,11 @@ class WorldServer(Server):
 	def shutdown(self):
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
-		self.conn.transaction_manager.commit()
+		try:
+			self.conn.transaction_manager.commit()
+		except:
+			import traceback
+			traceback.print_exc()
 		if self.external_address in self.db.servers:
 			del self.db.servers[self.external_address]
 			self.conn.transaction_manager.commit()
@@ -200,21 +204,22 @@ class WorldServer(Server):
 		self.conn.transaction_manager.commit()
 
 	def on_session_info(self, session_info, address):
+		self.conn.transaction_manager.commit()
 		self.conn.sync()
 		username = session_info.read(str, allocated_length=33)
 		session_key = session_info.read(str, allocated_length=33)
 
 		try:
-			if self.db.accounts[username.lower()].session_key != session_key:
-				log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username.lower()].session_key, session_key)
+			if self.db.accounts[username].session_key != session_key:
+				log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username].session_key, session_key)
 				self.close_connection(address, reason=DisconnectReason.InvalidSessionKey)
 		except KeyError:
-			log.error("User %s not found in database", username.lower())
+			log.error("User %s not found in database", username)
 			self.close_connection(address)
 		else:
-			account = self.db.accounts[username.lower()]
+			account = self.db.accounts[username]
 			#account.address = address
-			self.conn.transaction_manager.commit()
+			#self.conn.transaction_manager.commit()
 			self.accounts[address] = account
 
 			self.general.on_validated(address)

@@ -141,4 +141,4 @@ class StatsSubcomponent(Component):
 
 	@broadcast
 	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_uint=0, killer:GameObject=None, loot_owner:GameObject=0):
-		pass
+		self.object.handle("on_death", killer, silent=True)

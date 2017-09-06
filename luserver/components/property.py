@@ -194,6 +194,8 @@ class PropertyManagementComponent(Component):
 		pass
 
 	def query_property_data(self, player):
+		if server.world_id[0] not in server.db.property_template:
+			return
 		property = PropertyData()
 		property.owner = player
 		property.path = server.db.property_template[server.world_id[0]]
@@ -230,6 +232,8 @@ class PropertyVendorComponent(Component):
 		pass
 
 	def query_property_data(self, player):
+		if server.world_id[0] not in server.db.property_template:
+			return
 		property = PropertyData()
 		property.owner = player
 		property.path = server.db.property_template[server.world_id[0]]

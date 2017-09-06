@@ -37,6 +37,7 @@ checksum = {
 	World.CannonCoveShootingGallery: 0xb7702ef,
 	World.ChanteyShanty: 0x4b6015c,
 	World.ForbiddenValley: 0x8519760d,
+	World.FVSiege: 0x6a801aa,
 	World.ForbiddenValleyDragonBattle: 0x2f50187,
 	World.DragonmawChasm: 0x81850f4e,
 	World.RavenBluff: 0x3f00126,
@@ -99,8 +100,6 @@ class GeneralHandling:
 		load_world.write(c_float(player.physics.position.z))
 		load_world.write(bytes(4))
 		server.send(load_world, address)
-
-		player.char.world = destination
 
 	def on_client_load_complete(self, data, address):
 		player = server.accounts[address].characters.selected()

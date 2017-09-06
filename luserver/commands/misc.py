@@ -1,11 +1,7 @@
 import asyncio
 import logging
-import os
-import re
 
 from ..amf3 import AMF3
-from ..bitstream import BitStream, c_bool, c_int64, c_ushort
-from ..messages import WorldClientMsg
 from ..world import server, World
 from ..math.vector import Vector3
 from .command import ChatCommand, normal_bool, toggle_bool
@@ -25,13 +21,6 @@ class Build(ChatCommand):
 
 	def run(self, args, sender):
 		sender.char.activate_brick_mode(build_type=args.type)
-
-class CheckForLeaks(ChatCommand):
-	def __init__(self):
-		super().__init__("checkforleaks")
-
-	def run(self, args, sender):
-		sender.char.check_for_leaks(fullcheck=True)
 
 class Currency(ChatCommand):
 	def __init__(self):
@@ -139,7 +128,7 @@ class HighStats(ChatCommand):
 		sender.stats.max_life = 99
 		sender.stats.max_armor = 99
 		sender.stats.max_imagination = 99
-		RefillStatsCommand.run(args, sender)
+		RefillStats.run(args, sender)
 
 class Invisibility(ChatCommand):
 	# not working
@@ -195,84 +184,6 @@ class Location(ChatCommand):
 						server.chat.sys_msg_sender(World(obj.char._world[0]))
 					break
 
-class PlayCine(ChatCommand):
-	def __init__(self):
-		super().__init__("playcine")
-		self.command.add_argument("name")
-
-	def run(self, args, sender):
-		sender.char.play_cinematic(path_name=args.name, start_time_advance=0)
-
-class PlayFX(ChatCommand):
-	def __init__(self):
-		super().__init__("playfx")
-		self.command.add_argument("id", type=int)
-		self.command.add_argument("type")
-
-	def run(self, args, sender):
-		sender.render.play_f_x_effect(name=b"", effect_id=args.id, effect_type=args.type)
-
-class PlaySound(ChatCommand):
-	def __init__(self):
-		super().__init__("playsound", aliases=("ps",))
-		self.command.add_argument("id")
-
-	def run(self, args, sender):
-		sender.render.play_n_d_audio_emitter(event_guid=args.id.encode(), meta_event_name=b"")
-
-class PlayStuff(ChatCommand):
-	def __init__(self):
-		super().__init__("playstuff")
-		self.command.add_argument("--bpm", type=int, default=114)
-		self.notes = {
-			"C1": b"{6f33a653-6446-4ec9-9e0d-9552871a52bb}",
-			"C#1": b"{97aa64a3-89a3-4a9f-a370-c7cb5af66937}",
-			"D1": b"{3f3cfeaa-371a-44aa-89a0-68bbaa995997}",
-			"D#1": b"{0ec81367-a91c-40f8-a72e-e99a05d2b612}",
-			"E1": b"{7b8d02a5-986a-4526-bb93-ff229af44198}",
-			"F1": b"{fdf4a54e-126f-4a22-90b1-854b9e0ac232}",
-			"F#1": b"{9739af13-6b0f-4420-8306-c3709a350f0f}",
-			"G1": b"{b3e2e91e-e359-4fc5-829a-45c43a188552}",
-			"G#1": b"{4271bd1f-36eb-4362-acc9-669d6ab9f426}",
-			"A1": b"{45b34354-2198-42f6-a6a2-0d52cb2342d4}",
-			"A#1": b"{d2a79895-1037-4cb8-8692-0c1167290538}",
-			"B1": b"{85797d72-27e7-4255-af14-e565ba75db95}",
-			"C2": b"{b0e828d5-d324-4a8e-840e-480c356c0803}"
-		}
-
-	def run(self, args, sender):
-		quarter = 60/args.bpm
-		half = 2*quarter
-		full = 2*half
-		dotquarter = quarter * 1.5
-		eighth = quarter / 2
-		sixteenth = eighth / 2
-		song = [
-			("C#1", dotquarter),
-			("D#1", dotquarter),
-			("G#1", quarter),
-			("D#1", dotquarter),
-			("F1", dotquarter),
-			("G#1", sixteenth),
-			("F#1", sixteenth),
-			("F1", sixteenth),
-			("D#1", sixteenth),
-			("C#1", dotquarter),
-			("D#1", dotquarter),
-			("G#1", quarter),
-			("D#1", quarter),
-			("C#1", quarter),
-		]
-
-		last_time = 0
-		for note, dur in song:
-			asyncio.get_event_loop().call_later(last_time, self.play_note, note, sender)
-			last_time += dur
-
-	def play_note(self, note, sender):
-		sender.render.play_n_d_audio_emitter(event_guid=self.notes[note], meta_event_name=b"")
-
-
 class RefillStats(ChatCommand):
 	def __init__(self):
 		super().__init__("refillstats")
@@ -283,49 +194,15 @@ class RefillStats(ChatCommand):
 		sender.stats.armor = sender.stats.max_armor
 		sender.stats.imagination = sender.stats.max_imagination
 
-class Restart(ChatCommand):
+class Rules(ChatCommand):
 	def __init__(self):
-		super().__init__("restart", aliases=("r",))
-		self.command.add_argument("--show_message", action="store_true")
+		super().__init__("rules")
 
 	def run(self, args, sender):
-		asyncio.ensure_future(self.do_restart(args, sender))
-
-	async def do_restart(self, args, sender):
-		server.conn.transaction_manager.commit()
-		server_address = await server.address_for_world(server.world_id, include_self=False)
-		log.info("Sending redirect to world %s", server_address)
-		redirect = BitStream()
-		redirect.write_header(WorldClientMsg.Redirect)
-		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
-		redirect.write(c_ushort(server_address[1]))
-		redirect.write(c_bool(args.show_message))
-		for address in server.accounts:
-			server.send(redirect, address)
-		await asyncio.sleep(5)
-		server.shutdown()
-
-class Send(ChatCommand):
-	def __init__(self):
-		super().__init__("send", description="This will manually send packets")
-		self.command.add_argument("directory", help="Name of subdirectory of ./packets/ which contains the packets you want to send")
-		self.command.add_argument("--address")
-		self.command.add_argument("--broadcast", action="store_true", default=False)
-
-	def run(self, args, sender):
-		if not args.broadcast and args.address is None:
-			args.address = sender.char.address
-
-		path = os.path.normpath(os.path.join(__file__, "..", "..", "..", "runtime", "packets", args.directory))
-		files = os.listdir(path)
-		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
-		for file in files:
-			with open(os.path.join(path, file), "rb") as content:
-				server.chat.sys_msg_sender("sending "+str(file))
-				data = content.read()
-				#if data[:4] == b"\x53\x05\x00\x0c":
-				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
-				server.send(data, args.address, args.broadcast)
+		context = {"bScroll": True}
+		for i, page in enumerate(server.db.config["rules"]):
+			context["PAGE%i" % i] = page
+		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": context}))
 
 class SetFlag(ChatCommand):
 	def __init__(self):
@@ -350,7 +227,7 @@ class SetGMLevel(ChatCommand):
 		if player == sender and args.level == 0:
 			server.chat.sys_msg_sender("You don't want to lose privileges. To appear as a player, use /showgmstatus off")
 			return
-		player.char.gm_level = args.level
+		player.char.account.gm_level = args.level
 
 class SetRespawn(ChatCommand):
 	def __init__(self):
@@ -365,17 +242,10 @@ class ShowGMStatus(ChatCommand):
 		self.command.add_argument("--enable", type=toggle_bool)
 
 	def run(self, args, sender):
-		if sender.char.gm_level == 0:
-			sender.char.show_gm_status = False
+		if sender.char.account.gm_level == 0:
+			sender.char.account.show_gm_status = False
 			return
 		toggle(sender.char, "show_gm_status", args.enable)
-
-class Shutdown(ChatCommand):
-	def __init__(self):
-		super().__init__("shutdown")
-
-	def run(self, args, sender):
-		server.shutdown()
 
 class Speak(ChatCommand):
 	def __init__(self):
@@ -474,13 +344,6 @@ class Text(ChatCommand):
 
 	def run(self, args, sender):
 		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"text": " ".join(args.text)}}))
-
-class MultiPageText(ChatCommand):
-	def __init__(self):
-		super().__init__("multipagetext")
-
-	def run(self, args, sender):
-		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"bScroll": True, "PAGE0": "First page", "PAGE1": "More text", "PAGE2": "There's no more text after this"}}))
 
 class UnlockEmote(ChatCommand):
 	def __init__(self):

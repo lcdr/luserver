@@ -159,6 +159,7 @@ class CharHandling:
 		server.send(response, address)
 
 	def on_character_create_request(self, request, address):
+		account = server.accounts[address]
 		char_name = request.read(str, allocated_length=33)
 		predef_name_ids = request.read(c_uint), request.read(c_uint), request.read(c_uint)
 
@@ -177,6 +178,7 @@ class CharHandling:
 			if return_code == CharacterCreateReturnCode.Success:
 				new_char = PersistentObject(1, server.new_object_id())
 				new_char.name = char_name
+				new_char.char.account = account
 				new_char.char.address = address
 
 				request.skip_read(9)
@@ -195,10 +197,11 @@ class CharHandling:
 				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
 				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
 
-				characters = server.accounts[address].characters
+				characters = account.characters
 				characters[char_name] = new_char
 				characters.selected = persistent.wref.WeakRef(new_char)
 				server.conn.transaction_manager.commit()
+				log.info("Creating new character %s", char_name)
 		except Exception:
 			import traceback
 			traceback.print_exc()
@@ -219,6 +222,7 @@ class CharHandling:
 
 		for char in characters:
 			if characters[char].object_id == char_id:
+				log.info("Deleting character %s", char)
 				del characters[char]
 				server.conn.transaction_manager.commit()
 				break
@@ -238,12 +242,12 @@ class CharHandling:
 		characters.selected = persistent.wref.WeakRef(selected_char)
 		selected_char.char.address = address
 		selected_char.char.online = True
-
-		server.conn.transaction_manager.commit()
+		# needed for ZODB to pick up the changes to the components
+		# normally not needed because a replica serialization autotriggers this
+		selected_char._p_changed = True
 
 		if selected_char.char.world[0] == 0:
-			selected_char.char.world = 1000, 0, 0
-			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, respawn_point_name=""))
+			asyncio.ensure_future(selected_char.char.transfer_to_world((1000, 0, 0), respawn_point_name=""))
 		else:
 			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, include_self=True))
 

@@ -78,8 +78,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.char = self
+
 		# DB stuff
 
+		self.account = None
 		self.address = None
 		self._online = False
 		self._world = 0, 0, 0
@@ -154,10 +156,8 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 		self._flags["pvp_enabled"] = "gm_flag"
 		self._flags["show_gm_status"] = "gm_flag"
-		self._flags["gm_level"] = "gm_flag"
 		self.pvp_enabled = False
 		self.show_gm_status = False
-		self.gm_level = 0
 
 		self._flags["rebuilding"] = "rebuilding_flag"
 		self.rebuilding = 0
@@ -254,7 +254,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		if self.gm_flag or is_creation:
 			out.write(c_bit(self.pvp_enabled))
 			out.write(c_bit(self.show_gm_status))
-			out.write(c_ubyte(self.gm_level))
+			out.write(c_ubyte(self.account.gm_level))
 			out.write(c_bit(False))
 			out.write(c_ubyte(0))
 			if self.gm_flag:
@@ -393,7 +393,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		return False
 
 	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
-		if respawn_point_name is not None:
+		if respawn_point_name is not None and world[0] in server.db.world_data:
 			for obj in server.db.world_data[world[0]].objects.values():
 				if obj.lot == 4945 and (not hasattr(obj, "respawn_name") or respawn_point_name == "" or obj.respawn_name == respawn_point_name): # respawn point lot
 					self.object.physics.position.update(obj.physics.position)
@@ -522,6 +522,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def player_loaded(self, player_id:c_int64=None):
 		assert player_id == self.object.object_id
 		self.player_ready()
+		if self.world == (0, 0, 0):
+			server.chat.system_message(server.db.config["new_char_message"], self.address, broadcast=False)
+		self.world = server.world_id
+
 		for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
 			for item in inv:
 				if item is not None and item in self.object.inventory.equipped[-1]:
