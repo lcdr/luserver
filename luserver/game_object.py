@@ -176,7 +176,7 @@ class GameObject:
 		return out
 
 	def on_destruction(self):
-		self._serialize_scheduled = True
+		self._serialize_scheduled = True # prevent any serializations from now on
 		if self.parent is not None:
 			server.game_objects[self.parent].children.remove(self.object_id)
 			server.game_objects[self.parent].attr_changed("children")

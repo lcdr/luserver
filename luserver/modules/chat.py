@@ -5,6 +5,7 @@ import inspect
 import logging
 import os
 
+from ..auth import GMLevel
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
@@ -13,6 +14,9 @@ from ..commands.command import ChatCommand, object_selector
 log = logging.getLogger(__file__)
 
 class ChatCommandExit(Exception):
+	pass
+
+class PermissionError(Exception):
 	pass
 
 class CustomHelpFormatter(argparse.HelpFormatter):
@@ -220,6 +224,10 @@ class ChatHandling:
 		try:
 			# todo: sender privilege level check (if possible in argparse)
 			args = self.chat_parser.parse_args(command.split())
+
+			if sender.char.account.gm_level != GMLevel.Admin:
+				raise PermissionError("Must be admin to do this")
+
 			if hasattr(args, "func"):
 				args.func(args, sender)
 		except ChatCommandExit:

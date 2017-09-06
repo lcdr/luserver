@@ -26,3 +26,5 @@ Before the first run of the server, you'll need to initialize the database. Set 
 ### Server startup
 
 Run `runtime/__main__.py`. This sets up the auth server instance, other instances will be spawned automatically when needed.
+
+The server needs to use port 1001 for auth (hardcoded in the client). On linux this requires root permissions, to be able to start as non-root, execute `setcap 'cap_net_bind_service=+ep' /usr/bin/python3`.

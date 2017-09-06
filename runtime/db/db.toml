@@ -1,0 +1,8 @@
+[paths]
+cdclient_path=""
+client_path=""
+[defaults]
+# These are just config defaults. To change the config of a running server, use the ingame commands. Changing this file will only affect the config when the DB is initialized, and changes to a running server will not be saved here.
+auth_disabled_message="Server is in maintenance mode. Please try again later."
+new_char_message=""
+rules=[]

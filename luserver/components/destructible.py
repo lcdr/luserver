@@ -6,6 +6,10 @@ from ..math.vector import Vector3
 from .component import Component
 from .mission import TaskType
 
+class KillType:
+	Violent = 0
+	Silent = 1
+
 class DestructibleComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
@@ -42,11 +46,11 @@ class DestructibleComponent(Component):
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
-	def simply_die(self, death_type:str="", kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=0):
+	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=0):
 		"""Shorthand for request_die with default values."""
-		self.request_die(unknown_bool=False, death_type=death_type, direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=killer, loot_owner=loot_owner)
+		self.request_die(False, death_type, 0, 0, 10, kill_type, killer, loot_owner)
 
-	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=0):
+	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=0):
 		if self.object.stats.life == 0:
 			# already dead
 			return

@@ -37,6 +37,8 @@ class BasicAttack(Behavior):
 	def deserialize(self, behavior, bitstream, target, level):
 		bitstream.align_read()
 		bitstream.read(c_ushort) # "padding", unused
+		if target == self.object:
+			return
 		assert not bitstream.read(c_bit)
 		assert not bitstream.read(c_bit)
 		assert bitstream.read(c_bit)
@@ -71,7 +73,7 @@ class TacArc(Behavior):
 
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
-		if behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in server.game_objects:
+		if hasattr(behavior, "use_picked_target") and behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in server.game_objects:
 			target = server.game_objects[self.picked_target_id]
 			# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
 			log.debug("using picked target, not completely working")
@@ -162,7 +164,8 @@ class MovementType:
 	DoubleJump = 4
 	FallingAfterDoubleJumpAttack = 5
 	Jetpack = 6
-	# FallingAfterHit / Knockback ? 7
+	Seven = 7  # FallingAfterHit / Knockback ?
+	Nine = 9  # occurred with item 7311 - cutlass
 	Rail = 10
 
 class MovementSwitch(Behavior):
@@ -174,16 +177,17 @@ class MovementSwitch(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		movement_type = bitstream.read(c_uint)
-		if movement_type in (MovementType.Ground, 7, MovementType.Rail):
+		log.debug("Movement type %i", movement_type)
+		if movement_type in (MovementType.Ground, MovementType.Seven, MovementType.Nine, MovementType.Rail):
 			action = behavior.ground_action
 		elif movement_type == MovementType.Jump:
 			action = behavior.jump_action
 		elif movement_type in (MovementType.Falling, MovementType.FallingAfterDoubleJumpAttack):
-			action = behavior.falling_action
+			action = getattr(behavior, "falling_action", behavior.ground_action)
 		elif movement_type == MovementType.DoubleJump:
 			action = behavior.double_jump_action
 		elif movement_type == MovementType.Jetpack:
-			action = behavior.jetpack_action
+			action = getattr(behavior, "jetpack_action", behavior.ground_action)
 		else:
 			raise NotImplementedError("Behavior", behavior.id, ": Movement type", movement_type)
 		if action is not None:

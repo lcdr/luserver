@@ -1,13 +1,14 @@
-import configparser
 import os
 import sqlite3
 import subprocess
 import time
 
 import BTrees
+import toml
 import transaction
 import ZEO
 
+from luserver.auth import Account, GMLevel
 from luserver.world import World
 from luserver.components.inventory import ItemType
 from luserver.components.mission import TaskType
@@ -17,10 +18,10 @@ import luz_importer
 import scripts
 
 class Init:
-	def __init__(self, gen_accounts, gen_skills, gen_missions, gen_comps, gen_world):
-		self.config = configparser.ConfigParser()
-		config_dir = os.path.normpath(os.path.join(__file__, "..", ".."))
-		self.config.read(os.path.join(config_dir, "luserver.ini"))
+	def __init__(self, gen_accounts, gen_config, gen_skills, gen_missions, gen_comps, gen_world):
+		config_dir = os.path.normpath(os.path.join(__file__, ".."))
+		with open(os.path.join(config_dir, "db.toml"), encoding="utf8") as file:
+			self.config = toml.load(file)
 		self.config["paths"]["cdclient_path"] = os.path.normpath(os.path.join(config_dir, self.config["paths"]["cdclient_path"]))
 		self.config["paths"]["client_path"] = os.path.normpath(os.path.join(config_dir, self.config["paths"]["client_path"]))
 
@@ -41,6 +42,8 @@ class Init:
 
 		if gen_accounts:
 			self.gen_accounts()
+		if gen_config:
+			self.gen_config()
 		if gen_skills:
 			init_skills.Init(self.root, self.cdclient)
 		if gen_missions:
@@ -57,6 +60,16 @@ class Init:
 		self.root.current_instance_id = 0
 		self.root.current_clone_id = 1
 		self.root.accounts = BTrees.OOBTree.BTree()
+		admin_username = input("Enter admin username: ")
+		while True:
+			admin_password = input("Enter admin password: ")
+			if len(admin_password) < 10:
+				print("Password too short, min 10 chars")
+			else:
+				break
+		self.root.accounts[admin_username] = Account(admin_username, admin_password)
+		self.root.accounts[admin_username].gm_level = GMLevel.Admin
+
 		self.root.servers = BTrees.OOBTree.BTree()
 
 		self.root.properties = BTrees.IOBTree.BTree()
@@ -84,6 +97,14 @@ class Init:
 		self.root.world_info = BTrees.IOBTree.BTree()
 		for world_id, script_id, template in self.cdclient.execute("select zoneID, scriptID, zoneControlTemplate from ZoneTable"):
 			self.root.world_info[world_id] = scripts.SCRIPTS.get(script_id), template
+
+	def gen_config(self):
+		self.root.config = BTrees.OOBTree.BTree()
+		self.root.config["auth_enabled"] = True
+		self.root.config["credits"] = "Created by lcdr"
+		config_entries = "auth_disabled_message", "new_char_message", "rules"
+		for entry in config_entries:
+			self.root.config[entry] = self.config["defaults"][entry]
 
 	def gen_missions(self):
 		self.root.missions = BTrees.IOBTree.BTree()
@@ -319,8 +340,9 @@ class Init:
 if __name__ == "__main__":
 	# temporarily using int instead of bool for faster editing
 	GENERATE_ACCOUNTS = 1
+	GENERATE_CONFIG = 1
 	GENERATE_SKILLS = 1
 	GENERATE_MISSIONS = 1
 	GENERATE_COMPS = 1
 	GENERATE_WORLD_DATA = 1
-	Init(GENERATE_ACCOUNTS, GENERATE_SKILLS, GENERATE_MISSIONS, GENERATE_COMPS, GENERATE_WORLD_DATA)
+	Init(GENERATE_ACCOUNTS, GENERATE_CONFIG, GENERATE_SKILLS, GENERATE_MISSIONS, GENERATE_COMPS, GENERATE_WORLD_DATA)

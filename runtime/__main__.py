@@ -1,18 +1,18 @@
 import asyncio
-import configparser
 import logging
 import os
 import subprocess
 import sys
 import time
 
+import toml
 import ZEO
 
 from luserver.auth import AuthServer
 from luserver.world import WorldServer
 
-config = configparser.ConfigParser()
-config.read(os.path.normpath(os.path.join(__file__, "..", "luserver.ini")))
+with open(os.path.normpath(os.path.join(__file__, "..", "instance.toml"))) as file:
+	config = toml.load(file)
 
 logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)
 
@@ -65,8 +65,7 @@ else:
 		port = int(sys.argv[3])
 	else:
 		if config["connection"]["port_range"]:
-			port_range = config["connection"]["port_range"]
-			range_start, range_stop = [int(i) for i in port_range.split(",")]
+			range_start, range_stop = config["connection"]["port_range"]
 			for port in range(range_start, range_stop):
 				if (config["connection"]["external_host"], port) not in conn.root.servers:
 					log.info("Using port %i", port)
