@@ -7,6 +7,7 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from ...amf3 import AMF3
+from ...auth import GMLevel
 from ...bitstream import BitStream, c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ...game_object import GameObject
 from ...ldf import LDF, LDFDataType
@@ -542,6 +543,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	def display_message_box(self, show:bool=None, callback_client:GameObject=None, identifier:str=None, image_id:c_int=None, text:str=None, user_data:str=None):
 		pass
 
+	def disp_message_box(self, text):
+		"""display_message_box with default parameters."""
+		self.display_message_box(show=True, callback_client=None, identifier="", image_id=0, text=text, user_data="")
+
 	@single
 	def set_gravity_scale(self, scale:float=None):
 		pass
@@ -555,8 +560,12 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def display_tooltip(self, do_or_die:bool=False, no_repeat:bool=False, no_revive:bool=False, is_property_tooltip:bool=False, show:bool=None, translate:bool=False, time:c_int=None, id:str=None, localize_params:LDF=None, str_image_name:str=None, str_text:str=None):
+	def display_tooltip(self, do_or_die:bool=False, no_repeat:bool=False, no_revive:bool=False, is_property_tooltip:bool=False, show:bool=None, translate:bool=False, time:c_int=None, id:str=None, localize_params:LDF=None, image_name:str=None, text:str=None):
 		pass
+
+	def disp_tooltip(self, text):
+		"""display_tooltip with default parameters"""
+		self.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), image_name="", text=text)
 
 	def use_non_equipment_item(self, item_to_use:c_int64=None):
 		for item in self.object.inventory.items:
@@ -689,7 +698,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def u_i_message_server_to_single_client(self, args:AMF3=None, str_message_name:bytes=None):
+	def u_i_message_server_to_single_client(self, args:AMF3=None, message_name:bytes=None):
 		pass
 
 	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:bool=False):
@@ -704,8 +713,9 @@ class CharacterComponent(Component, CharMission, CharTrade):
 			self.parse_chat_message(0, body)
 			return
 		for account in server.accounts.values():
-			for char in account.characters.values():
-				server.mail.send_mail(self.object.name, "Bug Report: "+selection.decode(), body, char)
+			if account.gm_level == GMLevel.Admin:
+				for char in account.characters.values():
+					server.mail.send_mail(self.object.name, "Bug Report: "+selection.decode(), body, char)
 
 	def request_smash_player(self):
 		self.object.destructible.simply_die(killer=self.object)

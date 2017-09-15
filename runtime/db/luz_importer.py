@@ -114,7 +114,7 @@ def _parse_config(config, triggers=None):
 	if "respawnname" in config:
 		spawned_vars["respawn_name"] = config["respawnname"]
 	if "respawnVol" in config and config["respawnVol"]:
-		spawned_vars["respawn_data"] = Vector3([float(i) for i in config["rspPos"].split("\x1f")]), Quaternion([float(i) for i in config["rspRot"].split("\x1f")])
+		spawned_vars["respawn_data"] = Vector3(*[float(i) for i in config["rspPos"].split("\x1f")]), Quaternion(*[float(i) for i in config["rspRot"].split("\x1f")])
 	if "targetScene" in config:
 		spawned_vars["respawn_point_name"] = config["targetScene"]
 	if "transferZoneID" in config:
@@ -171,7 +171,7 @@ class _LUZImporter:
 		if version >= 38:
 			spawnpoint_position = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
 			w, x, y, z = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
-			self.world_data.spawnpoint = Vector3(spawnpoint_position), Quaternion(x, y, z, w)
+			self.world_data.spawnpoint = Vector3(*spawnpoint_position), Quaternion(x, y, z, w)
 
 		if version >= 37:
 			number_of_scenes = self.luz.read(c_uint)
@@ -258,10 +258,10 @@ class _LUZImporter:
 			waypoints = []
 
 			for _ in range(self.luz.read(c_uint)):
-				position = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
+				position = Vector3(self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float))
 
 				if path_type == PathType.MovingPlatform:
-					rotation = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
+					rotation = Quaternion(self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float))
 					waypoint_unknown2 = self.luz.read(c_ubyte)
 					waypoint_unknown3 = self.luz.read(c_float)
 					waypoint_unknown4 = self.luz.read(c_float)
@@ -275,7 +275,7 @@ class _LUZImporter:
 
 				elif path_type == PathType.Spawner:
 					w, x, y, z = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
-					rotation = x, y, z, w
+					rotation = Quaternion(x, y, z, w)
 
 				elif path_type == PathType.Race:
 					self.luz.skip_read(30)
@@ -396,9 +396,9 @@ class _LVLImporter:
 			lot = self.lvl.read(c_uint)
 			unknown1 = self.lvl.read(c_uint)
 			unknown2 = self.lvl.read(c_uint)
-			position = self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float)
+			position = Vector3(self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float))
 			w, x, y, z = self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float)
-			rotation = x, y, z, w
+			rotation = Quaternion(x, y, z, w)
 			scale = self.lvl.read(c_float)
 			config_data = self.lvl.read(str, length_type=c_uint)
 			assert self.lvl.read(c_uint) == 0

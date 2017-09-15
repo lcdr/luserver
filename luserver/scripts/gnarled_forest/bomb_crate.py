@@ -1,5 +1,4 @@
 import luserver.components.script as script
-from luserver.world import server
 from luserver.components.mission import TaskType
 
 MISSIONS = 333, 430, 431, 432, 454, 455, 456, 457, 458, 1427, 1525, 1562, 1599, 1627, 1637, 1647, 1657

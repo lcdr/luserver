@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_int, c_int64
+from ..bitstream import c_bit, c_int
 from ..game_object import GameObject
 from ..messages import broadcast
 from ..world import server

@@ -265,6 +265,7 @@ def send_game_message(mode):
 	"""
 	def decorator(func):
 		from .world import server
+
 		@wraps(func)
 		def wrapper(self, *args, **kwargs):
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
@@ -366,4 +367,42 @@ def game_message_serialize(out, type, value):
 	else:
 		raise TypeError(type)
 
-# see modules.general for deserialize
+def game_message_deserialize(message, type):
+	from .game_object import GameObject
+	from .world import server
+	if type == float:
+		return message.read(c_float)
+	if type == bytes:
+		return message.read(bytes, length=message.read(c_uint))
+	if type == str:
+		return message.read(str, length_type=c_uint)
+	if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
+		return message.read(type)
+	if type == BitStream:
+		length = message.read(c_uint)
+		return BitStream(message.read(bytes, length=length))
+	if type == LDF:
+		value = message.read(str, length_type=c_uint)
+		if value:
+			assert message.read(c_ushort) == 0 # for some reason has a null terminator
+		# todo: convert to LDF
+		return value
+	if type == GameObject:
+		return server.get_object(message.read(c_int64))
+	if inspect.isclass(type) and issubclass(type, Serializable):
+		return type.deserialize(message)
+	if isinstance(type, tuple):
+		if len(type) == 2: # list
+			value = []
+			for _ in range(game_message_deserialize(message, type[0])):
+				value.append(game_message_deserialize(message, type[1]))
+		elif len(type) == 3: # dict
+			value = {}
+			for _ in range(game_message_deserialize(message, type[0])):
+				key = game_message_deserialize(message, type[1])
+				val = game_message_deserialize(message, type[2])
+				value[key] = val
+		else:
+			raise ValueError(type)
+		return value
+	raise TypeError(type)

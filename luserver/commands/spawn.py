@@ -43,7 +43,7 @@ class SpawnPhantom(ChatCommand):
 			lot = 5652
 			displacement = Vector3(0, 2.5, 0)
 		if not isinstance(args.direction, Vector3):
-			args.direction = Vector3(args.direction)
+			args.direction = Vector3(*args.direction)
 		set_vars = {
 			"scale": args.scale,
 			"parent": sender,

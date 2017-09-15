@@ -80,11 +80,11 @@ class MovingPlatformComponent(Component):
 
 		self.movement_state = MovementState.Stationary
 		position, speed, wait_time = self.path.waypoints[self.current_waypoint_index]
-		self.current_position.update(*position)
+		self.current_position.update(position)
 
 		self.callbacks.append(self.object.call_later(wait_time, self.set_movement_state, MovementState.Moving))
 		target_position = self.path.waypoints[self.next_waypoint_index][0]
-		travel_time = Vector3(target_position).distance(self.current_position) / speed
+		travel_time = target_position.distance(self.current_position) / speed
 		self.callbacks.append(self.object.call_later(wait_time+travel_time, self.continue_pathing))
 
 	def continue_pathing(self):
@@ -94,7 +94,7 @@ class MovingPlatformComponent(Component):
 		self.movement_state = MovementState.Stationary
 		self.current_waypoint_index = self.next_waypoint_index
 		position, speed, wait_time = self.path.waypoints[self.current_waypoint_index]
-		self.current_position.update(*position)
+		self.current_position.update(position)
 
 		if self.current_waypoint_index == len(self.path.waypoints)-1:
 			assert not self.in_reverse

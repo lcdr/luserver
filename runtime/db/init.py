@@ -34,7 +34,7 @@ class Init:
 					flags = subprocess.CREATE_NEW_CONSOLE
 				else:
 					flags = 0
-				subprocess.Popen("runzeo -a 12345 -f "+ os.path.normpath(os.path.join(__file__, "..", "server_db.db")), shell=True, creationflags=flags)
+				subprocess.Popen("runzeo -a 12345 -f " + os.path.normpath(os.path.join(__file__, "..", "server_db.db")), shell=True, creationflags=flags)
 				time.sleep(3)
 
 		self.root = conn.root
