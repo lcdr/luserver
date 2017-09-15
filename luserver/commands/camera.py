@@ -29,7 +29,7 @@ class CamLookAt(ChatCommand):
 				server.chat.sys_msg_sender("Object not found")
 				return
 		else:
-			args.pos = Vector3(args.pos)
+			args.pos = Vector3(*args.pos)
 			config.ldf_set("xPos", LDFDataType.FLOAT, args.pos.x)
 			config.ldf_set("yPos", LDFDataType.FLOAT, args.pos.y)
 			config.ldf_set("zPos", LDFDataType.FLOAT, args.pos.z)
@@ -52,9 +52,9 @@ class CamShake(ChatCommand):
 
 	def run(self, args, sender):
 		if not isinstance(args.ampl, Vector3):
-			args.ampl = Vector3(args.ampl)
+			args.ampl = Vector3(*args.ampl)
 		if not isinstance(args.rot, Vector3):
-			args.rot = Vector3(args.rot)
+			args.rot = Vector3(*args.rot)
 
 		config = LDF()
 		config.ldf_set("posFrequency", LDFDataType.FLOAT, args.posfreq)

@@ -59,7 +59,7 @@ class FlashingText(ChatCommand):
 		self.command.add_argument("text", nargs="+")
 
 	def run(self, args, sender):
-		sender.char.u_i_message_server_to_single_client(str_message_name=b"ToggleFlashingText", args=AMF3({"text": " ".join(args.text)}))
+		sender.char.u_i_message_server_to_single_client(message_name=b"ToggleFlashingText", args=AMF3({"text": " ".join(args.text)}))
 
 class Freeze(ChatCommand):
 	def __init__(self):
@@ -158,7 +158,7 @@ class Knockback(ChatCommand):
 		self.command.add_argument("direction", nargs=3, type=float)
 
 	def run(self, args, sender):
-		args.direction = Vector3(args.direction)
+		args.direction = Vector3(*args.direction)
 		sender.char.knockback(vector=args.direction)
 
 class Level(ChatCommand):
@@ -188,8 +188,7 @@ class RefillStats(ChatCommand):
 	def __init__(self):
 		super().__init__("refillstats")
 
-	@staticmethod
-	def run(args, sender):
+	def run(self, args, sender):
 		sender.stats.life = sender.stats.max_life
 		sender.stats.armor = sender.stats.max_armor
 		sender.stats.imagination = sender.stats.max_imagination
@@ -202,7 +201,7 @@ class Rules(ChatCommand):
 		context = {"bScroll": True}
 		for i, page in enumerate(server.db.config["rules"]):
 			context["PAGE%i" % i] = page
-		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": context}))
+		sender.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "Story", "context": context}))
 
 class SetFlag(ChatCommand):
 	def __init__(self):
@@ -212,22 +211,6 @@ class SetFlag(ChatCommand):
 
 	def run(self, args, sender):
 		sender.char.set_flag(args.value, args.flag_id)
-
-class SetGMLevel(ChatCommand):
-	def __init__(self):
-		super().__init__("setgmlevel")
-		self.command.add_argument("player")
-		self.command.add_argument("level", type=int)
-
-	def run(self, args, sender):
-		player = server.find_player_by_name(args.player)
-		if player is None:
-			server.chat.sys_msg_sender("player cannot be found: %s" % args.player)
-			return
-		if player == sender and args.level == 0:
-			server.chat.sys_msg_sender("You don't want to lose privileges. To appear as a player, use /showgmstatus off")
-			return
-		player.char.account.gm_level = args.level
 
 class SetRespawn(ChatCommand):
 	def __init__(self):
@@ -255,7 +238,7 @@ class Speak(ChatCommand):
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
 			if obj.name == args.object:
-				obj.add_handler("on_private_chat_message", SpeakCommand.speak)
+				obj.add_handler("on_private_chat_message", Speak.speak)
 				server.chat.send_private_chat_message("!"+args.object, "Everything you type will be spoken by the selected object.", sender)
 				return
 		server.chat.sys_msg_sender("Object not found")
@@ -321,7 +304,7 @@ class Teleport(ChatCommand):
 
 	def run(self, args, sender):
 		if args.position:
-			pos = Vector3(args.position)
+			pos = Vector3(*args.position)
 
 		elif args.player:
 			args.player = args.player.lower()
@@ -343,7 +326,7 @@ class Text(ChatCommand):
 		self.command.add_argument("text", nargs="+")
 
 	def run(self, args, sender):
-		sender.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"text": " ".join(args.text)}}))
+		sender.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "Story", "context": {"text": " ".join(args.text)}}))
 
 class UnlockEmote(ChatCommand):
 	def __init__(self):

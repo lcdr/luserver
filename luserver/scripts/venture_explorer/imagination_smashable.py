@@ -1,10 +1,9 @@
 import random
 
 import luserver.components.script as script
-from luserver.bitstream import c_uint, c_int64
+from luserver.bitstream import c_uint
 from luserver.game_object import GameObject
 from luserver.messages import broadcast
-from luserver.world import server
 from luserver.components.mission import MissionState
 
 # crate chicken easter egg not implemented

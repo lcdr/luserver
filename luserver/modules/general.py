@@ -7,10 +7,9 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 
-from ..bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
-from ..game_object import GameObject
+from ..bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
 from ..ldf import LDF, LDFDataType
-from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, Serializable
+from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, game_message_deserialize
 from ..world import server, World
 from ..components.mission import TaskType
 
@@ -74,15 +73,14 @@ class GeneralHandling:
 
 	def on_validated(self, address):
 		player = server.accounts[address].characters.selected()
-		if player is not None:
+		if server.world_id[0] != 0:
 			player.char.address = address
 			server.game_objects[player.object_id] = player
 			player.parent = None
 			player.children = []
 			player.parent_flag = False
 			player.children_flag = False
-			if server.world_id[0] != 0:
-				self.send_load_world(server.world_id, address)
+			self.send_load_world(server.world_id, address)
 
 	def send_load_world(self, destination, address):
 		world_id, world_instance, world_clone = destination
@@ -197,7 +195,7 @@ class GeneralHandling:
 		chardata.write(encoded_ldf)
 		server.send(chardata, address)
 
-		server.replica_manager.add_participant(address) # Add to replica manager sync list
+		server.replica_manager.add_participant(address)  # Add to replica manager sync list
 		server.replica_manager.construct(player)
 		player.char.server_done_loading_all_objects()
 
@@ -302,7 +300,7 @@ class GeneralHandling:
 					if not is_not_default:
 						continue
 
-				value = self.game_message_deserialize(message, param.annotation)
+				value = game_message_deserialize(message, param.annotation)
 
 			kwargs[param.name] = value
 		assert message.all_read()
@@ -327,41 +325,3 @@ class GeneralHandling:
 				handler(player, **kwargs)
 			else:
 				handler(**kwargs)
-
-	def game_message_deserialize(self, message, type):
-		if type == float:
-			return message.read(c_float)
-		if type == bytes:
-			return message.read(bytes, length=message.read(c_uint))
-		if type == str:
-			return message.read(str, length_type=c_uint)
-		if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
-			return message.read(type)
-		if type == BitStream:
-			length = message.read(c_uint)
-			return BitStream(message.read(bytes, length=length))
-		if type == LDF:
-			value = message.read(str, length_type=c_uint)
-			if value:
-				assert message.read(c_ushort) == 0 # for some reason has a null terminator
-			# todo: convert to LDF
-			return value
-		if type == GameObject:
-			return server.get_object(message.read(c_int64))
-		if inspect.isclass(type) and issubclass(type, Serializable):
-			return type.deserialize(message)
-		if isinstance(type, tuple):
-			if len(type) == 2: # list
-				value = []
-				for _ in range(self.game_message_deserialize(message, type[0])):
-					value.append(self.game_message_deserialize(message, type[1]))
-			elif len(type) == 3: # dict
-				value = {}
-				for _ in range(self.game_message_deserialize(message, type[0])):
-					key = self.game_message_deserialize(message, type[1])
-					val = self.game_message_deserialize(message, type[2])
-					value[key] = val
-			else:
-				raise ValueError(type)
-			return value
-		raise TypeError(type)

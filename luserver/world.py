@@ -65,6 +65,8 @@ import logging
 import os.path
 import time
 
+import ZODB
+
 from pyraknet.replicamanager import ReplicaManager
 from .server import DisconnectReason, Server
 from .game_object import GameObject
@@ -134,13 +136,9 @@ class WorldServer(Server):
 
 
 	def shutdown(self):
+		self.commit()
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
-		try:
-			self.conn.transaction_manager.commit()
-		except:
-			import traceback
-			traceback.print_exc()
 		if self.external_address in self.db.servers:
 			del self.db.servers[self.external_address]
 			self.conn.transaction_manager.commit()
@@ -204,7 +202,7 @@ class WorldServer(Server):
 		self.conn.transaction_manager.commit()
 
 	def on_session_info(self, session_info, address):
-		self.conn.transaction_manager.commit()
+		self.commit()
 		self.conn.sync()
 		username = session_info.read(str, allocated_length=33)
 		session_key = session_info.read(str, allocated_length=33)
@@ -230,13 +228,21 @@ class WorldServer(Server):
 
 	def new_object_id(self):
 		self.current_object_id += 1
-		return (self.instance_id << 16)| self.current_object_id | BITS_PERSISTENT
+		return (self.instance_id << 16) | self.current_object_id | BITS_PERSISTENT
 
 	def new_clone_id(self):
 		current = self.db.current_clone_id
 		self.db.current_clone_id += 1
 		self.conn.transaction_manager.commit()
 		return current
+
+	def commit(self):
+		# failsafe on conflict error: abort transaction
+		try:
+			self.conn.transaction_manager.commit()
+		except ZODB.POSException.ConflictError:
+			log.exception("Conflict error, aborting transaction")
+			self.conn.transaction_manager.abort()
 
 	def spawn_object(self, lot, set_vars=None, is_world_control=False):
 		if set_vars is None:

@@ -1,27 +1,53 @@
-import collections.abc
 import math
+from numbers import Real
+from typing import ClassVar, overload
 
 from ..bitstream import c_float
 from ..messages import Serializable
 
 class Vector3(Serializable):
-	def update(self, x=0, y=0, z=0):
-		if isinstance(x, Vector3):
+	zero: "ClassVar[Vector3]"
+	right: "ClassVar[Vector3]"
+	left: "ClassVar[Vector3]"
+	up: "ClassVar[Vector3]"
+	down: "ClassVar[Vector3]"
+	forward: "ClassVar[Vector3]"
+	back: "ClassVar[Vector3]"
+	one: "ClassVar[Vector3]"
+	x: float
+	y: float
+	z: float
+	__slots__ = "x", "y", "z"
+
+	@overload
+	def __init__(self):
+		pass
+
+	@overload
+	def __init__(self, x: Real, y: Real, z: Real):
+		pass
+
+	@overload
+	def __init__(self, x: "Vector3"):
+		pass
+
+	def __init__(self, x=None, y=None, z=None):
+		if x is None:
+			self.x = 0.0
+			self.y = 0.0
+			self.z = 0.0
+		elif isinstance(x, Vector3):
 			self.x = x.x
 			self.y = x.y
 			self.z = x.z
-		elif isinstance(x, collections.abc.Sequence):
-			if len(x) != 3:
-				raise ValueError("Sequence must have length 3")
-			self.x = x[0]
-			self.y = x[1]
-			self.z = x[2]
+		elif isinstance(x, Real) and isinstance(y, Real) and isinstance(z, Real):
+			self.x = float(x)
+			self.y = float(y)
+			self.z = float(z)
 		else:
-			self.x = x
-			self.y = y
-			self.z = z
+			raise TypeError
 
-	__init__ = update
+	update = __init__
 
 	def __repr__(self):
 		return "Vector3(%g, %g, %g)" % (self.x, self.y, self.z)
@@ -66,16 +92,16 @@ class Vector3(Serializable):
 			return Vector3(0, 0, 0) # seems like the most reasonable thing to do
 		return Vector3(self.x/mag, self.y/mag, self.z/mag)
 
-	def cross(self, other):
+	def cross(self, other: "Vector3"):
 		return Vector3(self.y*other.z - self.z*other.y, self.z*other.x - self.x*other.z, self.x*other.y - self.y*other.x)
 
-	def dot(self, other):
+	def dot(self, other: "Vector3"):
 		return self.x*other.x + self.y*other.y + self.z*other.z
 
-	def hadamard(self, other):
+	def hadamard(self, other: "Vector3"):
 		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
 
-	def sq_distance(self, other):
+	def sq_distance(self, other: "Vector3"):
 		#diff = self - other
 		#return diff.sq_magnitude()
 		# optimized version without creating a new object
@@ -84,7 +110,7 @@ class Vector3(Serializable):
 		dz = self.z - other.z
 		return dx**2 + dy**2 + dz**2
 
-	def distance(self, other):
+	def distance(self, other: "Vector3"):
 		return math.sqrt(self.sq_distance(other))
 
 	def rotated(self, quaternion):

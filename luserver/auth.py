@@ -1,5 +1,7 @@
+import datetime
 import logging
 import random
+import time
 
 try:
 	import bcrypt
@@ -11,7 +13,7 @@ from persistent.mapping import PersistentMapping
 
 from . import server
 from .bitstream import BitStream, c_bool, c_ubyte, c_uint, c_ushort
-from .messages import AuthServerMsg, GeneralMsg, WorldClientMsg
+from .messages import AuthServerMsg, WorldClientMsg
 
 log = logging.getLogger(__name__)
 
@@ -57,11 +59,25 @@ class AuthServer(server.Server):
 
 			if username not in self.db.accounts:
 				raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
-			else:
-				if not encryption.verify(password, self.db.accounts[username].password):
-					raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
 
 			account = self.db.accounts[username]
+
+			if account.gm_level != GMLevel.Admin and account.banned_until > time.time():
+				raise LoginError("You have been banned until %s. If you believe this was in error, contact the server operator." % datetime.datetime.fromtimestamp(account.banned_until))
+
+			if account.password is None:
+				account.password = encryption.encrypt(password)
+				self.conn.transaction_manager.commit()
+				raise LoginError("Password has been set.")
+			else:
+				if not encryption.verify(password, account.password):
+					raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
+
+				if account.is_password_temp:
+					account.password = None
+					account.is_password_temp = False
+					self.conn.transaction_manager.commit()
+					raise LoginError("Your password is one-use-only.\nSign in again to set the used password as your permanent password.")
 
 			"""
 			if account.address is not None and account.address != address:
@@ -86,7 +102,7 @@ class AuthServer(server.Server):
 				message = str(e)
 			else:
 				return_code = e.args[0]
-		except Exception as e:
+		except Exception:
 			import traceback
 			traceback.print_exc()
 			message = "Server error during login, contact server operator"
@@ -131,12 +147,16 @@ class Account(Persistent):
 	def __init__(self, username, password):
 		self.username = username
 		self.password = encryption.encrypt(password)
+		self.password_is_temp = False
 		#self.address = address
 		self.muted_until = 0
 		self.banned_until = 0
 		self.gm_level = GMLevel.Nothing
 		self.characters = PersistentMapping()
 		self.characters.selected = nothing
+
+	def set_password(self, password):
+		self.password = encryption.encrypt(password)
 
 # I'd use a lambda but that isn't well handled by the db
 def nothing():

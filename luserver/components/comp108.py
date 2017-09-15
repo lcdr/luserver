@@ -1,6 +1,5 @@
 from ..bitstream import c_bit, c_int, c_int64
 from ..game_object import GameObject
-from ..ldf import LDF
 from ..world import server
 from .component import Component
 
@@ -26,7 +25,7 @@ class Comp108Component(Component):
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		player.char.mount(self.object)
-		player.char.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), str_image_name="", str_text="Use /dismount to dismount.")
+		player.char.disp_tooltip("Use /dismount to dismount.")
 
 	def on_destruction(self):
 		if self.driver_id != 0:

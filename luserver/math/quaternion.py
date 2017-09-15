@@ -1,31 +1,39 @@
-import collections.abc
 import math
+from numbers import Real
+from typing import ClassVar
 
 from ..bitstream import c_float
 from ..messages import Serializable
 from .vector import Vector3
 
 class Quaternion(Serializable):
-	def update(self, x=0, y=0, z=0, w=1):
-		if isinstance(x, Quaternion):
+	identity: "ClassVar[Quaternion]"
+	x: float
+	y: float
+	z: float
+	w: float
+	__slots__ = "x", "y", "z", "w"
+
+	def __init__(self, x=None, y=None, z=None, w=None):
+		if x is None:
+			self.x = 0.0
+			self.y = 0.0
+			self.z = 0.0
+			self.w = 1.0
+		elif isinstance(x, Quaternion):
 			self.x = x.x
 			self.y = x.y
 			self.z = x.z
 			self.w = x.w
-		elif isinstance(x, collections.abc.Sequence):
-			if len(x) != 4:
-				raise ValueError("Sequence must have length 4")
-			self.x = x[0]
-			self.y = x[1]
-			self.z = x[2]
-			self.w = x[3]
+		elif isinstance(x, Real) and isinstance(y, Real) and isinstance(z, Real) and isinstance(w, Real):
+			self.x = float(x)
+			self.y = float(y)
+			self.z = float(z)
+			self.w = float(w)
 		else:
-			self.x = x
-			self.y = y
-			self.z = z
-			self.w = w
+			raise TypeError
 
-	__init__ = update
+	update = __init__
 
 	def __repr__(self):
 		return "Quaternion(%g, %g, %g, %g)" % (self.x, self.y, self.z, self.w)

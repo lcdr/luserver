@@ -53,7 +53,6 @@ class PropertyData(Serializable):
 			out.write(c_float(coord[1]))
 			out.write(c_float(coord[2]))
 
-	@staticmethod
 	def deserialize(self, data):
 		data.read(c_int64)
 		data.read(c_int)
@@ -153,7 +152,7 @@ class PropertyEntranceComponent(Component):
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		self.property_entrance_begin(player=player)
-		player.char.u_i_message_server_to_single_client(str_message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
+		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
 	def enter_property1(self, player, index:c_int=None, return_to_zone:bool=True):

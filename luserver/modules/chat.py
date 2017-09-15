@@ -1,9 +1,11 @@
 import argparse
+import datetime
 import functools
 import importlib
 import inspect
 import logging
 import os
+import time
 
 from ..auth import GMLevel
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
@@ -16,7 +18,7 @@ log = logging.getLogger(__file__)
 class ChatCommandExit(Exception):
 	pass
 
-class PermissionError(Exception):
+class ChatPermissionError(Exception):
 	pass
 
 class CustomHelpFormatter(argparse.HelpFormatter):
@@ -46,7 +48,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=True, **kwargs):
+	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=False, **kwargs):
 		super().__init__(*args, usage=usage, formatter_class=formatter_class, add_help=False, **kwargs)
 		if add_help:
 			self.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
@@ -115,9 +117,14 @@ class ChatHandling:
 		server.send(response, address)
 
 	def on_general_chat_message(self, message, address):
+		sender = server.accounts[address].characters.selected()
+		if sender.char.account.gm_level != GMLevel.Admin and sender.char.account.muted_until > time.time():
+			self.system_message("Your account is muted until %s" % datetime.datetime.fromtimestamp(sender.char.account.muted_until), address, broadcast=False)
+			return
+
 		message.skip_read(3)
 		text = message.read(str, length_type=c_uint)[:-1]
-		self.send_general_chat_message(server.accounts[address].characters.selected(), text)
+		self.send_general_chat_message(sender, text)
 
 	def send_general_chat_message(self, sender, text):
 		chat_channel = 4
@@ -226,7 +233,7 @@ class ChatHandling:
 			args = self.chat_parser.parse_args(command.split())
 
 			if sender.char.account.gm_level != GMLevel.Admin:
-				raise PermissionError("Must be admin to do this")
+				raise ChatPermissionError("Must be admin to do this")
 
 			if hasattr(args, "func"):
 				args.func(args, sender)

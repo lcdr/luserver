@@ -1,5 +1,3 @@
-import random
-
 from ..world import server
 from .component import Component
 
