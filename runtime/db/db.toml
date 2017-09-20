@@ -6,3 +6,4 @@ client_path=""
 auth_disabled_message="Server is in maintenance mode. Please try again later."
 new_char_message=""
 rules=[]
+enabled_worlds=[]

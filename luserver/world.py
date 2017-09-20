@@ -199,7 +199,7 @@ class WorldServer(Server):
 				self.replica_manager.destruct(player)
 		#self.accounts[address].address = None
 		del self.accounts[address]
-		self.conn.transaction_manager.commit()
+		self.commit()
 
 	def on_session_info(self, session_info, address):
 		self.commit()

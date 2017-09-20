@@ -12,8 +12,9 @@ log = logging.getLogger(__name__)
 class LaunchpadComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
-		self.default_world_id = server.db.launchpad_component[comp_id][0]
-		self.respawn_point_name = server.db.launchpad_component[comp_id][1]
+		self.target_world = server.db.launchpad_component[comp_id][0]
+		self.default_world_id = server.db.launchpad_component[comp_id][1]
+		self.respawn_point_name = server.db.launchpad_component[comp_id][2]
 		if "respawn_point_name" in set_vars:
 			self.respawn_point_name = set_vars["respawn_point_name"]
 
@@ -22,6 +23,11 @@ class LaunchpadComponent(Component):
 
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
+
+		if server.db.config["enabled_worlds"] and self.target_world not in server.db.config["enabled_worlds"]:
+			player.char.disp_tooltip("This world is currently disabled.")
+			return
+
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
 				player.char.traveling_rocket = model.module_lots
