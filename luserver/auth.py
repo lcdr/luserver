@@ -147,7 +147,7 @@ class Account(Persistent):
 	def __init__(self, username, password):
 		self.username = username
 		self.password = encryption.encrypt(password)
-		self.password_is_temp = False
+		self.is_password_temp = False
 		#self.address = address
 		self.muted_until = 0
 		self.banned_until = 0

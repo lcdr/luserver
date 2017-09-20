@@ -394,6 +394,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		return False
 
 	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
+		server.commit()
 		if respawn_point_name is not None and world[0] in server.db.world_data:
 			for obj in server.db.world_data[world[0]].objects.values():
 				if obj.lot == 4945 and (not hasattr(obj, "respawn_name") or respawn_point_name == "" or obj.respawn_name == respawn_point_name): # respawn point lot
@@ -405,7 +406,7 @@ class CharacterComponent(Component, CharMission, CharTrade):
 				self.object.physics.rotation.update(server.db.world_data[world[0]].spawnpoint[1])
 			self.object.physics.attr_changed("position")
 			self.object.physics.attr_changed("rotation")
-		server.conn.transaction_manager.commit()
+		server.commit()
 
 		server_address = await server.address_for_world(world, include_self)
 		log.info("Sending redirect to world %s", server_address)

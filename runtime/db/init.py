@@ -102,8 +102,7 @@ class Init:
 		self.root.config = BTrees.OOBTree.BTree()
 		self.root.config["auth_enabled"] = True
 		self.root.config["credits"] = "Created by lcdr"
-		config_entries = "auth_disabled_message", "new_char_message", "rules"
-		for entry in config_entries:
+		for entry in self.config["defaults"]:
 			self.root.config[entry] = self.config["defaults"][entry]
 
 	def gen_missions(self):
@@ -327,7 +326,7 @@ class Init:
 					self.root.package_component[row[2]] = loot_matrix.get(comp_row[0])
 
 			elif row[1] == 67 and row[2] not in self.root.launchpad_component:
-				comp_row = self.cdclient.execute("select defaultZoneID, targetScene from RocketLaunchpadControlComponent where id == %i " % row[2]).fetchone()
+				comp_row = self.cdclient.execute("select targetZone, defaultZoneID, targetScene from RocketLaunchpadControlComponent where id == %i " % row[2]).fetchone()
 				if comp_row is not None:
 					self.root.launchpad_component[row[2]] = comp_row
 
