@@ -1,14 +1,36 @@
 import asyncio
 
+from ..amf3 import AMF3
 from .command import ChatCommand
+
+class PlayAnim(ChatCommand):
+	def __init__(self):
+		super().__init__("playanim")
+		self.command.add_argument("name")
+
+	def run(self, args, sender):
+		sender.render.play_animation(args.name)
 
 class PlayCine(ChatCommand):
 	def __init__(self):
 		super().__init__("playcine")
 		self.command.add_argument("name")
+		self.command.add_argument("--hideui", action="store_true", default=False)
+		self.command.add_argument("--showplayer", action="store_true", default=False)
 
 	def run(self, args, sender):
-		sender.char.play_cinematic(path_name=args.name, start_time_advance=0)
+		if args.hideui:
+			# hide HUD
+			sender.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "front_end"}))
+		sender.char.play_cinematic(path_name=args.name, send_server_notify=args.hideui, hide_player_during_cine=not args.showplayer, start_time_advance=0)
+
+class PlayEmote(ChatCommand):
+	def __init__(self):
+		super().__init__("playemote")
+		self.command.add_argument("id", type=int)
+
+	def run(self, args, sender):
+		sender.char.emote_played(args.id, None)
 
 class PlayFX(ChatCommand):
 	def __init__(self):

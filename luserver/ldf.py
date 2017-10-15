@@ -1,13 +1,13 @@
 import enum
 import numbers
 
-from .bitstream import BitStream, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint
+from .bitstream import BitStream, c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint
 
 class LDFDataType(enum.Enum):
 	STRING = 0
 	INT32 = 1
 	FLOAT = 3
-	DOUBLE = 4 # still not 100% sure
+	DOUBLE = 4
 	UINT32 = 5
 	BOOLEAN = 7
 	INT64_8 = 8
@@ -136,7 +136,7 @@ class LDF(dict):
 			elif data_type == LDFDataType.FLOAT:
 				uncompressed.write(c_float(value))
 			elif data_type == LDFDataType.DOUBLE:
-				raise NotImplementedError(data_type)
+				uncompressed.write(c_double(value))
 			elif data_type == LDFDataType.UINT32:
 				uncompressed.write(c_uint(value))
 			elif data_type == LDFDataType.BOOLEAN:

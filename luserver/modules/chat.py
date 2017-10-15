@@ -95,7 +95,7 @@ class ChatHandling:
 		for cmd in cmds:
 			cmd()
 
-		clientside_cmds = "dance", "talk", "tell", "wave", "w", "whisper"
+		clientside_cmds = "dance", "giggle", "talk", "tell", "wave", "w", "whisper"
 		for cmd in clientside_cmds:
 			parser = self.commands.add_parser(cmd)
 			parser.add_argument("args", nargs="*")

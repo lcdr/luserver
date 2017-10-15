@@ -114,14 +114,17 @@ class Server(pyraknet.server.Server):
 
 	async def address_for_world(self, world_id, include_self=False):
 		first = True
+		servers = {}
 		while True:
 			self.conn.sync()
-			for server_address, server_world in self.db.servers.items():
-				if server_world == world_id:
-					if not include_self and hasattr(self, "external_address") and server_address == self.external_address:
-						continue
-					return server_address
+			if world_id[0] % 100 == 0 or not first:
+				for server_address, server_world in self.db.servers.items():
+					if server_world == world_id and (world_id[0] % 100 == 0 or server_address not in servers):
+						if not include_self and hasattr(self, "external_address") and server_address == self.external_address:
+							continue
+						return server_address
 			# no server found, spawn a new one
+			servers = dict(self.db.servers)
 			command = "\"%s\" %i %i" % (os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "__main__.py")), world_id[0], world_id[2])
 			if os.name == "nt":
 				subprocess.Popen("cmd /K \"python "+command+" && exit || pause && exit\"", creationflags=subprocess.CREATE_NEW_CONSOLE)

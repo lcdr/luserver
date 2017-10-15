@@ -86,7 +86,8 @@ class MailHandling:
 
 	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
-		recipient.char.mails.append(mail)
+		with server.multi:
+			recipient.char.mails.append(mail)
 		self.send_mail_notification(recipient)
 
 	def send_mail_data(self, player):

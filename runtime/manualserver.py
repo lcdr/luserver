@@ -14,6 +14,7 @@ import pyraknet.server
 
 from luserver.bitstream import c_uint, c_ushort
 from luserver.messages import msg_enum, GameMessage, Message, WorldClientMsg, WorldServerMsg
+from luserver.world import WorldServer
 from luserver.modules.mail import MailID
 
 logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)

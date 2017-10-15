@@ -291,7 +291,7 @@ class Init:
 				else:
 					loot = None
 
-				if life is None:
+				if life is None or life < 1:
 					life = 1
 
 				if armor is not None:

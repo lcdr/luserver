@@ -64,6 +64,7 @@ import atexit
 import logging
 import os.path
 import time
+from contextlib import AbstractContextManager as ACM
 
 import ZODB
 
@@ -83,6 +84,18 @@ BITS_PERSISTENT = 1 << 60
 BITS_LOCAL = 1 << 46
 BITS_SPAWNED = 1 << 58 | BITS_LOCAL
 
+class MultiInstanceAccess(ACM):
+	"""
+	Context manager to safely modify objects that are modified by multiple instances.
+	Internally this means committing before and after, so that edits are immediately committed and the DB doesn't have conflicts.
+	"""
+
+	def __enter__(self):
+		server.commit()
+
+	def __exit__(self, exc_type, exc_value, traceback):
+		server.commit()
+
 class WorldServer(Server):
 	PEER_TYPE = WorldServerMsg.header()
 
@@ -98,6 +111,7 @@ class WorldServer(Server):
 		self.not_console_logged_packets.add("GameMessage/PickupItem")
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
+		self.multi = MultiInstanceAccess()
 		CharHandling()
 		ChatHandling()
 		GeneralHandling()
