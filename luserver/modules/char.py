@@ -242,9 +242,6 @@ class CharHandling:
 		characters.selected = persistent.wref.WeakRef(selected_char)
 		selected_char.char.address = address
 		selected_char.char.online = True
-		# needed for ZODB to pick up the changes to the components
-		# normally not needed because a replica serialization autotriggers this
-		selected_char._p_changed = True
 
 		if selected_char.char.world[0] == 0:
 			asyncio.ensure_future(selected_char.char.transfer_to_world((1000, 0, 0), respawn_point_name=""))

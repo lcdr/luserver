@@ -1,8 +1,8 @@
-from ...math.vector import Vector3
 from ...bitstream import c_int64, c_uint, c_uint64
 from ...game_object import GameObject
 from ...messages import single
 from ...world import server
+from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
 
 class TradeInviteResult:

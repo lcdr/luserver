@@ -10,7 +10,6 @@ from ...amf3 import AMF3
 from ...auth import GMLevel
 from ...bitstream import BitStream, c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ...game_object import GameObject
-from ...ldf import LDF, LDFDataType
 from ...messages import broadcast, single, WorldClientMsg
 from ...world import server, World
 from ...math.quaternion import Quaternion
@@ -18,10 +17,16 @@ from ...math.vector import Vector3
 from ...modules.social import FriendUpdateType
 from ..component import Component
 from ..inventory import InventoryType
-from ..pet import PetTamingNotify
 from ..mission import MissionState, TaskType
+from .activity import CharActivity
+from .camera import CharCamera
 from .mission import CharMission
+from .pet import CharPet
+from .property import CharProperty
 from .trade import CharTrade
+from .ui import CharUI
+
+from builtins import property
 
 log = logging.getLogger(__name__)
 
@@ -41,41 +46,16 @@ class TerminateType:
 	User = 1
 	FromInteraction = 2
 
-class EndBehavior:
-	Return = 0
-	Wait = 1
-
 class BuildType:
 	BuildNowhere = 0
 	BuildInWorld = 1
 	BuildOnProperty = 2
 
-class DeleteReason:
-	PickingModelUp = 0
-	ReturningModelToInventory = 1
-	BreakingModelApart = 2
-
-class MatchRequestType:
-	Join = 0
-	Ready = 1
-
-class MatchRequestValue:
-	Leave = 0
-	Ready = 1
-	Join = 5
-
-class MatchUpdateType:
-	Time = 3
-
 class RewardType:
 	Item = 0
 	InventorySpace = 4
 
-class CyclingMode:
-	AllowCycleTeammates = 0
-	DisallowCycling = 1
-
-class CharacterComponent(Component, CharMission, CharTrade):
+class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharPet, CharProperty, CharTrade, CharUI):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.char = self
@@ -395,6 +375,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	async def transfer_to_world(self, world, respawn_point_name=None, include_self=False):
 		server.commit()
+		# needed for ZODB to pick up the changes to the components
+		# normally not needed because a replica serialization autotriggers this
+		self.object._p_changed = True
+
 		if respawn_point_name is not None and world[0] in server.db.world_data:
 			for obj in server.db.world_data[world[0]].objects.values():
 				if obj.lot == 4945 and (not hasattr(obj, "respawn_name") or respawn_point_name == "" or obj.respawn_name == respawn_point_name): # respawn point lot
@@ -541,32 +525,12 @@ class CharacterComponent(Component, CharMission, CharTrade):
 		pass
 
 	@single
-	def display_message_box(self, show:bool=None, callback_client:GameObject=None, identifier:str=None, image_id:c_int=None, text:str=None, user_data:str=None):
-		pass
-
-	def disp_message_box(self, text):
-		"""display_message_box with default parameters."""
-		self.display_message_box(show=True, callback_client=None, identifier="", image_id=0, text=text, user_data="")
-
-	@single
 	def set_gravity_scale(self, scale:float=None):
-		pass
-
-	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=0, response:c_int=0, rotation:Quaternion=Quaternion.identity):
 		pass
 
 	@broadcast
 	def set_jet_pack_mode(self, bypass_checks:bool=True, hover:bool=False, enable:bool=False, effect_id:c_uint=-1, air_speed:float=10, max_air_speed:float=15, vertical_velocity:float=1, warning_effect_id:c_uint=-1):
 		pass
-
-	@single
-	def display_tooltip(self, do_or_die:bool=False, no_repeat:bool=False, no_revive:bool=False, is_property_tooltip:bool=False, show:bool=None, translate:bool=False, time:c_int=None, id:str=None, localize_params:LDF=None, image_name:str=None, text:str=None):
-		pass
-
-	def disp_tooltip(self, text):
-		"""display_tooltip with default parameters"""
-		self.display_tooltip(show=True, time=1000, id="", localize_params=LDF(), image_name="", text=text)
 
 	def use_non_equipment_item(self, item_to_use:c_int64=None):
 		for item in self.object.inventory.items:
@@ -578,96 +542,10 @@ class CharacterComponent(Component, CharMission, CharTrade):
 							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot, amount)
 						return
 
-	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=None, weekly:bool=None):
-		leaderboard = LDF()
-		leaderboard.ldf_set("ADO.Result", LDFDataType.BOOLEAN, True)
-		leaderboard.ldf_set("Result.Count", LDFDataType.INT32, 0)
-		self.send_activity_summary_leaderboard_data(game_id, query_type, leaderboard_data=leaderboard, throttled=False, weekly=False)
-
-	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int=None, info_type:c_int=None, leaderboard_data:LDF=None, throttled:bool=None, weekly:bool=None):
-		pass
-
-	@single
-	def notify_pet_taming_minigame(self, pet:GameObject=None, player_taming:GameObject=None, force_teleport:bool=None, notify_type:c_uint=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
-		pass
-
-	def client_exit_taming_minigame(self, voluntary_exit:bool=True):
-		self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
-
-	@broadcast
-	def pet_taming_try_build_result(self, success:bool=True, num_correct:c_int=0):
-		pass
-
-	@broadcast
-	def notify_pet_taming_puzzle_selected(self, bricks:(c_uint, c_uint)=None):
-		pass
-
 	@single
 	def set_emote_lock_state(self, lock:bool=None, emote_id:c_int=None):
 		if not lock:
 			self.unlocked_emotes.append(emote_id)
-
-	@single
-	def play_cinematic(self, allow_ghost_updates:bool=True, close_multi_interact:bool=False, send_server_notify:bool=False, use_controlled_object_for_audio_listener:bool=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:bool=False, lead_in:float=-1.0, leave_player_locked_when_finished:bool=False, lock_player:bool=True, path_name:str=None, result:bool=False, skip_if_same_path:bool=False, start_time_advance:float=None):
-		pass
-
-	def toggle_ghost_reference_override(self, override:bool=False):
-		pass
-
-	def set_ghost_reference_position(self, position:Vector3=None):
-		pass
-
-	@single
-	def add_camera_effect(self, config:LDF=None, duration:float=-1, effect_id:str=None, effect_type:str=None):
-		pass
-
-	@single
-	def remove_all_camera_effects(self):
-		pass
-
-	def update_model_from_client(self, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
-		for model in self.object.inventory.models:
-			if model is not None and model.object_id == model_id:
-				spawner_id = server.new_object_id()
-				if rotation != Quaternion.identity:
-					rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped
-				server.db.properties[server.world_id[0]][server.world_id[2]][spawner_id] = model.lot, position, rotation
-				server.spawn_model(spawner_id, model.lot, position, rotation)
-				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
-				server.world_control_object.script.on_model_placed(self.object)
-				for obj in server.game_objects.values():
-					if obj.lot == 3315:
-						plaque = obj
-						break
-				else:
-					log.error("no plaque found")
-					return
-
-				self.place_model_response(position, plaque, 14, rotation)
-				self.handle_u_g_c_equip_pre_create_based_on_edit_mode(0, spawner_id)
-				break
-
-	def delete_model_from_client(self, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
-		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
-		if reason == DeleteReason.PickingModelUp:
-			server.world_control_object.script.on_model_picked_up(self.object)
-		elif reason == DeleteReason.ReturningModelToInventory:
-			server.world_control_object.script.on_model_put_away(self.object)
-
-		server.replica_manager.destruct(server.game_objects[model_id])
-		for spawner, model in server.models:
-			if model.object_id == model_id:
-				server.models.remove((spawner, model))
-				prop_spawners = server.db.properties[server.world_id[0]][server.world_id[2]]
-				del prop_spawners[spawner.object_id]
-				item = self.object.inventory.add_item_to_inventory(model.lot)
-				if reason == DeleteReason.PickingModelUp:
-					self.object.inventory.equip_inventory(item_to_equip=item.object_id)
-					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.amount)
-				self.get_models_on_property(models={model: spawner for spawner, model in server.models})
-				self.place_model_response(response=16)
-				break
 
 	def parse_chat_message(self, client_state:c_int, text:str):
 		if text.startswith("/"):
@@ -678,17 +556,6 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	def bounce_notification(self, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:bool=None):
 		pass
-
-	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:BitStream=None, time_taken_in_ms:c_uint=None):
-		save_response = BitStream()
-		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
-		save_response.write(c_int64(local_id))
-		save_response.write(c_uint(0))
-		save_response.write(c_uint(1))
-		save_response.write(c_int64(server.new_object_id()))
-		save_response.write(c_uint(len(lxfml_data_compressed)))
-		save_response.write(lxfml_data_compressed)
-		server.send(save_response, self.address)
 
 	@broadcast
 	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
@@ -701,11 +568,6 @@ class CharacterComponent(Component, CharMission, CharTrade):
 	@single
 	def u_i_message_server_to_single_client(self, args:AMF3=None, message_name:bytes=None):
 		pass
-
-	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:bool=False):
-		if not client_failed:
-			self.pet_taming_try_build_result()
-			self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
 	def report_bug(self, body:str=None, client_version:bytes=None, other_player_id:bytes=None, selection:bytes=None):
 		# The chat text input has limited length, this one doesn't
@@ -727,36 +589,6 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	@broadcast
 	def player_reached_respawn_checkpoint(self, pos:Vector3=None, rot:Quaternion=Quaternion.identity):
-		pass
-
-	@single
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
-		pass
-
-	@single
-	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=None, model_id:c_int64=None):
-		pass
-
-	def property_contents_from_client(self, query_db:bool=False):
-		self.get_models_on_property(models={model: spawner for spawner, model in server.models})
-
-	@broadcast
-	def get_models_on_property(self, models:(c_uint, GameObject, GameObject)=None):
-		pass
-
-	def match_request(self, activator:c_int64=None, player_choices:LDF=None, type:c_int=None, value:c_int=None):
-		self.match_response(response=0)
-		if type == MatchRequestType.Join:# and value == MatchRequestValue.Join:
-			update_data = LDF()
-			update_data.ldf_set("time", LDFDataType.FLOAT, 60.0)
-			self.match_update(data=update_data, type=MatchUpdateType.Time)
-
-	@single
-	def match_response(self, response:c_int=None):
-		pass
-
-	@single
-	def match_update(self, data:LDF=None, type:c_int=None):
 		pass
 
 	def used_information_plaque(self, plaque_object_id:c_int64=None):
@@ -800,10 +632,6 @@ class CharacterComponent(Component, CharMission, CharTrade):
 
 	@single
 	def server_done_loading_all_objects(self):
-		pass
-
-	@broadcast
-	def force_camera_target_cycle(self, force_cycling:bool=False, cycling_mode:c_uint=CyclingMode.AllowCycleTeammates, optional_target:GameObject=None):
 		pass
 
 	def notify_server_level_processing_complete(self):

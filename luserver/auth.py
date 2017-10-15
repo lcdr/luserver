@@ -65,19 +65,21 @@ class AuthServer(server.Server):
 			if account.gm_level != GMLevel.Admin and account.banned_until > time.time():
 				raise LoginError("You have been banned until %s. If you believe this was in error, contact the server operator." % datetime.datetime.fromtimestamp(account.banned_until))
 
-			if account.password is None:
+			if account.password_state == PasswordState.AcceptNew:
+				if encryption.verify(password, account.password):
+					raise LoginError("Password must not be the same as temporary password")
 				account.password = encryption.encrypt(password)
+				account.password_state = PasswordState.Set
 				self.conn.transaction_manager.commit()
 				raise LoginError("Password has been set.")
-			else:
-				if not encryption.verify(password, account.password):
-					raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
 
-				if account.is_password_temp:
-					account.password = None
-					account.is_password_temp = False
-					self.conn.transaction_manager.commit()
-					raise LoginError("Your password is one-use-only.\nSign in again to set the used password as your permanent password.")
+			if not encryption.verify(password, account.password):
+				raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
+
+			if account.password_state == PasswordState.Temp:
+				account.password_state = PasswordState.AcceptNew
+				self.conn.transaction_manager.commit()
+				raise LoginError("Your password is one-use-only.\nSign in again to set the used password as your permanent password.")
 
 			"""
 			if account.address is not None and account.address != address:
@@ -143,11 +145,16 @@ class GMLevel:
 	Nothing = 0
 	Admin = 1
 
+class PasswordState:
+	Temp = 0
+	AcceptNew = 1
+	Set = 2
+
 class Account(Persistent):
 	def __init__(self, username, password):
 		self.username = username
 		self.password = encryption.encrypt(password)
-		self.is_password_temp = False
+		self.password_state = PasswordState.Set
 		#self.address = address
 		self.muted_until = 0
 		self.banned_until = 0

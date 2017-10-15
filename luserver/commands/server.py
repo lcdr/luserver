@@ -6,7 +6,7 @@ import re
 import secrets
 import time
 
-from ..auth import Account
+from ..auth import Account, PasswordState
 from ..bitstream import BitStream, c_bool, c_ushort
 from ..messages import WorldClientMsg
 from ..world import server
@@ -21,12 +21,11 @@ class Auth(ChatCommand):
 		self.command.add_argument("--message", nargs="+")
 
 	def run(self, args, sender):
-		server.conn.transaction_manager.commit()
-		server.db.config["auth_enabled"] = args.enabled
-		server.chat.sys_msg_sender("Auth is now %s" % args.enabled)
-		if args.message is not None:
-			server.db.config["auth_disabled_message"] = " ".join(args.message)
-		server.conn.transaction_manager.commit()
+		with server.multi:
+			server.db.config["auth_enabled"] = args.enabled
+			server.chat.sys_msg_sender("Auth is now %s" % args.enabled)
+			if args.message is not None:
+				server.db.config["auth_disabled_message"] = " ".join(args.message)
 
 class Ban(ChatCommand):
 	def __init__(self):
@@ -55,19 +54,27 @@ class CheckForLeaks(ChatCommand):
 	def run(self, args, sender):
 		sender.char.check_for_leaks(fullcheck=True)
 
+class Commit(ChatCommand):
+	def __init__(self):
+		super().__init__("commit")
+
+	def run(self, args, sender):
+		server.commit()
+
 class CreateAccount(ChatCommand):
 	def __init__(self):
 		super().__init__("createaccount")
 		self.command.add_argument("username")
 
 	def run(self, args, sender):
-		server.conn.transaction_manager.commit()
 		if args.username in server.db.accounts:
 			raise RuntimeError("Account already exists")
 		temp_password = secrets.token_urlsafe(10)
-		server.db.accounts[args.username] = Account(args.username, temp_password)
-		server.db.accounts[args.username].is_password_temp = True
-		server.conn.transaction_manager.commit()
+
+		with server.multi:
+			server.db.accounts[args.username] = Account(args.username, temp_password)
+			server.db.accounts[args.username].password_state = PasswordState.Temp
+
 		sender.char.disp_message_box("Account %s created. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
 
 class Kick(ChatCommand):
@@ -109,13 +116,14 @@ class ResetPassword(ChatCommand):
 		self.command.add_argument("username")
 
 	def run(self, args, sender):
-		server.conn.transaction_manager.commit()
 		if args.username not in server.db.accounts:
 			raise RuntimeError("Account doesn't exist")
 		temp_password = secrets.token_urlsafe(10)
-		server.db.accounts[args.username].set_password(temp_password)
-		server.db.accounts[args.username].is_password_temp = True
-		server.conn.transaction_manager.commit()
+
+		with server.multi:
+			server.db.accounts[args.username].set_password(temp_password)
+			server.db.accounts[args.username].password_state = PasswordState.Temp
+
 		sender.char.disp_message_box("Password reset for %s. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
 
 class Restart(ChatCommand):
@@ -191,10 +199,10 @@ class Unban(ChatCommand):
 		self.command.add_argument("player")
 
 	def run(self, args, sender):
-		server.conn.transaction_manager.commit()
-		player = server.find_player_by_name(args.player)
-		player.char.account.banned_until = 0
-		server.conn.transaction_manager.commit()
+		with server.multi:
+			player = server.find_player_by_name(args.player)
+			player.char.account.banned_until = 0
+
 		server.chat.sys_msg_sender("%s has been unbanned." % args.player)
 
 class Unmute(ChatCommand):

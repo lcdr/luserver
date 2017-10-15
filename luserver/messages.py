@@ -165,6 +165,7 @@ class GameMessage(Enum):
 	NotifyClientZoneObject = 737
 	PropertyRentalResponse = 750
 	PlayCinematic = 762
+	CinematicUpdate = 764
 	ToggleGhostReferenceOverride = 767
 	SetGhostReferencePosition = 768
 	FireEventServerSide = 770

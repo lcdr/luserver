@@ -30,6 +30,13 @@ class Currency(ChatCommand):
 	def run(self, args, sender):
 		sender.char.set_currency(currency=sender.char.currency + args.amount, position=Vector3.zero)
 
+class Dab(ChatCommand):
+	def __init__(self):
+		super().__init__("dab")
+
+	def run(self, args, sender):
+		sender.render.play_animation("cute-spin-exit")
+
 class Dismount(ChatCommand):
 	def __init__(self):
 		super().__init__("dismount")
