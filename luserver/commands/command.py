@@ -1,9 +1,11 @@
+from ..auth import GMLevel
 from ..world import server
 
 class ChatCommand:
 	def __init__(self, *args, **kwargs):
 		self.command = server.chat.commands.add_parser(*args, **kwargs)
 		self.command.set_defaults(func=self.run)
+		self.command.set_defaults(perm=GMLevel.Admin)
 
 	def run(self, args, sender):
 		raise NotImplementedError

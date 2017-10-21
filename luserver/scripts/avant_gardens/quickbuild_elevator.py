@@ -2,6 +2,7 @@ import luserver.components.script as script
 
 class ScriptComponent(script.ScriptComponent):
 	def complete_rebuild(self, player):
+		self.object.moving_platform.stop_pathing()
 		self.object.physics.proximity_radius(5)
 		self.player = player
 

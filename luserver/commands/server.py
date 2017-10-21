@@ -6,7 +6,7 @@ import re
 import secrets
 import time
 
-from ..auth import Account, PasswordState
+from ..auth import Account, GMLevel, PasswordState
 from ..bitstream import BitStream, c_bool, c_ushort
 from ..messages import WorldClientMsg
 from ..world import server
@@ -30,6 +30,7 @@ class Auth(ChatCommand):
 class Ban(ChatCommand):
 	def __init__(self):
 		super().__init__("ban")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("player")
 		self.command.add_argument("--minutes", type=int, default=0)
 		self.command.add_argument("--hours", type=int, default=0)
@@ -93,6 +94,7 @@ class Kick(ChatCommand):
 class Mute(ChatCommand):
 	def __init__(self):
 		super().__init__("mute")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("player")
 		self.command.add_argument("--minutes", type=int, default=0)
 		self.command.add_argument("--hours", type=int, default=0)
@@ -177,6 +179,9 @@ class SetGMLevel(ChatCommand):
 		self.command.add_argument("level", type=int)
 
 	def run(self, args, sender):
+		if args.level >= sender.char.account.gm_level:
+			server.chat.sys_msg_sender("Can't set level higher or equal to your own")
+			return
 		player = server.find_player_by_name(args.player)
 		if player is None:
 			server.chat.sys_msg_sender("player cannot be found: %s" % args.player)
@@ -196,6 +201,7 @@ class Shutdown(ChatCommand):
 class Unban(ChatCommand):
 	def __init__(self):
 		super().__init__("unban")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("player")
 
 	def run(self, args, sender):
@@ -208,6 +214,7 @@ class Unban(ChatCommand):
 class Unmute(ChatCommand):
 	def __init__(self):
 		super().__init__("unmute")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("player")
 
 	def run(self, args, sender):

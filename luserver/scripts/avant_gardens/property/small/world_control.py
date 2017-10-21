@@ -45,7 +45,7 @@ class ScriptComponent(script.ScriptComponent):
 		player = [obj for obj in server.game_objects.values() if obj.lot == 1][0]
 		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
 			return
-		server.spawners["SpiderBoss"].spawner.deactivate()
+		server.spawners["SpiderBoss"].spawner.destroy()
 		for spawner in ("AggroVol", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
 			server.spawners[spawner].spawner.destroy()
 		for i in range(5):

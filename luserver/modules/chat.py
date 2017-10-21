@@ -95,10 +95,12 @@ class ChatHandling:
 		for cmd in cmds:
 			cmd()
 
-		clientside_cmds = "dance", "giggle", "talk", "tell", "wave", "w", "whisper"
+		clientside_cmds = "backflip", "clap", "cringe", "cry", "dance", "gasp", "giggle", "s", "say", "salute", "shrug", "sigh", "talk", "tell", "victory", "wave", "w", "whisper", "yes"
 		for cmd in clientside_cmds:
 			parser = self.commands.add_parser(cmd)
 			parser.add_argument("args", nargs="*")
+			parser.set_defaults(func=lambda args, sender: None)
+			parser.set_defaults(perm=GMLevel.Nothing)
 
 		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message)
 		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message)
@@ -229,14 +231,12 @@ class ChatHandling:
 	def parse_command(self, command, sender):
 		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)
 		try:
-			# todo: sender privilege level check (if possible in argparse)
 			args = self.chat_parser.parse_args(command.split())
 
-			if sender.char.account.gm_level != GMLevel.Admin:
-				raise ChatPermissionError("Must be admin to do this")
+			if sender.char.account.gm_level < args.perm:
+				raise ChatPermissionError("Not enough permissions to execute")
 
-			if hasattr(args, "func"):
-				args.func(args, sender)
+			args.func(args, sender)
 		except ChatCommandExit:
 			pass
 		except Exception as e:
