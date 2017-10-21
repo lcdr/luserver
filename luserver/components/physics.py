@@ -77,7 +77,7 @@ class PhysicsComponent(Component):
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
 		object_id = server.new_spawned_id()
 		owner.char.dropped_loot[object_id] = lot
-		owner.char.drop_client_loot(final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
+		owner.char.drop_client_loot(spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
 class Controllable(PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):

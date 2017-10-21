@@ -143,7 +143,8 @@ class AuthServer(server.Server):
 
 class GMLevel:
 	Nothing = 0
-	Admin = 1
+	Mod = 50
+	Admin = 100
 
 class PasswordState:
 	Temp = 0

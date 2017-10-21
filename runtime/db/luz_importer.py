@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import BTrees
 
 import luserver.world
-from luserver.bitstream import BitStream, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from luserver.bitstream import BitStream, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import World
@@ -184,9 +184,14 @@ class _LUZImporter:
 			elif path_type == PathType.Spawner:
 				spawner_vars = {
 					"spawntemplate": self.luz.read(c_uint),
-					"spawner_unknown": (self.luz.read(c_uint), self.luz.read(c_int), self.luz.read(c_uint))}
+					"respawn_time": self.luz.read(c_uint)
+				}
+				max_to_spawn = self.luz.read(c_int)
+				num_to_maintain = self.luz.read(c_uint)
+				assert max_to_spawn == -1 or max_to_spawn == num_to_maintain
+				spawner_vars["num_to_maintain"] = num_to_maintain
 				object_id = self.luz.read(c_int64)
-				unknown3 = self.luz.read(c_ubyte)
+				spawner_vars["active_on_load"] = self.luz.read(c_bool)
 
 			waypoints = []
 
@@ -196,8 +201,8 @@ class _LUZImporter:
 				if path_type == PathType.MovingPlatform:
 					rotation = Quaternion(self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float))
 					waypoint_unknown2 = self.luz.read(c_ubyte)
-					waypoint_unknown3 = self.luz.read(c_float)
-					waypoint_unknown4 = self.luz.read(c_float)
+					speed = self.luz.read(c_float)
+					wait = self.luz.read(c_float)
 
 					if path_version >= 13:
 						waypoint_audio_guid_1 = self.luz.read(str, length_type=c_ubyte)
@@ -229,7 +234,7 @@ class _LUZImporter:
 							pass
 
 				if path_type == PathType.MovingPlatform:
-					waypoints.append((position, waypoint_unknown3, waypoint_unknown4))
+					waypoints.append((position, speed, wait))
 				elif path_type == PathType.Spawner:
 					spawned_vars = {"position": position, "rotation": rotation}
 					spawned_vars.update(parse_config(config))
