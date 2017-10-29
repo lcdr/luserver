@@ -14,11 +14,24 @@ class ScriptComponent(script.ScriptComponent):
 
 	@single
 	def player_ready(self, player):
-		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
-			self.clear_maelstrom(player)
-			return
+		if not player.char.get_flag(FLAG_DEFEATED_SPIDER):
+			self.start_maelstrom()
+		else:
+			server.spawners["FXObject"].spawner.destroy()
 
-		for spawner in ("BirdFX", "SunBeam", "Instancer"):
+		# todo: implement distinction between instance and claim property (different launcher)
+		server.spawners["Launcher"].spawner.activate()
+
+		if 320 not in player.char.missions:
+			server.spawners["PropertyGuard"].spawner.activate()
+
+	def start_maelstrom(self):
+		for spawner in ("SpiderBoss", "SpiderEggs"):
+			server.spawners[spawner].spawner.activate()
+
+		server.spawners["Rocks"].spawner.activate()
+
+		for spawner in ("BirdFX", "SunBeam"):
 			server.spawners[spawner].spawner.destroy()
 
 		self.set_network_var("unclaimed", LDFDataType.BOOLEAN, True)
@@ -30,22 +43,11 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.notify_client_object(name="maelstromSkyOn", param1=0, param2=0, param_str=b"", param_obj=None)
 
-	def clear_maelstrom(self, player):
-		for spawner in ("AggroVol", "FXObject", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderBoss", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
-			server.spawners[spawner].spawner.destroy()
-		for i in range(5):
-			server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
-		for i in range(1, 9):
-			server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
-
-		if 320 in player.char.missions:
-			server.spawners["PropertyGuard"].spawner.destroy()
-
 	def on_spider_defeated(self):
 		player = [obj for obj in server.game_objects.values() if obj.lot == 1][0]
 		if player.char.get_flag(FLAG_DEFEATED_SPIDER):
 			return
-		server.spawners["SpiderBoss"].spawner.destroy()
+		server.spawners["SpiderBoss"].spawner.deactivate()
 		for spawner in ("AggroVol", "Instancer", "Land_Target", "Rocks", "RFS_Targets", "SpiderEggs", "SpiderRocket_Bot", "SpiderRocket_Mid", "SpiderRocket_Top", "TeleVol"):
 			server.spawners[spawner].spawner.destroy()
 		for i in range(5):

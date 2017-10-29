@@ -450,6 +450,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		if lot in (177, 935, 4035, 6431, 7230, 8200, 8208, 11910, 11911, 11912, 11913, 11914, 11915, 11916, 11917, 11918, 11919, 11920): # powerup
 			for skill_id, _ in server.db.object_skills[lot]:
 				self.object.skill.cast_skill(skill_id)
+				self.update_mission_task(TaskType.CollectPowerup, skill_id)
 		else:
 			self.object.inventory.add_item_to_inventory(lot)
 		del self.dropped_loot[loot_object_id]

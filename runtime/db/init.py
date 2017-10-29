@@ -119,7 +119,7 @@ class Init:
 			# tasks
 			tasks = []
 			for task_type, target, target_group, target_value, parameter in self.cdclient.execute("select taskType, target, targetGroup, targetValue, taskParam1 from MissionTasks where id = "+str(id)):
-				if task_type in (TaskType.KillEnemy, TaskType.Script, TaskType.QuickBuild, TaskType.ObtainItem, TaskType.MissionComplete, TaskType.TamePet):
+				if task_type in (TaskType.KillEnemy, TaskType.Script, TaskType.QuickBuild, TaskType.ObtainItem, TaskType.MissionComplete, TaskType.CollectPowerup, TaskType.TamePet):
 					target = target,
 					if target_group:
 						target += tuple(int(target_id) for target_id in target_group.split(","))
