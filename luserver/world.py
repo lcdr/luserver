@@ -120,7 +120,7 @@ class WorldServer(Server):
 
 		self.instance_id = self.db.current_instance_id
 		self.db.current_instance_id += 1
-		self.conn.transaction_manager.commit()
+		self.commit()
 		self.current_object_id = 0
 		self.current_spawned_id = BITS_SPAWNED
 		self.world_data = None
@@ -138,8 +138,8 @@ class WorldServer(Server):
 	async def init_network(self):
 		await super().init_network()
 		self.external_address = self.external_address[0], self._address[1] # update port (for OS-chosen port)
-		self.db.servers[self.external_address] = self.world_id
-		self.conn.transaction_manager.commit()
+		with self.multi:
+			self.db.servers[self.external_address] = self.world_id
 
 	def check_shutdown(self):
 		# shut down instances with no players every 60 minutes
@@ -154,8 +154,8 @@ class WorldServer(Server):
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
 		if self.external_address in self.db.servers:
-			del self.db.servers[self.external_address]
-			self.conn.transaction_manager.commit()
+			with self.multi:
+				del self.db.servers[self.external_address]
 		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
 

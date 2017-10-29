@@ -96,7 +96,9 @@ class TacArc(Behavior):
 
 		else:
 			if hasattr(behavior, "blocked_action"):
-				if bitstream.read(c_bit): # is blocked
+				is_blocked = bitstream.read(c_bit)
+				log.debug("blocked bit %s", is_blocked)
+				if is_blocked:
 					log.debug("blocked")
 					self.deserialize_behavior(behavior.blocked_action, bitstream, target, level+1)
 					return
@@ -377,6 +379,7 @@ class Chain(Behavior):
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
 		chain_index = bitstream.read(c_uint)
+		log.debug("chain index %i", chain_index)
 		self.deserialize_behavior(behavior.behaviors[chain_index-1], bitstream, target, level+1)
 
 class ForceMovement(Behavior):

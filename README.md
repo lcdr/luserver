@@ -1,6 +1,7 @@
 # luserver
 ## A LEGO Universe server
 ### Created by lcdr
+### Source repository at https://bitbucket.org/lcdr/luserver/
 ### License: GPL v3
 
 ### Installation

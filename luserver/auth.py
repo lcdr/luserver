@@ -58,6 +58,7 @@ class AuthServer(server.Server):
 			password = request.read(str, allocated_length=41)
 
 			if username not in self.db.accounts:
+				log.info("Login attempt with username %s and invalid password", username)
 				raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
 
 			account = self.db.accounts[username]

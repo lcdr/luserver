@@ -13,6 +13,7 @@ class TaskType:
 	MinigameAchievement = 14
 	Interact = 15
 	MissionComplete = 16
+	CollectPowerup = 21
 	TamePet = 22
 	# CompleteRace = 23 ? or CompleteActivity or something?
 	Flag = 24
