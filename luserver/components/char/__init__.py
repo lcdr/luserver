@@ -235,7 +235,10 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		if self.gm_flag or is_creation:
 			out.write(c_bit(self.pvp_enabled))
 			out.write(c_bit(self.show_gm_status))
-			out.write(c_ubyte(self.account.gm_level))
+			if self.account is None:
+				out.write(c_ubyte(0))
+			else:
+				out.write(c_ubyte(self.account.gm_level))
 			out.write(c_bit(False))
 			out.write(c_ubyte(0))
 			if self.gm_flag:

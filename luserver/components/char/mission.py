@@ -7,7 +7,7 @@ from ...messages import single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
-from ..mission import check_prereqs, MissionProgress, MissionState, TaskType
+from ..mission import check_prereqs, MissionProgress, MissionState, ObtainItemType, TaskType
 
 class CharMission:
 	def __init__(self):
@@ -50,6 +50,9 @@ class CharMission:
 						if task_type in (TaskType.UseEmote, TaskType.UseSkill):
 							if parameter not in task.parameter:
 								continue
+						if task_type == TaskType.MinigameAchievement:
+							if parameter[0] != task.parameter or parameter[1] < task.target_value:
+								continue
 						if isinstance(task.target, tuple):
 							if target not in task.target:
 								continue
@@ -67,6 +70,9 @@ class CharMission:
 							task.parameter.add(increment)
 							task.value = len(task.parameter)
 							update = increment
+						elif task.type == TaskType.MinigameAchievement:
+							task.value = task.target_value
+							update = task.value
 						else:
 							task.value = min(task.value+increment, task.target_value)
 							update = task.value
@@ -95,6 +101,13 @@ class CharMission:
 		self.set_currency(currency=self.currency + mission.rew_currency, position=Vector3.zero, source_type=source_type)
 		self.modify_lego_score(mission.rew_universe_score, source_type=source_type)
 
+		for task in mission.tasks:
+			if task.type == TaskType.ObtainItem and task.parameter == ObtainItemType.RemoveOnComplete:
+				self.object.inventory.remove_item_from_inv(InventoryType.Max, lot=task.target[0], amount=task.target_value)
+
+		if mission.rew_max_items:
+			self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+mission.rew_max_items)
+
 		if not mission.is_choice_reward:
 			for lot, amount in mission.rew_items:
 				self.object.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
@@ -104,9 +117,6 @@ class CharMission:
 
 		self.object.stats.max_life += mission.rew_max_life
 		self.object.stats.max_imagination += mission.rew_max_imagination
-
-		if mission.rew_max_items:
-			self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+mission.rew_max_items)
 
 		self.notify_mission(mission_id, mission_state=MissionState.Completed, sending_rewards=False)
 

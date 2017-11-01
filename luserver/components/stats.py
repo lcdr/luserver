@@ -139,6 +139,11 @@ class StatsSubcomponent(Component):
 		if self.object.spawner_object is not None:
 			self.object.spawner_object.handle("on_spawned_destruction")
 
+	def refill_stats(self):
+		self.life = self.max_life
+		self.armor = self.max_armor
+		self.imagination = self.max_imagination
+
 	@broadcast
 	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_uint=0, killer:GameObject=None, loot_owner:GameObject=0):
 		self.object.handle("on_death", killer, silent=True)
