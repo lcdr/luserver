@@ -135,7 +135,7 @@ class HighStats(ChatCommand):
 		sender.stats.max_life = 99
 		sender.stats.max_armor = 99
 		sender.stats.max_imagination = 99
-		RefillStats.run(args, sender)
+		sender.stats.refill_stats()
 
 class Invisibility(ChatCommand):
 	# not working
@@ -196,9 +196,7 @@ class RefillStats(ChatCommand):
 		super().__init__("refillstats")
 
 	def run(self, args, sender):
-		sender.stats.life = sender.stats.max_life
-		sender.stats.armor = sender.stats.max_armor
-		sender.stats.imagination = sender.stats.max_imagination
+		sender.stats.refill_stats()
 
 class Rules(ChatCommand):
 	def __init__(self):

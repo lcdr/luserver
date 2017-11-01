@@ -324,7 +324,7 @@ class InventoryComponent(Component):
 		assert subkey == 0
 		assert trade_id == 0
 		if inventory_type == InventoryType.Max:
-			inventories = [InventoryType.Items, InventoryType.Models, InventoryType.MissionObjects]
+			inventories = [InventoryType.Items, InventoryType.Bricks, InventoryType.Models, InventoryType.MissionObjects]
 		else:
 			inventories = [inventory_type]
 		for inventory_type in inventories:
@@ -398,6 +398,14 @@ class InventoryComponent(Component):
 						if other_item.item_type == item.item_type and other_item.object_id != item.object_id:
 							self.un_equip_inventory(item_to_unequip=other_item.object_id)
 							break
+
+					# if this is a rocket, check for launchpads nearby, and possibly activate the launch sequence
+					if item.lot == 6416 and self.object.char.traveling_rocket is None:
+						for obj in server.world_data.objects.values():
+							if hasattr(obj, "launchpad"):
+								if self.object.physics.position.sq_distance(obj.physics.position) < 25:
+									obj.launchpad.launch(self.object, item)
+									break
 					return
 
 	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64=None, replacement_object_id:c_int64=0):

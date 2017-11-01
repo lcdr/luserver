@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 class LaunchpadComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
+		self.object.launchpad = self
 		self.target_world = server.db.launchpad_component[comp_id][0]
 		self.default_world_id = server.db.launchpad_component[comp_id][1]
 		self.respawn_point_name = server.db.launchpad_component[comp_id][2]
@@ -30,11 +31,14 @@ class LaunchpadComponent(Component):
 
 		for model in player.inventory.models:
 			if model is not None and model.lot == 6416:
-				player.char.traveling_rocket = model.module_lots
-				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player)
+				self.launch(player, model)
 				break
 		else:
 			player.char.disp_tooltip("You don't have a rocket!")
+
+	def launch(self, player, rocket):
+		player.char.traveling_rocket = rocket.module_lots
+		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 
 	def fire_event_server_side(self, player, args:str=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender_id:c_int64=None):
 		if args == "ZonePlayer":

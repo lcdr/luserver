@@ -13,11 +13,11 @@ class ScriptedActivityComponent(Component):
 		self.object.scripted_activity = self
 		self._flags["activity_values"] = "activity_flag"
 		self.activity_values = {}
-		self.comp_id = comp_id
+		self.activity_id = comp_id
 		if "transfer_world_id" in set_vars:
 			self.transfer_world_id = set_vars["transfer_world_id"]
-		elif self.comp_id in server.db.activities:
-			activity = server.db.activities[self.comp_id]
+		elif self.activity_id in server.db.activities:
+			activity = server.db.activities[self.activity_id]
 			self.transfer_world_id = activity[0]
 		else:
 			self.transfer_world_id = None

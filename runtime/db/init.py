@@ -127,8 +127,15 @@ class Init:
 					parameter = tuple(int(param_id) for param_id in parameter.split(","))
 				elif task_type == TaskType.Discover:
 					target = target_group
+				elif task_type == TaskType.MinigameAchievement:
+					parameter = target_group
 				elif task_type == TaskType.Flag:
 					target = tuple(int(flag_id) for flag_id in target_group.split(","))
+				if task_type == TaskType.ObtainItem:
+					if not parameter:
+						parameter = None
+					else:
+						parameter = int(parameter)
 
 				tasks.append((task_type, target, target_value, parameter))
 

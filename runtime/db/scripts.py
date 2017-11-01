@@ -15,6 +15,7 @@ SCRIPTS = {
 	847: "avant_gardens.rusty_steele",
 	867: "avant_gardens.survival.buff_station",
 	882: "avant_gardens.survival.world_control",
+	901: "avant_gardens.survival.stromling_mech",
 	946: "gnarled_forest.torch",
 	947: "gnarled_forest.banana_tree",
 	952: "general.binoculars",

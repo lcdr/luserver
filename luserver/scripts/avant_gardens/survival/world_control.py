@@ -12,6 +12,7 @@ from luserver.math.quaternion import Quaternion
 
 # todo: change this to a separate activity manager script
 
+BASE_SPAWNERS = "Base_MobA", "Base_MobB","Base_MobC"
 SURVIVAL_MISSIONS = [
 	(479, 60),
 	(1153, 180),
@@ -40,13 +41,20 @@ class ScriptComponent(script.ScriptComponent):
 			player.char.teleport(ignore_y=False, pos=spawn.physics.position, set_rotation=True, x=spawn.physics.rotation.x, y=spawn.physics.rotation.y, z=spawn.physics.rotation.z, w=spawn.physics.rotation.w)
 
 	def start(self):
+		if len(self.object.scripted_activity.activity_values) == 1:
+			self.game_type = "solo"
+		else:
+			self.game_type = "team"
+		server.spawners["Smash_01"].spawner.activate()
+		for spawner in BASE_SPAWNERS:
+			server.spawners[spawner].spawner.activate()
+
 		self.start_time = time.time()
 		self.tick_handle = self.object.call_later(1, self.tick)
 		self.object.scripted_activity.activity_start()
-		self.set_network_var("Clear_Scoreboard", LDFDataType.BOOLEAN, True)
-		self.set_network_var("Start_Wave_Message", LDFDataType.STRING, "Start!")
 		self.set_network_var("wavesStarted", LDFDataType.BOOLEAN, True)
-
+		self.set_network_var("Start_Wave_Message", LDFDataType.STRING, "Start!")
+		self.set_network_var("Clear_Scoreboard", LDFDataType.BOOLEAN, True)
 		leaderboard = LDF()
 		leaderboard.ldf_set("ADO.Result", LDFDataType.BOOLEAN, True)
 		leaderboard.ldf_set("Result.Count", LDFDataType.INT32, 1)
@@ -54,6 +62,7 @@ class ScriptComponent(script.ScriptComponent):
 
 		for player_id in self.object.scripted_activity.activity_values:
 			player = server.get_object(player_id)
+			player.stats.refill_stats()
 			self.object.scripted_activity.send_activity_summary_leaderboard_data(game_id=5, info_type=1, leaderboard_data=leaderboard, throttled=False, weekly=False, player=player)
 
 	def game_over(self, player):
@@ -61,6 +70,10 @@ class ScriptComponent(script.ScriptComponent):
 			return
 		self.object.cancel_callback(self.tick_handle)
 		self.script_network_vars.clear()
+
+		server.spawners["Smash_01"].spawner.destroy()
+		for spawner in BASE_SPAWNERS:
+			server.spawners[spawner].spawner.destroy()
 
 		for player_id, values in self.object.scripted_activity.activity_values.items():
 			player = server.get_object(player_id)
@@ -74,6 +87,7 @@ class ScriptComponent(script.ScriptComponent):
 			for mission_id, time in SURVIVAL_MISSIONS:
 				if player_time > time:
 					player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
+			player.char.update_mission_task(TaskType.MinigameAchievement, self.object.scripted_activity.activity_id, ("survival_time_"+self.game_type, 400))
 
 	def tick(self):
 		self.set_network_var("Update_Timer", LDFDataType.DOUBLE, time.time()-self.start_time)

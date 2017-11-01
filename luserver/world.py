@@ -22,6 +22,8 @@ class World(Enum):
 	AvantGardens = 1100
 	AG = AvantGardens
 	AvantGardensSurvival = 1101
+	AGSurvival = AvantGardensSurvival
+	AGS = AvantGardensSurvival
 	SpiderQueenBattle = 1102
 	BlockYard = 1150
 	AvantGrove = 1151

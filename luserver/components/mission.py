@@ -25,6 +25,9 @@ class MissionState:
 	ReadyToComplete = 4
 	Completed = 8
 
+class ObtainItemType:
+	RemoveOnComplete = 2
+
 from persistent import Persistent
 
 class MissionTask(Persistent):
