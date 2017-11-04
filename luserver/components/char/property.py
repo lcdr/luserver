@@ -24,7 +24,7 @@ class CharProperty:
 					rotation = Quaternion(rotation.y, rotation.z, rotation.w, rotation.x) # don't ask me why this is swapped
 				server.db.properties[server.world_id[0]][server.world_id[2]][spawner_id] = model.lot, position, rotation
 				server.spawn_model(spawner_id, model.lot, position, rotation)
-				self.object.inventory.remove_item_from_inv(InventoryType.Models, model)
+				self.object.inventory.remove_item(InventoryType.Models, model)
 				server.world_control_object.script.on_model_placed(self.object)
 				for obj in server.game_objects.values():
 					if obj.lot == 3315:
@@ -51,10 +51,10 @@ class CharProperty:
 				server.models.remove((spawner, model))
 				prop_spawners = server.db.properties[server.world_id[0]][server.world_id[2]]
 				del prop_spawners[spawner.object_id]
-				item = self.object.inventory.add_item_to_inventory(model.lot)
+				item = self.object.inventory.add_item(model.lot)
 				if reason == DeleteReason.PickingModelUp:
 					self.object.inventory.equip_inventory(item_to_equip=item.object_id)
-					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.amount)
+					self.handle_u_g_c_equip_post_delete_based_on_edit_mode(inv_item=item.object_id, items_total=item.count)
 				self.get_models_on_property(models={model: spawner for spawner, model in server.models})
 				self.place_model_response(response=16)
 				break

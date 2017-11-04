@@ -323,8 +323,8 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			else:
 				item_types_equipped.add(item.item_type)
 
-			if item.amount <= 0:
-				log.warning("Item equipped with amount %i: %s", item.amount, item)
+			if item.count <= 0:
+				log.warning("Item equipped with count %i: %s", item.count, item)
 				clean_equipped = True
 
 		if clean_equipped:
@@ -335,8 +335,8 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		if fullcheck:
 			for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
 				for item in inv:
-					if item is not None and item.amount <= 0:
-						log.warning("Item in inventory with amount %i: %s", item.amount, item)
+					if item is not None and item.count <= 0:
+						log.warning("Item in inventory with count %i: %s", item.count, item)
 
 		if self.object.inventory.temp_models:
 			log.warning("Temp Models not empty")
@@ -455,7 +455,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				self.object.skill.cast_skill(skill_id)
 				self.update_mission_task(TaskType.CollectPowerup, skill_id)
 		else:
-			self.object.inventory.add_item_to_inventory(lot)
+			self.object.inventory.add_item(lot)
 		del self.dropped_loot[loot_object_id]
 
 	def request_resurrect(self):
@@ -488,10 +488,8 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		pass
 
 	def client_item_consumed(self, item_id:c_int64=None):
-		for item in self.object.inventory.items:
-			if item is not None and item.object_id == item_id:
-				self.update_mission_task(TaskType.UseConsumable, item.lot)
-				break
+		item = self.object.inventory.get_stack(InventoryType.Items, item_id)
+		self.update_mission_task(TaskType.UseConsumable, item.lot)
 
 	@single
 	def set_user_ctrl_comp_pause(self, paused:bool=None):
@@ -516,10 +514,8 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			server.chat.system_message(server.db.config["new_char_message"], self.address, broadcast=False)
 		self.world = server.world_id
 
-		for inv in (self.object.inventory.items, self.object.inventory.temp_items, self.object.inventory.models):
-			for item in inv:
-				if item is not None and item in self.object.inventory.equipped[-1]:
-					self.object.skill.add_skill_for_item(item, add_buffs=False)
+		for item in self.object.inventory.equipped[-1]:
+			self.object.skill.add_skill_for_item(item, add_buffs=False)
 
 		self.restore_to_post_load_stats()
 		server.world_control_object.handle("player_ready", player=self.object)
@@ -537,14 +533,13 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		pass
 
 	def use_non_equipment_item(self, item_to_use:c_int64=None):
-		for item in self.object.inventory.items:
-			if item is not None and item.object_id == item_to_use:
-				for component_type, component_id in server.db.components_registry[item.lot]:
-					if component_type == 53: # PackageComponent, make an enum for this somewhen
-						self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
-						for lot, amount in self.random_loot(server.db.package_component[component_id]).items():
-							asyncio.get_event_loop().call_soon(self.object.inventory.add_item_to_inventory, lot, amount)
-						return
+		item = self.object.inventory.get_stack(InventoryType.Items, item_to_use)
+		for component_type, component_id in server.db.components_registry[item.lot]:
+			if component_type == 53: # PackageComponent, make an enum for this somewhen
+				self.object.inventory.remove_item(InventoryType.Items, item)
+				for lot, count in self.random_loot(server.db.package_component[component_id]).items():
+					asyncio.get_event_loop().call_soon(self.object.inventory.add_item, lot, count)
+				return
 
 	@single
 	def set_emote_lock_state(self, lock:bool=None, emote_id:c_int=None):
@@ -611,7 +606,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				self.notify_level_rewards(self.level, sending_rewards=True)
 				for reward_type, value in server.db.level_rewards[self.level]:
 					if reward_type == RewardType.Item:
-						self.object.inventory.add_item_to_inventory(value, source_type=source_type)
+						self.object.inventory.add_item(value, source_type=source_type)
 					elif reward_type == RewardType.InventorySpace:
 						self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+value)
 					else:

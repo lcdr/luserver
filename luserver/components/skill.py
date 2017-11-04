@@ -221,10 +221,7 @@ class SkillComponent(Component):
 
 		# remove consumable
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
-			for item in self.object.inventory.items:
-				if item is not None and item.object_id == consumable_item_id:
-					self.object.inventory.remove_item_from_inv(InventoryType.Items, item)
-					break
+			self.object.inventory.remove_item(InventoryType.Items, object_id=consumable_item_id)
 
 	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=None):
 		pass

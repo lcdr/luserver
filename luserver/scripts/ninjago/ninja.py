@@ -20,6 +20,6 @@ class ScriptComponent(script.ScriptComponent):
 	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int=None, mission_id:c_int=None, player:GameObject=None):
 		if mission_state == MissionState.ReadyToComplete:
 			if mission_id in package:
-				player.inventory.remove_item_from_inv(InventoryType.Items, lot=package[mission_id])
+				player.inventory.remove_item(InventoryType.Items, lot=package[mission_id])
 			elif mission_id in flag:
 				player.char.set_flag(True, flag[mission_id])

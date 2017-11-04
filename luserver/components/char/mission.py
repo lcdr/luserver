@@ -28,7 +28,7 @@ class CharMission:
 			if task.type == TaskType.ObtainItem:
 				for item in self.object.inventory.items:
 					if item is not None and item.lot in task.target:
-						self.update_mission_task(TaskType.ObtainItem, item.lot, increment=item.amount, mission_id=mission_id)
+						self.update_mission_task(TaskType.ObtainItem, item.lot, increment=item.count, mission_id=mission_id)
 						if task.value == task.target_value:
 							break
 
@@ -103,14 +103,14 @@ class CharMission:
 
 		for task in mission.tasks:
 			if task.type == TaskType.ObtainItem and task.parameter == ObtainItemType.RemoveOnComplete:
-				self.object.inventory.remove_item_from_inv(InventoryType.Max, lot=task.target[0], amount=task.target_value)
+				self.object.inventory.remove_item(InventoryType.Max, lot=task.target[0], count=task.target_value)
 
 		if mission.rew_max_items:
 			self.object.inventory.set_inventory_size(inventory_type=InventoryType.Items, size=len(self.object.inventory.items)+mission.rew_max_items)
 
 		if not mission.is_choice_reward:
-			for lot, amount in mission.rew_items:
-				self.object.inventory.add_item_to_inventory(lot, amount, source_type=source_type)
+			for lot, count in mission.rew_items:
+				self.object.inventory.add_item(lot, count, source_type=source_type)
 
 		if mission.rew_emote is not None:
 			self.set_emote_lock_state(lock=False, emote_id=mission.rew_emote)
@@ -152,9 +152,9 @@ class CharMission:
 		assert player_id == self.object.object_id
 		if reward_item != -1:
 			mission = self.missions[mission_id]
-			for lot, amount in mission.rew_items:
+			for lot, count in mission.rew_items:
 				if lot == reward_item:
-					self.object.inventory.add_item_to_inventory(lot, amount, source_type=LootType.Mission)
+					self.object.inventory.add_item(lot, count, source_type=LootType.Mission)
 					break
 		receiver.handle("respond_to_mission", mission_id, self.object, reward_item, silent=True)
 

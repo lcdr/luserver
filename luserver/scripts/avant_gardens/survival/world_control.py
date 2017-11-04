@@ -6,12 +6,14 @@ from luserver.ldf import LDF, LDFDataType
 from luserver.bitstream import c_int
 from luserver.messages import single
 from luserver.world import server
+from luserver.components.inventory import InventoryType
 from luserver.components.mission import TaskType
 from luserver.math.vector import Vector3
 from luserver.math.quaternion import Quaternion
 
 # todo: change this to a separate activity manager script
 
+GREEN_IMAGINITE = 3039
 BASE_SPAWNERS = "Base_MobA", "Base_MobB","Base_MobC"
 SURVIVAL_MISSIONS = [
 	(479, 60),
@@ -32,6 +34,7 @@ SURVIVAL_MISSIONS = [
 
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
+		self.first_time = True
 		self.set_network_var("NumberOfPlayers", LDFDataType.INT32, 1)
 
 	def set_player_spawn_points(self):
@@ -62,6 +65,9 @@ class ScriptComponent(script.ScriptComponent):
 
 		for player_id in self.object.scripted_activity.activity_values:
 			player = server.get_object(player_id)
+			if self.first_time:
+				player.inventory.remove_item(InventoryType.Items, lot=GREEN_IMAGINITE) # todo: don't hardcode this and generalize it across activities
+				self.first_time = False
 			player.stats.refill_stats()
 			self.object.scripted_activity.send_activity_summary_leaderboard_data(game_id=5, info_type=1, leaderboard_data=leaderboard, throttled=False, weekly=False, player=player)
 

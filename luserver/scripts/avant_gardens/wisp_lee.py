@@ -12,7 +12,7 @@ class ScriptComponent(script.ScriptComponent):
 				visible = 1
 			elif mission_state == MissionState.ReadyToComplete:
 				visible = 0
-				player.inventory.remove_item_from_inv(InventoryType.Items, lot=14592)
+				player.inventory.remove_item(InventoryType.Items, lot=14592)
 			else:
 				return
 			for obj in server.game_objects.values():
