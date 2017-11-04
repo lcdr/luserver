@@ -29,7 +29,7 @@ class VendorComponent(Component):
 		pass
 
 	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int=1, item:c_int=None):
-		new_item = player.inventory.add_item_to_inventory(item, count)
+		new_item = player.inventory.add_item(item, count)
 		player.char.set_currency(currency=player.char.currency - new_item.base_value*count, position=Vector3.zero)
 
 	def sell_to_vendor(self, player, count:c_int=1, item_obj_id:c_int64=None):
@@ -39,7 +39,7 @@ class VendorComponent(Component):
 			for item in inv:
 				if item is not None and item.object_id == item_obj_id:
 					player.char.set_currency(currency=player.char.currency + (item.base_value*count)//10, position=Vector3.zero)
-					player.inventory.remove_item_from_inv(inv_type, object_id=item_obj_id, amount=count)
+					player.inventory.remove_item(inv_type, object_id=item_obj_id, count=count)
 					found = True
 					break
 		if not found:

@@ -107,12 +107,12 @@ class MailHandling:
 				mails.write(c_int64(0)) # attachment object id
 				mails.write(c_int(-1)) # attachment LOT
 				mails.write(bytes(12))
-				mails.write(c_ushort(0)) # attachment amount
+				mails.write(c_ushort(0)) # attachment count
 			else:
 				mails.write(c_int64(mail.attachment.object_id))
 				mails.write(c_int(mail.attachment.lot))
 				mails.write(bytes(12))
-				mails.write(c_ushort(mail.attachment.amount))
+				mails.write(c_ushort(mail.attachment.count))
 			mails.write(bytes(6))
 			mails.write(c_uint64(mail.send_time))
 			mails.write(c_uint64(mail.send_time))
@@ -127,7 +127,7 @@ class MailHandling:
 		mail_id = data.read(c_int64)
 		for mail in player.char.mails:
 			if mail.id == mail_id:
-				player.inventory.add_item_to_inventory(mail.attachment.lot, mail.attachment.amount)
+				player.inventory.add_item(mail.attachment.lot, mail.attachment.count)
 				mail.attachment = None
 				out = BitStream()
 				out.write_header(WorldClientMsg.Mail)
@@ -166,15 +166,15 @@ class MailHandling:
 				break
 
 	def send_mail_notification(self, player):
-		unread_mails_amount = len([mail for mail in player.char.mails if not mail.is_read])
-		if unread_mails_amount == 0:
+		unread_mails_count = len([mail for mail in player.char.mails if not mail.is_read])
+		if unread_mails_count == 0:
 			return
 		notification = BitStream()
 		notification.write_header(WorldClientMsg.Mail)
 		notification.write(c_uint(MailID.MailNotification))
 		notification.write(bytes(4)) # notification type, seems only 0 is used
 		notification.write(bytes(32))
-		notification.write(c_uint(unread_mails_amount))
+		notification.write(c_uint(unread_mails_count))
 		notification.write(bytes(4))
 		server.send(notification, player.char.address)
 

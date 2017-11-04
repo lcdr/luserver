@@ -192,8 +192,8 @@ class CharHandling:
 				new_char.char.eye_style = request.read(c_uint)
 				new_char.char.mouth_style = request.read(c_uint)
 
-				shirt = new_char.inventory.add_item_to_inventory(self.shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
-				pants = new_char.inventory.add_item_to_inventory(pants_lot[new_char.char.pants_color], notify_client=False)
+				shirt = new_char.inventory.add_item(self.shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
+				pants = new_char.inventory.add_item(pants_lot[new_char.char.pants_color], notify_client=False)
 				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
 				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
 
@@ -252,15 +252,15 @@ class CharHandling:
 		# The LOTs for the shirts are for some reason in two batches of IDs
 		lot_start_1 = 4048
 		lot_start_2 = 5729
-		amount_of_styles_1 = 34
-		amount_of_styles_2 = 6
+		num_styles_1 = 34
+		num_styles_2 = 6
 
 		cc_color_index = self.character_create_color_index(color)
 
 		if 0 < style < 35:
-			return lot_start_1 + cc_color_index * amount_of_styles_1 + style
+			return lot_start_1 + cc_color_index * num_styles_1 + style
 		if 34 < style < 41:
-			return lot_start_2 + cc_color_index * amount_of_styles_2 + style-34
+			return lot_start_2 + cc_color_index * num_styles_2 + style-34
 		raise ValueError(style)
 
 	def character_create_color_index(self, color):

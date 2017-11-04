@@ -12,4 +12,4 @@ class ScriptComponent(script.ScriptComponent):
 				player.char.add_mission(1729)
 				player.char.complete_mission(1729)
 			elif mission_state == MissionState.ReadyToComplete:
-				player.inventory.remove_item_from_inv(InventoryType.Items, lot=14397)
+				player.inventory.remove_item(InventoryType.Items, lot=14397)

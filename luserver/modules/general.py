@@ -122,23 +122,23 @@ class GeneralHandling:
 		for index, item in enumerate(player.inventory.items):
 			if item is not None:
 				optional = {}
-				if item.amount != 1:
-					optional["c"] = str(item.amount)
+				if item.count != 1:
+					optional["c"] = str(item.count)
 				ET.SubElement(in_0, "i", l=str(item.lot), id=str(item.object_id), s=str(index), **optional)
 
 		in_2 = ET.SubElement(items, "in", t="2")
 		for index, brick in enumerate(player.inventory.bricks):
 			optional = {}
-			if brick.amount != 1:
-				optional["c"] = str(brick.amount)
+			if brick.count != 1:
+				optional["c"] = str(brick.count)
 			ET.SubElement(in_2, "i", l=str(brick.lot), id=str(brick.object_id), s=str(index), **optional)
 
 		in_5 = ET.SubElement(items, "in", t="5")
 		for index, model in enumerate(player.inventory.models):
 			if model is not None:
 				optional = {}
-				if model.amount != 1:
-					optional["c"] = str(model.amount)
+				if model.count != 1:
+					optional["c"] = str(model.count)
 				i = ET.SubElement(in_5, "i", l=str(model.lot), id=str(model.object_id), s=str(index), **optional)
 				if hasattr(model, "module_lots"):
 					module_lots = [(LDFDataType.INT32, i) for i in model.module_lots]
@@ -149,8 +149,8 @@ class GeneralHandling:
 		for index, behavior in enumerate(player.inventory.behaviors):
 			if behavior is not None:
 				optional = {}
-				if behavior.amount != 1:
-					optional["c"] = str(behavior.amount)
+				if behavior.count != 1:
+					optional["c"] = str(behavior.count)
 				ET.SubElement(in_7, "i", l=str(behavior.lot), id=str(behavior.object_id), s=str(index), **optional)
 
 		flag = ET.SubElement(root, "flag")

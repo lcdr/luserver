@@ -28,7 +28,10 @@ class RebuildComponent(ScriptedActivityComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.rebuild = self
-		self.complete_time = server.db.rebuild_component[comp_id][0]
+		if "rebuild_complete_time" in set_vars:
+			self.complete_time = set_vars["rebuild_complete_time"]
+		else:
+			self.complete_time = server.db.rebuild_component[comp_id][0]
 		self.smash_time = server.db.rebuild_component[comp_id][1]
 		self.reset_time = server.db.rebuild_component[comp_id][2]
 		self.imagination_cost = server.db.rebuild_component[comp_id][3]

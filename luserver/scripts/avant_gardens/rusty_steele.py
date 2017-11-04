@@ -10,5 +10,5 @@ FLASHLIGHT = 14556
 class ScriptComponent(script.ScriptComponent):
 	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int=None, mission_id:c_int=None, player:GameObject=None):
 		if mission_id == 1854 and mission_state == MissionState.ReadyToComplete:
-			player.inventory.remove_item_from_inv(InventoryType.Items, lot=WHEEL, amount=4)
-			player.inventory.remove_item_from_inv(InventoryType.Items, lot=FLASHLIGHT, amount=3)
+			player.inventory.remove_item(InventoryType.Items, lot=WHEEL, count=4)
+			player.inventory.remove_item(InventoryType.Items, lot=FLASHLIGHT, count=3)

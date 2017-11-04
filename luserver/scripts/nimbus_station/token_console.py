@@ -11,7 +11,7 @@ class ScriptComponent(script.ScriptComponent):
 	def on_use(self, player, multi_interact_id):
 		assert multi_interact_id is None
 		if INTERACT_MISSION in player.char.missions:
-			player.inventory.remove_item_from_inv(InventoryType.Items, lot=MAELSTROM_BRICK, amount=BRICKS_TO_TAKE)
-			player.inventory.add_item_to_inventory(player.char.faction_token_lot(), amount=TOKENS_TO_GIVE)
+			player.inventory.remove_item(InventoryType.Items, lot=MAELSTROM_BRICK, count=BRICKS_TO_TAKE)
+			player.inventory.add_item(player.char.faction_token_lot(), count=TOKENS_TO_GIVE)
 
 			player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=INTERACT_MISSION)

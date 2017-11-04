@@ -9,6 +9,8 @@ import scripts
 def parse_config(config, triggers=None):
 	spawned_vars = {}
 
+	if "compTime" in config:
+		spawned_vars["rebuild_complete_time"] = config["compTime"]
 	if "custom_script_client" in config:
 		spawned_vars["custom_script"] = None
 	if "custom_script_server" in config:

@@ -69,6 +69,7 @@ import time
 from contextlib import AbstractContextManager as ACM
 
 import ZODB
+from persistent.mapping import PersistentMapping
 
 from pyraknet.replicamanager import ReplicaManager
 from .server import DisconnectReason, Server
@@ -256,8 +257,26 @@ class WorldServer(Server):
 		# failsafe on conflict error: abort transaction
 		try:
 			self.conn.transaction_manager.commit()
-		except ZODB.POSException.ConflictError:
+		except ZODB.POSException.ConflictError as e:
 			log.exception("Conflict error, aborting transaction")
+			obj = self.conn.get(e.oid)
+			old = self.conn.oldstate(obj, e.get_old_serial())
+			new = self.conn.oldstate(obj, e.get_new_serial())
+			if isinstance(new, (dict, PersistentMapping)):
+				change_detected = False
+				for key, value in new.items():
+					if key not in old:
+						log.error("other transaction added %s", key)
+						change_detected = True
+					if old[key] != new[key] and not hasattr(new[key], "__dict__") and not isinstance(new[key], list) and not isinstance(new[key], dict):
+						log.error("other transaction changed %s from %s to %s",key, old[key], new[key])
+						change_detected = True
+				if not change_detected:
+					log.error("no change detected, class is %s", type(new))
+			else:
+				log.error("old %s", old)
+				log.error("new %s", new)
+
 			self.conn.transaction_manager.abort()
 
 	def spawn_object(self, lot, set_vars=None, is_world_control=False):

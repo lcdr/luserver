@@ -27,18 +27,18 @@ class ModularBuildComponent(Component):
 	def modular_build_finish(self, player, module_lots:(c_ubyte, c_int)=None):
 		for model in player.inventory.temp_models.copy():
 			if model.lot in module_lots:
-				player.inventory.remove_item_from_inv(InventoryType.TempModels, model)
+				player.inventory.remove_item(InventoryType.TempModels, model)
 
 		if self.object.lot == 8044:
-			player.inventory.add_item_to_inventory(8092, module_lots=module_lots) # modular car
+			player.inventory.add_item(8092, module_lots=module_lots) # modular car
 		else:
-			player.inventory.add_item_to_inventory(6416, module_lots=module_lots) # modular rocket
+			player.inventory.add_item(6416, module_lots=module_lots) # modular rocket
 		player.char.finish_arranging_with_item(new_source_bag=0, new_source_id=0, new_source_lot=-1, new_source_type=0, new_target_id=0, new_target_lot=-1, new_target_type=0, new_target_pos=Vector3.zero, old_item_bag=0, old_item_id=0, old_item_lot=-1, old_item_type=0)
 
 	def modular_build_convert_model(self, player, model_id:c_int64=None):
 		for model in player.inventory.models:
 			if model is not None and model.object_id == model_id:
 				for module_lot in model.module_lots:
-					player.inventory.add_item_to_inventory(lot=module_lot, inventory_type=InventoryType.TempModels, notify_client=False)
-				player.inventory.remove_item_from_inv(InventoryType.Models, model)
+					player.inventory.add_item(lot=module_lot, inventory_type=InventoryType.TempModels, notify_client=False)
+				player.inventory.remove_item(InventoryType.Models, model)
 				break

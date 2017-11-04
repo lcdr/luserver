@@ -54,10 +54,10 @@ from .mission import TaskType
 log = logging.getLogger(__name__)
 
 class Stack(Persistent, Serializable):
-	def __init__(self, db, object_id, lot, amount=1):
+	def __init__(self, db, object_id, lot, count=1):
 		self.object_id = object_id
 		self.lot = lot
-		self.amount = amount
+		self.count = count
 		self.slot = 0
 
 		for component_type, component_id in db.components_registry[self.lot]:
@@ -70,15 +70,15 @@ class Stack(Persistent, Serializable):
 			log.error("ItemComponent for LOT %i not found!", self.lot)
 
 	def __repr__(self):
-		return "%ix %i" % (self.amount, self.lot)
+		return "%ix %i" % (self.count, self.lot)
 
 	def serialize(self, stream):
 		stream.write(c_int64(self.object_id))
 		stream.write(c_int(self.lot))
 		stream.write(c_bit(False))
-		stream.write(c_bit(self.amount != 1))
-		if self.amount != 1:
-			stream.write(c_uint(self.amount))
+		stream.write(c_bit(self.count != 1))
+		if self.count != 1:
+			stream.write(c_uint(self.count))
 		stream.write(c_bit(self.slot != 0))
 		if self.slot != 0:
 			stream.write(c_ushort(self.slot))
@@ -94,9 +94,9 @@ class Stack(Persistent, Serializable):
 		if stream.read(c_bit):
 			print("UNKNOWN1", stream.read(c_int64))
 		if stream.read(c_bit):
-			item.amount = stream.read(c_uint)
+			item.count = stream.read(c_uint)
 		else:
-			item.amount = 1
+			item.count = 1
 		if stream.read(c_bit):
 			item.slot = stream.read(c_ushort)
 		else:
@@ -133,7 +133,7 @@ class InventoryComponent(Component):
 
 		if comp_id in server.db.inventory_component:
 			for item_lot, equip in server.db.inventory_component[comp_id]:
-				item = self.add_item_to_inventory(item_lot, persistent=False, notify_client=False)
+				item = self.add_item(item_lot, persistent=False, notify_client=False)
 				if equip:
 					self.equip_inventory(item_to_equip=item.object_id)
 
@@ -177,7 +177,7 @@ class InventoryComponent(Component):
 
 		# check for previously equipped items that have been unequipped or replaced
 		for prev_equipped_item in self.equipped[-2]:
-			if prev_equipped_item.amount == 0:
+			if prev_equipped_item.count == 0:
 				continue # item has been deleted
 
 			for equipped_item in self.equipped[-1]:
@@ -214,7 +214,7 @@ class InventoryComponent(Component):
 				inventory[slot] = item
 				break
 
-	def add_item_to_inventory(self, lot, amount=1, module_lots=None, inventory_type=None, source_type=0, show_flying_loot=True, persistent=True, notify_client=True):
+	def add_item(self, lot, count=1, module_lots=None, inventory_type=None, source_type=0, show_flying_loot=True, persistent=True, notify_client=True):
 		for component_type, component_id in server.db.components_registry[lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
 				item_type, stack_size = server.db.item_component[component_id][1:3]
@@ -225,7 +225,7 @@ class InventoryComponent(Component):
 
 
 		if hasattr(self.object, "char"):
-			self.object.char.update_mission_task(TaskType.ObtainItem, lot, increment=amount)
+			self.object.char.update_mission_task(TaskType.ObtainItem, lot, increment=count)
 
 		if inventory_type is None:
 			if item_type == ItemType.Brick:
@@ -245,17 +245,17 @@ class InventoryComponent(Component):
 		if module_lots:
 			stack_size = 1
 
-		while amount > 0:
+		while count > 0:
 			new_stack = stack_size == 1
 			if not new_stack:
 				for stack in inventory:
-					if stack is not None and stack.lot == lot and (stack_size == 0 or stack.amount < stack_size):
+					if stack is not None and stack.lot == lot and (stack_size == 0 or stack.count < stack_size):
 						if stack_size == 0:
-							added_amount = amount
+							added_count = count
 						else:
-							added_amount = min(stack_size - stack.amount, amount)
-						stack.amount += added_amount
-						amount -= added_amount
+							added_count = min(stack_size - stack.count, count)
+						stack.count += added_count
+						count -= added_count
 						index = inventory.index(stack)
 						break
 				else:
@@ -268,11 +268,11 @@ class InventoryComponent(Component):
 					object_id = server.new_spawned_id()
 
 				if stack_size == 0:
-					added_amount = amount
+					added_count = count
 				else:
-					added_amount = min(stack_size, amount)
-				amount -= added_amount
-				stack = Stack(server.db, object_id, lot, added_amount)
+					added_count = min(stack_size, count)
+				count -= added_count
+				stack = Stack(server.db, object_id, lot, added_count)
 				if module_lots:
 					stack.module_lots = module_lots
 
@@ -294,19 +294,19 @@ class InventoryComponent(Component):
 				if hasattr(stack, "module_lots"):
 					extra_info.ldf_set("assemblyPartLOTs", LDFDataType.STRING, [(LDFDataType.INT32, i) for i in stack.module_lots])
 
-				self.add_item_to_inventory_client_sync(loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, amount=added_amount, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
+				self.add_item_to_inventory_client_sync(loot_type_source=source_type, extra_info=extra_info, object_template=stack.lot, inv_type=inventory_type, count=added_count, new_obj_id=stack.object_id, flying_loot_pos=Vector3.zero, show_flying_loot=show_flying_loot, slot_id=index)
 		return stack
 
 	@single
-	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False, bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, amount:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:bool=True, slot_id:c_int=None):
+	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False, bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=None, object_template:c_int=None, subkey:c_int64=0, inv_type:c_int=0, count:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=None, flying_loot_pos:Vector3=None, show_flying_loot:bool=True, slot_id:c_int=None):
 		pass
 
-	def remove_item_from_inv(self, inventory_type, item=None, object_id=0, lot=0, amount=1):
+	def remove_item(self, inventory_type, item=None, object_id=0, lot=0, count=1):
 		if item is not None:
 			object_id = item.object_id
 
 		if hasattr(self.object, "char"):
-			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=amount)
+			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=count)
 
 	@single
 	def remove_item_from_inventory(self, confirmed:bool=True, delete_item:bool=True, out_success:bool=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:bool=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
@@ -342,9 +342,9 @@ class InventoryComponent(Component):
 				else:
 					continue
 
-			item.amount -= stack_count
-			assert item.amount >= 0
-			if item.amount == 0: # delete item
+			item.count -= stack_count
+			assert item.count >= 0
+			if item.count == 0: # delete item
 				if item in self.equipped[-1]:
 					self.un_equip_inventory(item_to_unequip=item.object_id)
 
@@ -354,7 +354,7 @@ class InventoryComponent(Component):
 					inventory[inventory.index(item)] = None
 				if hasattr(item, "module_lots") and not force_deletion: # only give modules if the player removed it
 					for module_lot in item.module_lots:
-						self.add_item_to_inventory(module_lot)
+						self.add_item(module_lot)
 			return
 
 	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64=None):
@@ -390,7 +390,7 @@ class InventoryComponent(Component):
 
 					# equip sub-items
 					for sub_item in item.sub_items:
-						sub = self.add_item_to_inventory(sub_item, inventory_type=InventoryType.TempItems)
+						sub = self.add_item(sub_item, inventory_type=InventoryType.TempItems)
 						self.equip_inventory(item_to_equip=sub.object_id)
 
 					# unequip any items of the same type
@@ -440,7 +440,7 @@ class InventoryComponent(Component):
 									self.object.skill.remove_skill_server(skill)
 
 				for sub_item in item.sub_items:
-					self.remove_item_from_inv(InventoryType.TempItems, lot=sub_item)
+					self.remove_item(InventoryType.TempItems, lot=sub_item)
 
 				# if this is a sub-item of another item, unequip the other item (and its sub-items)
 				for other_item in self.equipped[-1]:
@@ -458,10 +458,24 @@ class InventoryComponent(Component):
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):
 				if stack_count == 0:
-					move_stack_count = item.amount
+					move_stack_count = item.count
 				else:
-					assert item.amount >= stack_count
+					assert item.count >= stack_count
 					move_stack_count = stack_count
-				new_item = self.add_item_to_inventory(item.lot, move_stack_count, inventory_type=inventory_type_b, show_flying_loot=show_flying_loot)
-				self.remove_item_from_inv(inventory_type_a, item, amount=move_stack_count)
+				new_item = self.add_item(item.lot, move_stack_count, inventory_type=inventory_type_b, show_flying_loot=show_flying_loot)
+				self.remove_item(inventory_type_a, item, count=move_stack_count)
 				return new_item
+
+	def has_item(self, inventory_type, lot):
+		inv = self.inventory_type_to_inventory(inventory_type)
+		for item in inv:
+			if item is not None and item.lot == lot:
+				return True
+		return False
+
+	def get_stack(self, inventory_type, object_id):
+		inv = self.inventory_type_to_inventory(inventory_type)
+		for item in inv:
+			if item is not None and item.object_id == object_id:
+				return item
+		raise RuntimeError("Stack not found")

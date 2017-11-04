@@ -149,6 +149,10 @@ class Init:
 			if reward_emote == -1:
 				reward_emote = None
 
+			if not is_mission:
+				# achievements don't have choices, this is inconsistent in the DB
+				is_choice_reward = False
+
 			self.root.missions[id] = (currency, universe_score, bool(is_choice_reward), tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission)
 
 		self.root.mission_mail = BTrees.IOBTree.BTree()
