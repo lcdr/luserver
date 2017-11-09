@@ -478,4 +478,4 @@ class InventoryComponent(Component):
 		for item in inv:
 			if item is not None and item.object_id == object_id:
 				return item
-		raise RuntimeError("Stack not found")
+		raise RuntimeError("Stack %i not found in inv %i" % (object_id, inventory_type))
