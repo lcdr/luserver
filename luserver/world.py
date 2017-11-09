@@ -68,6 +68,7 @@ import os.path
 import time
 from contextlib import AbstractContextManager as ACM
 
+import BTrees
 import ZODB
 from persistent.mapping import PersistentMapping
 
@@ -250,7 +251,7 @@ class WorldServer(Server):
 	def new_clone_id(self):
 		current = self.db.current_clone_id
 		self.db.current_clone_id += 1
-		self.conn.transaction_manager.commit()
+		self.commit()
 		return current
 
 	def commit(self):
@@ -262,7 +263,7 @@ class WorldServer(Server):
 			obj = self.conn.get(e.oid)
 			old = self.conn.oldstate(obj, e.get_old_serial())
 			new = self.conn.oldstate(obj, e.get_new_serial())
-			if isinstance(new, (dict, PersistentMapping)):
+			if isinstance(new, (dict, PersistentMapping, BTrees.OOBTree.BTree, BTrees.IOBTree.BTree)):
 				change_detected = False
 				for key, value in new.items():
 					if key not in old:

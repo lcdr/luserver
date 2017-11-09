@@ -294,8 +294,12 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		update_notify.write(c_bool(False)) # is best friend
 		update_notify.write(c_bool(False)) # is FTP
 
-		for friend_ref in self.friends:
-			server.send(update_notify, friend_ref().char.address)
+		for friend_ref in self.friends.copy():
+			if friend_ref() is None:
+				self.friends.remove(friend_ref)
+			else:
+				if friend_ref().char.address in server._connected:
+					server.send(update_notify, friend_ref().char.address)
 
 	def on_destruction(self):
 		self.vehicle_id = 0

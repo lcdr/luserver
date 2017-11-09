@@ -60,6 +60,7 @@ class MissionProgress(Persistent):
 
 import asyncio
 import logging
+import random
 
 from ..bitstream import c_int
 from ..game_object import GameObject
@@ -91,6 +92,7 @@ class MissionNPCComponent(Component):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.mission = self
 		self.missions = server.db.mission_npc_component[comp_id]
+		self.random_mission_choices = {}
 
 	def serialize(self, out, is_creation):
 		pass
@@ -108,7 +110,26 @@ class MissionNPCComponent(Component):
 						break
 				elif offers_mission:
 					log.debug("assessing %i", mission_id)
-					if check_prereqs(mission_id, player):
+					is_random = server.db.missions[mission_id][4]
+					random_pool = server.db.missions[mission_id][5]
+					if is_random:
+						if random_pool and check_prereqs(mission_id, player):
+							if player.object_id not in self.random_mission_choices:
+								eligible_missions = []
+								for random_mission_id in random_pool:
+									if random_mission_id not in player.char.missions:
+										eligible_missions.append(random_mission_id)
+								if not eligible_missions:
+									continue
+								offer = random.choice(eligible_missions)
+								log.debug("choosing random mission %i", offer)
+								# save the random choice so the player can't cycle through random missions
+								self.random_mission_choices[player.object_id] = offer
+								player.add_handler("on_destruction", self.clear_random_missions)
+							else:
+								offer = self.random_mission_choices[player.object_id]
+								log.debug("choosing saved random mission %i", offer)
+					elif check_prereqs(mission_id, player):
 						offer = mission_id
 
 		if offer is not None:
@@ -132,6 +153,11 @@ class MissionNPCComponent(Component):
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
 			player.char.complete_mission(mission_id)
+			self.clear_random_missions(player)
 
 	def request_linked_mission(self, player:GameObject=None, mission_id:c_int=None, mission_offered:bool=None):
 		self.on_use(player, None)
+
+	def clear_random_missions(self, player):
+		if player.object_id in self.random_mission_choices:
+			del self.random_mission_choices[player.object_id]

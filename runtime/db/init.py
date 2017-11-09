@@ -107,7 +107,7 @@ class Init:
 
 	def gen_missions(self):
 		self.root.missions = BTrees.IOBTree.BTree()
-		for id, prereq, currency, universe_score, is_choice_reward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_max_imagination, reward_max_life, reward_max_items, is_mission in self.cdclient.execute("select id, prereqMissionID, reward_currency, LegoScore, isChoiceReward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_maximagination, reward_maxhealth, reward_maxinventory, isMission from Missions"):
+		for id, prereq, currency, universe_score, is_choice_reward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_max_imagination, reward_max_life, reward_max_items, is_mission, is_random, random_pool in self.cdclient.execute("select id, prereqMissionID, reward_currency, LegoScore, isChoiceReward, reward_item1, reward_item1_count, reward_item2, reward_item2_count, reward_item3, reward_item3_count, reward_item4, reward_item4_count, reward_emote, reward_maximagination, reward_maxhealth, reward_maxinventory, isMission, isRandom, randomPool from Missions"):
 			# prereqs
 			prereqs = []
 			if prereq:
@@ -153,7 +153,12 @@ class Init:
 				# achievements don't have choices, this is inconsistent in the DB
 				is_choice_reward = False
 
-			self.root.missions[id] = (currency, universe_score, bool(is_choice_reward), tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission)
+			if not random_pool:
+				random_pool = None
+			else:
+				random_pool = tuple(int(mission_id) for mission_id in random_pool.split(","))
+
+			self.root.missions[id] = (currency, universe_score, bool(is_choice_reward), tuple(reward_items), reward_emote, reward_max_life, reward_max_imagination, reward_max_items), tuple(prereqs), tuple(tasks), bool(is_mission), bool(is_random), random_pool
 
 		self.root.mission_mail = BTrees.IOBTree.BTree()
 		for id, mission_id, attachment_lot in self.cdclient.execute("select ID, missionID, attachmentLOT from MissionEmail where attachmentLOT is not null"):
