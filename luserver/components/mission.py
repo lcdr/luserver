@@ -125,7 +125,9 @@ class MissionNPCComponent(Component):
 								log.debug("choosing random mission %i", offer)
 								# save the random choice so the player can't cycle through random missions
 								self.random_mission_choices[player.object_id] = offer
-								player.add_handler("on_destruction", self.clear_random_missions)
+								# todo: fix this
+								# disabling for now because handlers accidentally get saved to DB
+								#player.add_handler("on_destruction", self.clear_random_missions)
 							else:
 								offer = self.random_mission_choices[player.object_id]
 								log.debug("choosing saved random mission %i", offer)

@@ -52,7 +52,7 @@ class ScriptComponent(script.ScriptComponent):
 		for spawner in BASE_SPAWNERS:
 			server.spawners[spawner].spawner.activate()
 
-		self.start_time = time.time()
+		self.start_time = time.perf_counter()
 		self.tick_handle = self.object.call_later(1, self.tick)
 		self.object.scripted_activity.activity_start()
 		self.set_network_var("wavesStarted", LDFDataType.BOOLEAN, True)
@@ -96,7 +96,7 @@ class ScriptComponent(script.ScriptComponent):
 			player.char.update_mission_task(TaskType.MinigameAchievement, self.object.scripted_activity.activity_id, ("survival_time_"+self.game_type, 400))
 
 	def tick(self):
-		self.set_network_var("Update_Timer", LDFDataType.DOUBLE, time.time()-self.start_time)
+		self.set_network_var("Update_Timer", LDFDataType.DOUBLE, time.perf_counter()-self.start_time)
 		self.tick_handle = self.object.call_later(1, self.tick)
 
 	def are_all_players_dead(self):
@@ -112,8 +112,8 @@ class ScriptComponent(script.ScriptComponent):
 				all_dead = b"true"
 			else:
 				all_dead = b"false"
-			self.object.scripted_activity.activity_values[player.object_id][1] = time.time()-self.start_time
-			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.time()-self.start_time), param2=0, param_str=all_dead, param_obj=player)
+			self.object.scripted_activity.activity_values[player.object_id][1] = time.perf_counter()-self.start_time
+			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.perf_counter()-self.start_time), param2=0, param_str=all_dead, param_obj=player)
 			self.game_over(player)
 		else:
 			player.char.request_resurrect()

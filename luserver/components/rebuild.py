@@ -81,7 +81,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			out.write(c_bit(self.success))
 			out.write(c_bit(self.enabled))
 			if self.rebuild_state == RebuildState.Building:
-				out.write(c_float(time.time() - self.rebuild_start_time + self.last_progress))
+				out.write(c_float(time.perf_counter() - self.rebuild_start_time + self.last_progress))
 			else:
 				out.write(c_float(self.last_progress))
 			out.write(c_float(0))
@@ -104,7 +104,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.rebuild_state = RebuildState.Building
 		player.char.rebuilding = 1
 		self.enable_rebuild(enable=self.enabled, fail=False, success=self.success, duration=0, user=player)
-		self.rebuild_start_time = time.time()
+		self.rebuild_start_time = time.perf_counter()
 		drain_interval = self.complete_time/self.imagination_cost
 		remaining_cost = int((self.complete_time - self.last_progress) // drain_interval)
 		for i in range(remaining_cost):
@@ -153,7 +153,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			for handle in self.callback_handles:
 				self.object.cancel_callback(handle)
 			self.callback_handles.clear()
-			self.last_progress += time.time() - self.rebuild_start_time
+			self.last_progress += time.perf_counter() - self.rebuild_start_time
 			self.rebuild_state = RebuildState.Incomplete
 			self.remove_player(user)
 			user.char.rebuilding = 0

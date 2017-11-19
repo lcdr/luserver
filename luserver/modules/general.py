@@ -1,12 +1,14 @@
 """
 For world server packet handling that is general enough not to be grouped in a specialized handling module.
 """
+import asyncio
 import functools
 import inspect
 import logging
 import re
 import xml.etree.ElementTree as ET
 
+from ..auth import GMLevel
 from ..bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
 from ..ldf import LDF, LDFDataType
 from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, game_message_deserialize
@@ -80,7 +82,14 @@ class GeneralHandling:
 			player.children = []
 			player.parent_flag = False
 			player.children_flag = False
-			self.send_load_world(server.world_id, address)
+			if player.char.account.gm_level != GMLevel.Admin and server.db.config["enabled_worlds"] and server.world_id[0] not in server.db.config["enabled_worlds"]:
+				if player.char.world[0] != server.world_id[0]:
+					dest = player.char.world
+				else:
+					dest = 1100, 0, 0
+				asyncio.ensure_future(player.char.transfer_to_world(dest, respawn_point_name=""))
+			else:
+				self.send_load_world(server.world_id, address)
 
 	def send_load_world(self, destination, address):
 		world_id, world_instance, world_clone = destination

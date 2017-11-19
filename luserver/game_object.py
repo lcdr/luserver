@@ -196,6 +196,12 @@ class GameObject:
 	def add_handler(self, event_name, handler):
 		self._handlers.setdefault(event_name, []).append(functools.partial(handler, self))
 
+	def remove_handler(self, event_name, handler):
+		if event_name not in self._handlers:
+			return
+		if handler in self._handlers[event_name]:
+			self._handlers.remove(handler)
+
 	def handlers(self, event_name, silent=False):
 		"""
 		Return matching handlers for an event.
