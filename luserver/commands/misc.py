@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from ..amf3 import AMF3
+from ..ldf import LDF, LDFDataType
 from ..world import server, World
 from ..math.vector import Vector3
 from .command import ChatCommand, normal_bool, toggle_bool
@@ -71,20 +72,29 @@ class FlashingText(ChatCommand):
 class Freeze(ChatCommand):
 	def __init__(self):
 		super().__init__("freeze")
-		self.velocity = {}
 		self.enabled = False
+		self.lut_volume = None
+		self.velocity = {}
 
 	def run(self, args, sender):
 		self.enabled = not self.enabled
 		sender.render.play_n_d_audio_emitter(event_guid=b"{57cf736d-ab58-4f30-b4d6-afebf81caedd}", meta_event_name=b"")
-		asyncio.get_event_loop().call_later(3.1, self.do_freeze, args, sender)
+		asyncio.get_event_loop().call_later(3.1, self.do_freeze, sender)
 
-	def do_freeze(self, args, sender):
+	def do_freeze(self, sender):
+		if self.enabled:
+			config = LDF()
+			config.ldf_set("custom_script_client", LDFDataType.STRING, r"scripts\02_client\map\general\l_lut_volume.lua")
+			config.ldf_set("LUT", LDFDataType.STRING, "lut_hue_volume.dds")
+			config.ldf_set("renderDisabled", LDFDataType.BOOLEAN, True)
+			spawn_config = {"config": config, "scale": 1000, "position": sender.physics.position}
+			self.lut_volume = server.spawn_object(5652, spawn_config)
+
 		for obj in server.game_objects.values():
 			if hasattr(obj, "render") and (not self.enabled or obj != sender):
 					obj.render.freeze_animation(do_freeze=self.enabled)
 			if hasattr(obj, "char"):
-				obj.render.play_f_x_effect(name=b"", effect_type="on-anim", effect_id=4747)
+				#obj.render.play_f_x_effect(name=b"", effect_type="on-anim", effect_id=4747)
 				if self.enabled and obj != sender:
 					self.velocity[obj] = Vector3(obj.physics.velocity)
 					obj.char.set_gravity_scale(0)
@@ -101,6 +111,7 @@ class Freeze(ChatCommand):
 
 		if not self.enabled:
 			self.velocity.clear()
+			server.replica_manager.destruct(self.lut_volume)
 
 class Glow(ChatCommand):
 	def __init__(self):
@@ -187,8 +198,8 @@ class Location(ChatCommand):
 			for obj in server.game_objects.values():
 				if hasattr(obj, "char") and obj.name.startswith(args.player):
 					server.chat.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
-					if obj.char._world[0] != server.world_id[0]:
-						server.chat.sys_msg_sender(World(obj.char._world[0]))
+					if obj.char.world[0] != server.world_id[0]:
+						server.chat.sys_msg_sender(World(obj.char.world[0]))
 					break
 
 class RefillStats(ChatCommand):

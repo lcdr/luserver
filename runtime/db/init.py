@@ -7,6 +7,7 @@ import BTrees
 import toml
 import transaction
 import ZEO
+from persistent.mapping import PersistentMapping
 
 from luserver.auth import Account, GMLevel
 from luserver.world import World
@@ -99,7 +100,7 @@ class Init:
 			self.root.world_info[world_id] = scripts.SCRIPTS.get(script_id), template
 
 	def gen_config(self):
-		self.root.config = BTrees.OOBTree.BTree()
+		self.root.config = PersistentMapping()
 		self.root.config["auth_enabled"] = True
 		self.root.config["credits"] = "Created by lcdr"
 		for entry in self.config["defaults"]:

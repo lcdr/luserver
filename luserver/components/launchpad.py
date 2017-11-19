@@ -40,7 +40,7 @@ class LaunchpadComponent(Component):
 		player.char.traveling_rocket = rocket.module_lots
 		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 
-	def fire_event_server_side(self, player, args:str=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender_id:c_int64=None):
+	def fire_event_server_side(self, player, args:str=None, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=None):
 		if args == "ZonePlayer":
 			if param2:
 				param3 = self.default_world_id

@@ -302,6 +302,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 					server.send(update_notify, friend_ref().char.address)
 
 	def on_destruction(self):
+		self.object._handlers.clear()
 		self.vehicle_id = 0
 		self.online = False
 		self.dropped_loot.clear()
