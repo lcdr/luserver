@@ -10,7 +10,7 @@ from ..math.vector import Vector3
 from .component import Component
 from .inventory import InventoryType, ItemType
 from .mission import TaskType
-from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Jetpack, SkillEvent, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
+from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Jetpack, SkillEvent, SkillCastFailed, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
 
 log = logging.getLogger(__name__)
 
@@ -102,6 +102,7 @@ TEMPLATES = {
 	BehaviorTemplate.Buff: Buff,
 	BehaviorTemplate.Jetpack: Jetpack,
 	BehaviorTemplate.SkillEvent: SkillEvent,
+	BehaviorTemplate.SkillCastFailed: SkillCastFailed,
 	BehaviorTemplate.Chain: Chain,
 	BehaviorTemplate.ForceMovement: ForceMovement,
 	BehaviorTemplate.Interrupt: Interrupt,
@@ -138,6 +139,7 @@ class SkillComponent(Component):
 		self.original_target_id = None
 		self.last_ui_handle = 0
 		self.last_ui_skill_handle = self.last_ui_handle
+		self.skill_cast_failed = False
 		self.everlasting = False
 		self.skills = [skill_id for skill_id, _ in server.db.object_skills.get(self.object.lot, [])]
 
@@ -212,9 +214,11 @@ class SkillComponent(Component):
 			target = self.object
 		self.picked_target_id = optional_target_id
 		behavior, imagination_cost = server.db.skill_behavior[skill_id]
-		self.object.stats.imagination -= imagination_cost
 		self.original_target_id = target.object_id
+		self.skill_cast_failed = False
 		self.deserialize_behavior(behavior, bitstream, target)
+		if not self.skill_cast_failed:
+			self.object.stats.imagination -= imagination_cost
 
 		if not bitstream.all_read():
 			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
@@ -274,6 +278,10 @@ class SkillComponent(Component):
 				return
 			target = server.game_objects[target_id]
 
+		if local_id not in self.projectile_behaviors:
+			log.warn("Projectile ID %i not in behavior list, it's likely a previous behavior did not parse correctly", local_id)
+			return
+
 		for behav in self.projectile_behaviors[local_id]:
 			self.original_target_id = target.object_id
 			self.deserialize_behavior(behav, bitstream, target)
@@ -289,7 +297,7 @@ class SkillComponent(Component):
 		if behavior is None:
 			return
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
-		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.NPCCombatSkill, BehaviorTemplate.AirMovement):
+		if behavior.template not in (BehaviorTemplate.BasicAttack, BehaviorTemplate.TacArc, BehaviorTemplate.And, BehaviorTemplate.Heal, BehaviorTemplate.MovementSwitch, BehaviorTemplate.AreaOfEffect, BehaviorTemplate.PlayEffect, BehaviorTemplate.Imagination, BehaviorTemplate.TargetCaster, BehaviorTemplate.Stun, BehaviorTemplate.Duration, BehaviorTemplate.Knockback, BehaviorTemplate.AttackDelay, BehaviorTemplate.RepairArmor, BehaviorTemplate.Switch, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.Chain, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.ForceMovement, BehaviorTemplate.AlterCooldown, BehaviorTemplate.ChargeUp, BehaviorTemplate.SwitchMultiple, BehaviorTemplate.Start, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.NPCCombatSkill, BehaviorTemplate.AirMovement):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
 
 		if behavior.template in TEMPLATES:

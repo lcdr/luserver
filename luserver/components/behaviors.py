@@ -95,10 +95,13 @@ class TacArc(Behavior):
 				self.deserialize_behavior(behavior.action, bitstream, target, level+1)
 
 		else:
-			if hasattr(behavior, "blocked_action"):
+			if getattr(behavior, "check_env", False):
 				is_blocked = bitstream.read(c_bit)
 				log.debug("blocked bit %s", is_blocked)
 				if is_blocked:
+					if not hasattr(behavior, "blocked_action"):
+						log.error("TacArc would be blocked but has no blocked action!")
+						return
 					log.debug("blocked")
 					self.deserialize_behavior(behavior.blocked_action, bitstream, target, level+1)
 					return
@@ -206,6 +209,7 @@ class AreaOfEffect(Behavior):
 		for _ in range(bitstream.read(c_uint)): # number of targets
 			target_id = bitstream.read(c_int64)
 			targets.append(server.game_objects[target_id])
+		log.debug("targets: %s", targets)
 		for target in targets:
 			self.deserialize_behavior(behavior.action, bitstream, target, level+1)
 
@@ -245,7 +249,7 @@ class Stun(Behavior):
 
 	@staticmethod
 	def deserialize(self, behavior, bitstream, target, level):
-		if target and target.object_id != self.original_target_id:
+		if False:#target and target.object_id != self.original_target_id:
 			log.debug("Stun reading bit")
 			assert not bitstream.read(c_bit)
 
@@ -374,6 +378,15 @@ class SkillEvent(Behavior):
 			event_name = None
 
 		target.handle("on_skill_event", self.object, event_name, silent=True)
+
+class SkillCastFailed(Behavior):
+	@staticmethod
+	def serialize(self, behavior, bitstream, target, level):
+		pass
+
+	@staticmethod
+	def deserialize(self, behavior, bitstream, target, level):
+		self.skill_cast_failed = True
 
 class Chain(Behavior):
 	@staticmethod
