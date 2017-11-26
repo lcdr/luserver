@@ -17,7 +17,9 @@ class GameObject:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, lot, object_id, set_vars={}):
+	def __init__(self, lot, object_id, set_vars=None):
+		if set_vars is None:
+			set_vars = {}
 		self._handlers = {}
 		self._flags = {}
 		self._flags["parent_flag"] = "related_objects_flag"
@@ -81,11 +83,19 @@ class GameObject:
 		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
 			if component_type == 5:
 				if "custom_script" in set_vars and set_vars["custom_script"] is not None:
-					script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
-					comp = script.ScriptComponent,
+					try:
+						script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
+						comp = script.ScriptComponent,
+					except ModuleNotFoundError as e:
+						log.warning(str(e))
+						comp = ScriptComponent,
 				elif component_id is not None and component_id in server.db.script_component:
-					script = importlib.import_module("luserver.scripts."+server.db.script_component[component_id])
-					comp = script.ScriptComponent,
+					try:
+						script = importlib.import_module("luserver.scripts."+server.db.script_component[component_id])
+						comp = script.ScriptComponent,
+					except ModuleNotFoundError as e:
+						log.warning(str(e))
+						comp = ScriptComponent,
 				else:
 					comp = ScriptComponent,
 			elif component_type in component:

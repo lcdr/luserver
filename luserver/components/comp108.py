@@ -31,6 +31,6 @@ class Comp108Component(Component):
 		if self.driver_id != 0:
 			server.game_objects[self.driver_id].char.dismount()
 
-	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=0):
+	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=0, killer:GameObject=None, loot_owner:GameObject=None):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash
 		self.object.call_later(3, self.object.destructible.resurrect)

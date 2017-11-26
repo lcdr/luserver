@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import math
 import os
 import re
 import secrets
@@ -8,8 +9,12 @@ import time
 
 from ..auth import Account, GMLevel, PasswordState
 from ..bitstream import BitStream, c_bool, c_ushort
+from ..ldf import LDF, LDFDataType
 from ..messages import WorldClientMsg
 from ..world import server
+from ..components.physics import AABB, CollisionSphere, PrimitiveModelType
+from ..math.quaternion import Quaternion
+from ..math.vector import Vector3
 from .command import ChatCommand, normal_bool
 
 log = logging.getLogger(__name__)
@@ -111,6 +116,45 @@ class Mute(ChatCommand):
 				break
 		else:
 			server.chat.sys_msg_sender("Player not connected")
+
+class PhysicsDebug(ChatCommand):
+	def __init__(self):
+		super().__init__("physicsdebug")
+		self.debug_markers = []
+		server.add_handler("proximity_radius", self.on_proximity_radius)
+
+	def run(self, args, sender):
+		if self.debug_markers:
+			for marker in self.debug_markers:
+				server.replica_manager.destruct(marker)
+			self.debug_markers.clear()
+		else:
+			for obj in server.general.tracked_objects.copy():
+				self.spawn_debug_marker(obj)
+
+	def on_proximity_radius(self, obj):
+		if not self.debug_markers:
+			return
+		self.spawn_debug_marker(obj)
+
+	def spawn_debug_marker(self, obj):
+		coll = server.general.tracked_objects[obj]
+		set_vars = {"parent": obj, "rotation": Quaternion.identity}
+		if isinstance(coll, AABB):
+			config = LDF()
+			config.ldf_set("primitiveModelType", LDFDataType.INT32, PrimitiveModelType.Cuboid)
+			config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, coll.max.x-coll.min.x)
+			config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, coll.max.y-coll.min.y)
+			config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, coll.max.z-coll.min.z)
+
+			set_vars["position"] = Vector3((coll.min.x+coll.max.x)/2, coll.min.y, (coll.min.z+coll.max.z)/2)
+			set_vars["config"] = config
+			marker = server.spawn_object(14510, set_vars)
+		elif isinstance(coll, CollisionSphere):
+			set_vars["position"] = coll.position
+			set_vars["scale"] = math.sqrt(coll.sq_radius)/5
+			marker = server.spawn_object(6548, set_vars)
+		self.debug_markers.append(marker)
 
 class ResetPassword(ChatCommand):
 	def __init__(self):

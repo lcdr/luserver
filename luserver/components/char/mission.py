@@ -11,7 +11,6 @@ from ..mission import check_prereqs, MissionProgress, MissionState, ObtainItemTy
 
 class CharMission:
 	def __init__(self):
-		self.autocomplete_missions = False
 		self.missions = PersistentMapping()
 		# add achievements
 		for mission_id, data in server.db.missions.items():

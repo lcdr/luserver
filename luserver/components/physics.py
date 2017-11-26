@@ -36,30 +36,10 @@ class PhysicsComponent(Component):
 		for comp in self.object.components:
 			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 				server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
-				if server.get_objects_in_group("physics_debug_marker"):
-					self.spawn_debug_marker()
+				if "proximity_radius" in server._handlers:
+					for handler in server._handlers["proximity_radius"]:
+						handler(self)
 				break
-
-	def spawn_debug_marker(self):
-		if self.object not in server.general.tracked_objects:
-			return
-		coll = server.general.tracked_objects[self.object]
-		set_vars = {"groups": ("physics_debug_marker",), "parent": self.object, "rotation": Quaternion.identity}
-		if isinstance(coll, AABB):
-			config = LDF()
-			config.ldf_set("primitiveModelType", LDFDataType.INT32, PrimitiveModelType.Cuboid)
-			config.ldf_set("primitiveModelValueX", LDFDataType.FLOAT, coll.max.x-coll.min.x)
-			config.ldf_set("primitiveModelValueY", LDFDataType.FLOAT, coll.max.y-coll.min.y)
-			config.ldf_set("primitiveModelValueZ", LDFDataType.FLOAT, coll.max.z-coll.min.z)
-
-			set_vars["position"] = Vector3((coll.min.x+coll.max.x)/2, coll.min.y, (coll.min.z+coll.max.z)/2)
-			set_vars["config"] = config
-			server.spawn_object(14510, set_vars)
-		elif isinstance(coll, CollisionSphere):
-			set_vars["position"] = coll.position
-			set_vars["scale"] = math.sqrt(coll.sq_radius)/5
-			server.spawn_object(6548, set_vars)
-
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 
@@ -339,8 +319,6 @@ class PhantomPhysicsComponent(PhysicsComponent):
 						continue
 				if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 					server.general.tracked_objects[self.object] = AABB(self.object)
-					if server.get_objects_in_group("physics_debug_marker"):
-						self.spawn_debug_marker()
 					break
 
 	def on_enter(self, player):
