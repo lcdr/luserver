@@ -561,6 +561,10 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 	def bounce_notification(self, object_id_bounced:c_int64=None, object_id_bouncer:c_int64=None, success:bool=None):
 		pass
 
+	@single
+	def display_zone_summary(self, is_property_map:bool=False, is_zone_start:bool=False, sender:GameObject=None):
+		pass
+
 	@broadcast
 	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=0, build_start_pos:Vector3=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
 		self.object.inventory.push_equipped_items_state()

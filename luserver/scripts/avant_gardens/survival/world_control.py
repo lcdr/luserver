@@ -128,11 +128,11 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.set_player_spawn_points()
 
-	def message_box_respond(self, player, button:c_int=None, identifier:str=None, user_data:str=None):
-		if identifier == "RePlay":
+	def message_box_respond(self, player, button:c_int=None, id:str=None, user_data:str=None):
+		if id == "RePlay":
 			self.start()
 
-		elif identifier == "Exit_Question" and button == 1:
+		elif id == "Exit_Question" and button == 1:
 			self.game_over(player)
 			self.object.scripted_activity.remove_player(player)
 			asyncio.ensure_future(player.char.transfer_to_last_non_instance(Vector3(131.83, 376, -180.31), Quaternion(0, -0.268720, 0, 0.963218)))

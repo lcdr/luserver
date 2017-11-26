@@ -58,7 +58,6 @@ class MissionProgress(Persistent):
 		self.tasks = [MissionTask(task_type, target, target_value, parameter) for task_type, target, target_value, parameter in mission_data[2]]
 		self.is_mission = mission_data[3]
 
-import asyncio
 import logging
 import random
 
@@ -66,7 +65,6 @@ from ..bitstream import c_int
 from ..game_object import GameObject
 from ..messages import single
 from ..world import server
-from ..commands.mission import CompleteMission
 from .component import Component
 
 log = logging.getLogger(__name__)
@@ -149,9 +147,6 @@ class MissionNPCComponent(Component):
 		if mission_state == MissionState.Available:
 			assert not is_complete
 			player.char.add_mission(mission_id)
-			if player.char.autocomplete_missions:
-				asyncio.get_event_loop().call_soon(CompleteMission.async_complete_mission, CompleteMission, mission_id, False, player)
-
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
 			player.char.complete_mission(mission_id)

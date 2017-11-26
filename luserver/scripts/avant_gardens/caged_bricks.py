@@ -10,4 +10,4 @@ class ScriptComponent(script.ScriptComponent):
 		assert multi_interact_id is None
 		player.char.set_flag(True, FLAG_ID)
 		player.inventory.remove_item(InventoryType.Items, lot=MAELSTROM_CUBE_LOT)
-		server.get_objects_in_group("cagedSpider")[0].script.fire_event_client_side(args="toggle", obj=None, sender=player)
+		server.get_objects_in_group("cagedSpider")[0].script.fire_event_client_side(args="toggle", obj=None, sender=player, player=player)

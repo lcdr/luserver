@@ -194,6 +194,7 @@ class GameMessage(Enum):
 	BounceNotification = 932
 	BBBSaveRequest = 1001
 	NotifyClientObject = 1042
+	DisplayZoneSummary = 1043
 	StartBuildingWithItem = 1057
 	StartArrangingWithItem = 1061
 	FinishArrangingWithItem = 1062

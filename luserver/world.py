@@ -116,6 +116,7 @@ class WorldServer(Server):
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.multi = MultiInstanceAccess()
+		self._handlers = {}
 		CharHandling()
 		ChatHandling()
 		GeneralHandling()
@@ -198,6 +199,19 @@ class WorldServer(Server):
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
 					lot, position, rotation = spawn_data
 					self.spawn_model(spawner_id, lot, position, rotation)
+
+	EVENT_NAMES = "proximity_radius"
+	def add_handler(self, event_name: str, handler):
+		if event_name not in WorldServer.EVENT_NAMES:
+			raise ValueError("Invalid event name %s", event_name)
+		self._handlers.setdefault(event_name, []).append(handler)
+
+	def remove_handler(self, event_name: str, handler):
+		if event_name not in WorldServer.EVENT_NAMES:
+			raise ValueError("Invalid event name %s", event_name)
+		if event_name not in self._handlers or handler not in self._handlers[event_name]:
+			raise RuntimeError("handler not found")
+		self._handlers[event_name].remove(handler)
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
 		spawned_vars = {}

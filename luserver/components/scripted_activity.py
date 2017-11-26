@@ -44,8 +44,8 @@ class ScriptedActivityComponent(Component):
 	def activity_start(self):
 		pass
 
-	def message_box_respond(self, player, button:c_int=None, identifier:str=None, user_data:str=None):
-		if identifier == "LobbyReady" and button == 1:
+	def message_box_respond(self, player, button:c_int=None, id:str=None, user_data:str=None):
+		if id == "LobbyReady" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 
 	@single

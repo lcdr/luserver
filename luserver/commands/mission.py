@@ -16,17 +16,6 @@ class AddMission(ChatCommand):
 		else:
 			sender.char.add_mission(int(args.mission))
 
-class AutocompleteMissions(ChatCommand):
-	def __init__(self):
-		super().__init__("autocompletemissions")
-		self.command.add_argument("--enable", type=toggle_bool)
-
-	def run(self, args, sender):
-		if args.enable is None:
-			sender.char.autocomplete_missions = not sender.char.autocomplete_missions
-		else:
-			sender.char.autocomplete_missions = args.enable
-
 class CompleteMission(ChatCommand):
 	def __init__(self):
 		super().__init__("completemission")

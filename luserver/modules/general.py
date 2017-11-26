@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 # Constant checksums that the client expects to verify map version
 # (likely value of the last map revision)
-checksum = {
+_CHECKSUMS = {
 	World.VentureExplorer: 0x20b8087c,
 	World.ReturnToTheVentureExplorer: 0x26680a3c,
 	World.AvantGardens: 0x49525511,
@@ -57,21 +57,10 @@ class GeneralHandling:
 	def __init__(self):
 		server.general = self
 		self.tracked_objects = {}
-		physics_debug_cmd = server.chat.commands.add_parser("physicsdebug")
-		physics_debug_cmd.set_defaults(func=self.physics_debug_cmd)
 
 		server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete)
 		server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update)
 		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message)
-
-	def physics_debug_cmd(self, args, sender):
-		debug_markers = server.get_objects_in_group("physics_debug_marker")
-		if not debug_markers:
-			for obj in self.tracked_objects.copy():
-				obj.physics.spawn_debug_marker()
-		else:
-			for marker in debug_markers:
-				server.replica_manager.destruct(marker)
 
 	def on_validated(self, address):
 		player = server.accounts[address].characters.selected()
@@ -100,7 +89,7 @@ class GeneralHandling:
 		load_world.write(c_ushort(world_id))
 		load_world.write(c_ushort(world_instance))
 		load_world.write(c_uint(world_clone))
-		load_world.write(c_uint(checksum.get(World(world_id), 0)))
+		load_world.write(c_uint(_CHECKSUMS.get(World(world_id), 0)))
 		load_world.write(bytes(2))
 		load_world.write(c_float(player.physics.position.x))
 		load_world.write(c_float(player.physics.position.y))

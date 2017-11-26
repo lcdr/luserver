@@ -284,13 +284,10 @@ class Init:
 			self.root.components_registry.setdefault(row[0], []).append((row[1], row[2]))
 
 			if row[1] == 5 and row[2] not in self.root.script_component:
-				comp_row = self.cdclient.execute("select id, script_name from ScriptComponent where id == %i" % row[2]).fetchone()
-				if comp_row is None:
-					continue
-				id, script_name = comp_row
-				script_name = scripts.SCRIPTS.get(id)
-				if script_name is not None:
-					self.root.script_component[id] = script_name
+				# we don't even need to query the db since we've got our own scripts table
+				script_id = row[2]
+				if script_id in scripts.SCRIPTS:
+					self.root.script_component[script_id] = scripts.SCRIPTS[script_id]
 
 			elif row[1] == 7 and row[2] not in self.root.destructible_component:
 				faction, faction_list, level, loot_matrix_index, currency_index, life, armor, imagination, is_smashable = self.cdclient.execute("select faction, factionList, level, LootMatrixIndex, CurrencyIndex, life, armor, imagination, isSmashable from DestructibleComponent where id == %i" % row[2]).fetchone()
