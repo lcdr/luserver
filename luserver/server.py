@@ -15,6 +15,7 @@ class DisconnectReason:
 class NotifyReason:
 	DuplicateDisconnected = 0
 
+import __main__
 import asyncio
 import os
 import subprocess
@@ -125,7 +126,7 @@ class Server(pyraknet.server.Server):
 						return server_address
 			# no server found, spawn a new one
 			servers = dict(self.db.servers)
-			command = "\"%s\" %i %i" % (os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "__main__.py")), world_id[0], world_id[2])
+			command = "\"%s\" %i %i" % (__main__.__file__, world_id[0], world_id[2])
 			if os.name == "nt":
 				subprocess.Popen("cmd /K \"python "+command+" && exit || pause && exit\"", creationflags=subprocess.CREATE_NEW_CONSOLE)
 			else:

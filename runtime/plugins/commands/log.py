@@ -1,7 +1,7 @@
 import logging
 
-from ..world import server
-from .command import ChatCommand
+from luserver.world import server
+from luserver.interfaces.plugin import ChatCommand
 
 class Filelog(ChatCommand):
 	def __init__(self):

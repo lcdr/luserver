@@ -1,7 +1,7 @@
 import asyncio
 
-from ..amf3 import AMF3
-from .command import ChatCommand
+from luserver.amf3 import AMF3
+from luserver.interfaces.plugin import ChatCommand
 
 class PlayAnim(ChatCommand):
 	def __init__(self):

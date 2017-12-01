@@ -61,8 +61,11 @@ class World(Enum):
 	Ninjago = NinjagoMonastery
 	BattleAgainstFrakjaw = 2001
 
+import __main__
 import asyncio
 import atexit
+import importlib.util
+import inspect
 import logging
 import os.path
 import time
@@ -76,6 +79,7 @@ from pyraknet.replicamanager import ReplicaManager
 from .server import DisconnectReason, Server
 from .game_object import GameObject
 from .messages import WorldServerMsg
+from .interfaces.plugin import ChatCommand
 from .modules.char import CharHandling
 from .modules.chat import ChatHandling
 from .modules.general import GeneralHandling
@@ -133,12 +137,12 @@ class WorldServer(Server):
 		self.models = []
 		self.last_callback_id = 0
 		self.callback_handles = {}
-		self.set_world_id(world_id)
 		self.accounts = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60*60, self.check_shutdown)
-
 		self.register_handler(WorldServerMsg.SessionInfo, self.on_session_info)
+		self.load_plugins()
+		self.set_world_id(world_id)
 
 	async def init_network(self):
 		await super().init_network()
@@ -173,7 +177,7 @@ class WorldServer(Server):
 			console_log = True
 
 		if packetname in self.file_logged_packets:
-			with open(os.path.normpath(os.path.join(__file__, "..", "..", "runtime", "logs", packetname+str(time.time())+".bin")), "wb") as file:
+			with open(os.path.normpath(os.path.join(__main__.__file__, "..", "logs", packetname+str(time.time())+".bin")), "wb") as file:
 				file.write(data)
 
 		if console_log:
@@ -200,7 +204,7 @@ class WorldServer(Server):
 					lot, position, rotation = spawn_data
 					self.spawn_model(spawner_id, lot, position, rotation)
 
-	EVENT_NAMES = "proximity_radius"
+	EVENT_NAMES = "proximity_radius", "spawn"
 	def add_handler(self, event_name: str, handler):
 		if event_name not in WorldServer.EVENT_NAMES:
 			raise ValueError("Invalid event name %s", event_name)
@@ -212,6 +216,24 @@ class WorldServer(Server):
 		if event_name not in self._handlers or handler not in self._handlers[event_name]:
 			raise RuntimeError("handler not found")
 		self._handlers[event_name].remove(handler)
+
+	def handle(self, event_name: str, *args):
+		if event_name not in WorldServer.EVENT_NAMES:
+			raise ValueError("Invalid event name %s", event_name)
+		if event_name not in self._handlers:
+			return
+		for handler in self._handlers[event_name]:
+			handler(*args)
+
+	def load_plugins(self):
+		plugin_dir = os.path.normpath(os.path.join(__main__.__file__, "..", "plugins"))
+
+		with os.scandir(plugin_dir) as it:
+			for entry in it:
+				if entry.is_dir():
+					spec = importlib.util.spec_from_file_location("luserver.plugins."+entry.name, os.path.join(entry.path, "__init__.py"))
+					module = importlib.util.module_from_spec(spec)
+					spec.loader.exec_module(module)
 
 	def spawn_model(self, spawner_id, lot, position, rotation):
 		spawned_vars = {}
@@ -306,6 +328,7 @@ class WorldServer(Server):
 		self.game_objects[obj.object_id] = obj
 		self.replica_manager.construct(obj)
 		obj.handle("on_startup", silent=True)
+		self.handle("spawn", obj)
 		return obj
 
 	def get_object(self, object_id):

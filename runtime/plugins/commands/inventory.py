@@ -1,5 +1,5 @@
-from ..components.inventory import InventoryType
-from .command import ChatCommand
+from luserver.components.inventory import InventoryType
+from luserver.interfaces.plugin import ChatCommand
 
 class AddItem(ChatCommand):
 	def __init__(self):

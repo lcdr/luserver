@@ -1,15 +1,18 @@
-from ..world import server
-from ..components.physics import PhysicsEffect
-from ..math.vector import Vector3
-from .command import ChatCommand
+from luserver.world import server
+from luserver.components.physics import PhysicsEffect
+from luserver.interfaces.plugin import ChatCommand
+from luserver.math.vector import Vector3
 
 class DestroySpawned(ChatCommand):
 	def __init__(self):
 		super().__init__("destroyspawned")
+		self.command.add_argument("lot", type=int)
 
 	def run(self, args, sender):
 		for child in sender.children.copy():
-			server.replica_manager.destruct(server.game_objects[child])
+			child_obj = server.game_objects[child]
+			if args.lot is None or child_obj.lot == args.lot:
+				server.replica_manager.destruct()
 
 class Spawn(ChatCommand):
 	def __init__(self):

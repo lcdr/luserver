@@ -1,6 +1,6 @@
-from ..world import server
-from ..modules.char import EyeStyle, MouthStyle
-from .command import ChatCommand
+from luserver.world import server
+from luserver.interfaces.plugin import ChatCommand
+from luserver.modules.char import EyeStyle, MouthStyle
 
 class _MinifigCommand(ChatCommand):
 	def __init__(self, name):

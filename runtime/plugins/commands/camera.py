@@ -1,7 +1,7 @@
-from ..ldf import LDF, LDFDataType
-from ..world import server
-from ..math.vector import Vector3
-from .command import ChatCommand
+from luserver.ldf import LDF, LDFDataType
+from luserver.world import server
+from luserver.interfaces.plugin import ChatCommand
+from luserver.math.vector import Vector3
 
 # other camera effects are "celebrate" and "attach", these haven't been completely investigated yet
 
