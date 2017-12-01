@@ -7,15 +7,15 @@ import re
 import secrets
 import time
 
-from ..auth import Account, GMLevel, PasswordState
-from ..bitstream import BitStream, c_bool, c_ushort
-from ..ldf import LDF, LDFDataType
-from ..messages import WorldClientMsg
-from ..world import server
-from ..components.physics import AABB, CollisionSphere, PrimitiveModelType
-from ..math.quaternion import Quaternion
-from ..math.vector import Vector3
-from .command import ChatCommand, normal_bool
+from luserver.auth import Account, GMLevel, PasswordState
+from luserver.bitstream import BitStream, c_bool, c_ushort
+from luserver.ldf import LDF, LDFDataType
+from luserver.messages import WorldClientMsg
+from luserver.world import server
+from luserver.components.physics import AABB, CollisionSphere, PrimitiveModelType
+from luserver.interfaces.plugin import ChatCommand, normal_bool
+from luserver.math.quaternion import Quaternion
+from luserver.math.vector import Vector3
 
 log = logging.getLogger(__name__)
 

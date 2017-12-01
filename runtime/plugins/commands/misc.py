@@ -1,11 +1,11 @@
 import asyncio
 import logging
 
-from ..amf3 import AMF3
-from ..ldf import LDF, LDFDataType
-from ..world import server, World
-from ..math.vector import Vector3
-from .command import ChatCommand, normal_bool, toggle_bool
+from luserver.amf3 import AMF3
+from luserver.ldf import LDF, LDFDataType
+from luserver.world import server, World
+from luserver.interfaces.plugin import ChatCommand, instance_obj, instance_player, normal_bool, toggle_bool
+from luserver.math.vector import Vector3
 
 log = logging.getLogger(__name__)
 
@@ -191,16 +191,11 @@ class Level(ChatCommand):
 class Location(ChatCommand):
 	def __init__(self):
 		super().__init__("location", aliases=("locate", "loc"), description="Print your location.")
-		self.command.add_argument("--player")
+		self.command.add_argument("--player", type=instance_player)
 
 	def run(self, args, sender):
-		if args.player:
-			for obj in server.game_objects.values():
-				if hasattr(obj, "char") and obj.name.startswith(args.player):
-					server.chat.sys_msg_sender(args.player, "is at%f %f %f" % (obj.physics.position.x, obj.physics.position.y, obj.physics.position.z))
-					if obj.char.world[0] != server.world_id[0]:
-						server.chat.sys_msg_sender(World(obj.char.world[0]))
-					break
+		if args.player is not None:
+			server.chat.sys_msg_sender("%s is at %g %g %g" % (args.player.name, args.player.physics.position.x, args.player.physics.position.y, args.player.physics.position.z))
 
 class RefillStats(ChatCommand):
 	def __init__(self):
@@ -266,13 +261,10 @@ class Speak(ChatCommand):
 class Spectate(ChatCommand):
 	def __init__(self):
 		super().__init__("spectate")
-		self.command.add_argument("name")
+		self.command.add_argument("obj", type=instance_obj)
 
 	def run(self, args, sender):
-		args.name = args.name.lower()
-		for obj in server.game_objects.values():
-			if obj.name.lower().startswith(args.name):
-				sender.char.force_camera_target_cycle(optional_target=obj)
+		sender.char.force_camera_target_cycle(optional_target=args.obj)
 
 class Tags(ChatCommand):
 	def __init__(self):
@@ -314,27 +306,22 @@ class Tags(ChatCommand):
 class Teleport(ChatCommand):
 	def __init__(self):
 		super().__init__("teleport", aliases=("tp",))
+		self.command.add_argument("--teleportee", type=instance_player)
 		self.command.add_argument("--position", nargs=3, type=float)
-		self.command.add_argument("--player")
+		self.command.add_argument("--player", type=instance_player)
 		self.command.add_argument("--y", action="store_false")
 
 	def run(self, args, sender):
-		if args.position:
+		if args.teleportee is None:
+			args.teleportee = sender
+		if args.position is not None:
 			pos = Vector3(*args.position)
-
-		elif args.player:
-			args.player = args.player.lower()
-			for obj in server.game_objects.values():
-				if hasattr(obj, "char") and obj.name.lower().startswith(args.player):
-					pos = obj.physics.position
-					break
-			else:
-				server.chat.sys_msg_sender("no player found")
-				return
+		elif args.player is not None:
+			pos = args.player.physics.position
 		else:
-			pos = Vector3(sender.physics.position.x, 100000, sender.physics.position.z)
+			pos = Vector3(args.teleportee.physics.position.x, 100000, args.teleportee.physics.position.z)
 
-		sender.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
+		args.teleportee.char.teleport(ignore_y=args.y, pos=pos, x=0, y=0, z=0)
 
 class Text(ChatCommand):
 	def __init__(self):

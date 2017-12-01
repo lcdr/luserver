@@ -1,8 +1,6 @@
 import argparse
 import datetime
 import functools
-import importlib
-import inspect
 import logging
 import os
 import time
@@ -11,7 +9,7 @@ from ..auth import GMLevel
 from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
-from ..commands.command import ChatCommand, object_selector
+from ..interfaces.plugin import object_selector
 
 log = logging.getLogger(__file__)
 
@@ -79,21 +77,6 @@ class ChatHandling:
 		server.chat = self
 		self.chat_parser = CustomArgumentParser(prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
-
-		cmds = []
-		cmd_dir = os.path.normpath(os.path.join(__file__, "..", "..", "commands"))
-
-		for filename in os.listdir(cmd_dir):
-			name, ext = os.path.splitext(filename)
-			if ext == ".py":
-				mod = importlib.import_module("luserver.commands."+name)
-				for name in dir(mod):
-					var = getattr(mod, name)
-					if not name.startswith("_") and inspect.isclass(var) and var is not ChatCommand and issubclass(var, ChatCommand):
-						cmds.append(var)
-
-		for cmd in cmds:
-			cmd()
 
 		clientside_cmds = "backflip", "clap", "cringe", "cry", "dance", "gasp", "giggle", "s", "say", "salute", "shrug", "sigh", "talk", "tell", "victory", "wave", "w", "whisper", "yes"
 		for cmd in clientside_cmds:

@@ -1,8 +1,8 @@
 import asyncio
 
-from ..world import server
-from ..components.mission import MissionProgress, MissionState
-from .command import ChatCommand
+from luserver.world import server
+from luserver.components.mission import MissionProgress, MissionState
+from luserver.interfaces.plugin import ChatCommand
 
 class AddMission(ChatCommand):
 	def __init__(self):

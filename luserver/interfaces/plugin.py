@@ -1,3 +1,5 @@
+from argparse import ArgumentTypeError
+
 from ..auth import GMLevel
 from ..world import server
 
@@ -31,3 +33,21 @@ def object_selector(str_):
 			if obj.name == str_[1:]:
 				selected.append(obj)
 	return selected
+
+def instance_obj(name):
+	if not name.startswith("!"):
+		return instance_player(name)
+	else:
+		name = name[1:]
+	name = name.lower()
+	for obj in server.game_objects.values():
+		if obj.name.lower().startswith(name):
+			return obj
+	raise ArgumentTypeError("Object not found in instance")
+
+def instance_player(name):
+	name = name.lower()
+	for obj in server.game_objects.values():
+		if hasattr(obj, "char") and obj.name.lower().startswith(name):
+			return obj
+	raise ArgumentTypeError("Player not found in instance")
