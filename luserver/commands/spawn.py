@@ -17,6 +17,7 @@ class Spawn(ChatCommand):
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--position", nargs=3, type=float)
 		self.command.add_argument("--name", nargs="+")
+		self.command.add_argument("--rebuild_smash_time", type=float)
 
 	def run(self, args, sender):
 		set_vars = {"parent": sender}
@@ -24,6 +25,8 @@ class Spawn(ChatCommand):
 			set_vars["position"] = args.position
 		if args.name is not None:
 			set_vars["name"] = " ".join(args.name)
+		if args.rebuild_smash_time is not None:
+			set_vars["rebuild_smash_time"] = args.rebuild_smash_time
 		server.spawn_object(args.lot, set_vars)
 
 class SpawnPhantom(ChatCommand):

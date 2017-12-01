@@ -28,13 +28,11 @@ class RebuildComponent(ScriptedActivityComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.rebuild = self
-		if "rebuild_complete_time" in set_vars:
-			self.complete_time = set_vars["rebuild_complete_time"]
-		else:
-			self.complete_time = server.db.rebuild_component[comp_id][0]
-		self.smash_time = server.db.rebuild_component[comp_id][1]
-		self.reset_time = server.db.rebuild_component[comp_id][2]
-		self.imagination_cost = server.db.rebuild_component[comp_id][3]
+		db_entry = server.db.rebuild_component[comp_id]
+		self.complete_time = set_vars.get("rebuild_complete_time", db_entry[0])
+		self.smash_time = set_vars.get("rebuild_smash_time", db_entry[1])
+		self.reset_time = db_entry[2]
+		self.imagination_cost = db_entry[3]
 		self.callback_handles = []
 		self.rebuild_start_time = 0
 		self.last_progress = 0
@@ -44,11 +42,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self._rebuild_state = RebuildState.Open
 		self.success = False
 		self.enabled = True
-
-		if "activity_id" in set_vars:
-			self.activity_id = set_vars["activity_id"]
-		else:
-			self.activity_id = server.db.rebuild_component[comp_id][4]#self.object.lot
+		self.activity_id = set_vars.get("activity_id", db_entry[4])
 		self.completion_rewards = server.db.activity_rewards.get(self.activity_id, (None, None, None))
 
 		if "rebuild_activator_position" in set_vars:

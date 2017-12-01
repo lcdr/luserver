@@ -2,7 +2,7 @@ import asyncio
 
 from ..world import server
 from ..components.mission import MissionProgress, MissionState
-from .command import ChatCommand, toggle_bool
+from .command import ChatCommand
 
 class AddMission(ChatCommand):
 	def __init__(self):
