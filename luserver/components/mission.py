@@ -24,6 +24,10 @@ class MissionState:
 	Active = 2
 	ReadyToComplete = 4
 	Completed = 8
+	# daily missions
+	CompletedAvailable = 9
+	CompletedActive = 10
+	CompletedReadyToComplete = 12
 
 class ObtainItemType:
 	RemoveOnComplete = 2
