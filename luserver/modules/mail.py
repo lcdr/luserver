@@ -21,6 +21,10 @@ import persistent
 from ..bitstream import BitStream, c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
+from ..components.inventory import InventoryType, LootType, Stack
+from ..math.vector import Vector3
+
+MAIL_SEND_COST = 25
 
 class MailSendReturnCode:
 	Success = 0
@@ -61,9 +65,13 @@ class MailHandling:
 		return_code = MailSendReturnCode.Success
 		try:
 			if attachment_item_count != 0:
-				server.chat.system_message("Attachments aren't implemented at the moment.", player.char.address, broadcast=False)
-				return_code = MailSendReturnCode.ItemCannotBeMailed
-				return
+				removed_item = player.inventory.remove_item(InventoryType.Max, object_id=attachment_item_object_id, count=attachment_item_count)
+				object_id = server.new_object_id()
+				attachment = Stack(server.db, object_id, removed_item.lot)
+				attachment_cost = (removed_item.base_value * attachment_item_count)//10
+			else:
+				attachment = None
+				attachment_cost = 0
 			if recipient_name == player.name:
 				return_code = MailSendReturnCode.CannotMailYourself
 				return
@@ -72,7 +80,7 @@ class MailHandling:
 			except KeyError:
 				return_code = MailSendReturnCode.RecipientNotFound
 				return
-			self.send_mail(player.name, subject, body, recipient)
+			self.send_mail(player.name, subject, body, recipient, attachment)
 		except Exception:
 			import traceback
 			traceback.print_exc()
@@ -83,12 +91,14 @@ class MailHandling:
 			out.write(c_uint(MailID.MailSendResponse))
 			out.write(c_uint(return_code))
 			server.send(out, player.char.address)
+			player.char.set_currency(currency=player.char.currency - MAIL_SEND_COST - attachment_cost, loot_type=LootType.Mail, position=Vector3.zero)
 
 	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		with server.multi:
 			recipient.char.mails.append(mail)
-		self.send_mail_notification(recipient)
+		if recipient.char.address in server._connected:
+			self.send_mail_notification(recipient)
 
 	def send_mail_data(self, player):
 		mails = BitStream()
