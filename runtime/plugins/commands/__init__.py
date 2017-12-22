@@ -6,7 +6,7 @@ from luserver.interfaces.plugin import ChatCommand
 
 commands = []
 
-with os.scandir(os.path.join(__file__, "..")) as it:
+with os.scandir(os.path.normpath(os.path.join(__file__, ".."))) as it:
 	for entry in it:
 		if entry.is_file():
 			name, ext = os.path.splitext(entry.name)

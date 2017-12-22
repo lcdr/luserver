@@ -294,12 +294,16 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		update_notify.write(c_bool(False)) # is best friend
 		update_notify.write(c_bool(False)) # is FTP
 
-		for friend_ref in self.friends.copy():
+		outdated_refs = []
+		for index, friend_ref in enumerate(self.friends):
 			if friend_ref() is None:
-				self.friends.remove(friend_ref)
+				outdated_refs.insert(0, index)
 			else:
 				if friend_ref().char.address in server._connected:
 					server.send(update_notify, friend_ref().char.address)
+
+		for index in outdated_refs:
+			del self.friends[index]
 
 	def on_destruction(self):
 		self.object._handlers.clear()

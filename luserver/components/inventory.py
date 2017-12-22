@@ -30,12 +30,14 @@ class ItemType:
 
 class LootType:
 	Mission = 2
+	Mail = 3
 	Achievement = 5
 	Trade = 6
 	# 8 occurs when deleting an item and when a player dies
 	# loot drop = 11 ?
 	# 13 related to build
 	# 16 occurs on completing modular build
+	# 18 occurs when opening a package item
 	# 21 occurs with modular build temp models
 
 import logging
@@ -306,14 +308,14 @@ class InventoryComponent(Component):
 			object_id = item.object_id
 
 		if hasattr(self.object, "char"):
-			self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=count)
+			return self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=count)
 
 	@single
 	def remove_item_from_inventory(self, confirmed:bool=True, delete_item:bool=True, out_success:bool=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=None, force_deletion:bool=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0):
 		if not confirmed:
 			return
 		if object_id == 0 and object_template == 0:
-			log.warning("Neither object id nor lot specified, can't remove item")
+			log.error("Neither object id nor lot specified, can't remove item")
 			return
 		assert delete_item
 		assert not out_success
@@ -327,6 +329,8 @@ class InventoryComponent(Component):
 			inventories = [InventoryType.Items, InventoryType.Bricks, InventoryType.Models, InventoryType.MissionObjects]
 		else:
 			inventories = [inventory_type]
+
+		last_affected_item = None
 		for inventory_type in inventories:
 			inventory = self.inventory_type_to_inventory(inventory_type)
 			if object_id != 0:
@@ -343,6 +347,7 @@ class InventoryComponent(Component):
 					continue
 
 			item.count -= stack_count
+			last_affected_item = item
 			assert item.count >= 0
 			if item.count == 0: # delete item
 				if item in self.equipped[-1]:
@@ -355,7 +360,7 @@ class InventoryComponent(Component):
 				if hasattr(item, "module_lots") and not force_deletion: # only give modules if the player removed it
 					for module_lot in item.module_lots:
 						self.add_item(module_lot)
-			return
+			return last_affected_item
 
 	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64=None):
 		assert not out_success
