@@ -18,7 +18,7 @@ import time
 
 import persistent
 
-from ..bitstream import BitStream, c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
+from ..bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort, WriteStream
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..components.inventory import InventoryType, LootType, Stack
@@ -81,17 +81,17 @@ class MailHandling:
 				return_code = MailSendReturnCode.RecipientNotFound
 				return
 			self.send_mail(player.name, subject, body, recipient, attachment)
+			player.char.set_currency(currency=player.char.currency - MAIL_SEND_COST - attachment_cost, loot_type=LootType.Mail, position=Vector3.zero)
 		except Exception:
 			import traceback
 			traceback.print_exc()
 			return_code = MailSendReturnCode.UnknownFailure
 		finally:
-			out = BitStream()
+			out = WriteStream()
 			out.write_header(WorldClientMsg.Mail)
 			out.write(c_uint(MailID.MailSendResponse))
 			out.write(c_uint(return_code))
 			server.send(out, player.char.address)
-			player.char.set_currency(currency=player.char.currency - MAIL_SEND_COST - attachment_cost, loot_type=LootType.Mail, position=Vector3.zero)
 
 	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
@@ -101,7 +101,7 @@ class MailHandling:
 			self.send_mail_notification(recipient)
 
 	def send_mail_data(self, player):
-		mails = BitStream()
+		mails = WriteStream()
 		mails.write_header(WorldClientMsg.Mail)
 		mails.write(c_uint(MailID.MailData))
 		mails.write(bytes(4)) # return code success (enum is a bit overkill here)
@@ -139,7 +139,7 @@ class MailHandling:
 			if mail.id == mail_id:
 				player.inventory.add_item(mail.attachment.lot, mail.attachment.count)
 				mail.attachment = None
-				out = BitStream()
+				out = WriteStream()
 				out.write_header(WorldClientMsg.Mail)
 				out.write(c_uint(MailID.MailAttachmentCollectResponse))
 				out.write(bytes(4))
@@ -153,7 +153,7 @@ class MailHandling:
 		for mail in player.char.mails:
 			if mail.id == mail_id:
 				player.char.mails.remove(mail)
-				out = BitStream()
+				out = WriteStream()
 				out.write_header(WorldClientMsg.Mail)
 				out.write(c_uint(MailID.MailDeleteResponse))
 				out.write(bytes(4))
@@ -167,7 +167,7 @@ class MailHandling:
 		for mail in player.char.mails:
 			if mail.id == mail_id:
 				mail.is_read = True
-				out = BitStream()
+				out = WriteStream()
 				out.write_header(WorldClientMsg.Mail)
 				out.write(c_uint(MailID.MailReadResponse))
 				out.write(bytes(4))
@@ -179,7 +179,7 @@ class MailHandling:
 		unread_mails_count = len([mail for mail in player.char.mails if not mail.is_read])
 		if unread_mails_count == 0:
 			return
-		notification = BitStream()
+		notification = WriteStream()
 		notification.write_header(WorldClientMsg.Mail)
 		notification.write(c_uint(MailID.MailNotification))
 		notification.write(bytes(4)) # notification type, seems only 0 is used

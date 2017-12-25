@@ -1,4 +1,4 @@
-from luserver.bitstream import BitStream, c_float, c_int64, c_ubyte, c_uint, c_ushort
+from luserver.bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import BITS_LOCAL
@@ -81,28 +81,28 @@ class LVLImporter:
 		self.world_data = world_data
 		self.triggers = triggers
 		with open(lvl_path, "rb") as file:
-			self.lvl = BitStream(file.read())
+			self.lvl = ReadStream(file.read())
 
 		self.parse_lvl()
 
 	def parse_lvl(self):
 		if self.lvl[0:4] == b"CHNK":
 			while True:
-				if self.lvl._read_offset // 8 == len(self.lvl):  # end of file
+				if self.lvl.read_offset // 8 == len(self.lvl):  # end of file
 					break
-				assert self.lvl._read_offset // 8 % 16 == 0  # seems everything is aligned like this?
-				start_pos = self.lvl._read_offset // 8
+				assert self.lvl.read_offset // 8 % 16 == 0  # seems everything is aligned like this?
+				start_pos = self.lvl.read_offset // 8
 				assert self.lvl.read(bytes, length=4) == b"CHNK"
 				chunktype = self.lvl.read(c_uint)
 				assert self.lvl.read(c_ushort) == 1
 				assert self.lvl.read(c_ushort) in (1, 2)
 				chunk_length = self.lvl.read(c_uint)  # position of next CHNK relative to this CHNK
 				data_pos = self.lvl.read(c_uint)
-				self.lvl._read_offset = data_pos * 8
-				assert self.lvl._read_offset // 8 % 16 == 0
+				self.lvl.read_offset = data_pos * 8
+				assert self.lvl.read_offset // 8 % 16 == 0
 				if chunktype == 2001:
 					self.parse_chunk_type_2001()
-				self.lvl._read_offset = (start_pos + chunk_length) * 8  # go to the next CHNK
+				self.lvl.read_offset = (start_pos + chunk_length) * 8  # go to the next CHNK
 		else:
 			self.parse_old_lvl_header()
 			self.parse_chunk_type_2001()

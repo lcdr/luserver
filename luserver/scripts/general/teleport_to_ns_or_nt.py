@@ -1,7 +1,5 @@
 import luserver.scripts.general.console_teleport as script
-from luserver.amf3 import AMF3
 from luserver.bitstream import c_int
-from luserver.world import server
 from luserver.components.char import TerminateType
 # todo: implement visited worlds so the NS/NT choice UI can work
 

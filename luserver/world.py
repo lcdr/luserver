@@ -65,7 +65,6 @@ import __main__
 import asyncio
 import atexit
 import importlib.util
-import inspect
 import logging
 import os.path
 import time
@@ -79,7 +78,6 @@ from pyraknet.replicamanager import ReplicaManager
 from .server import DisconnectReason, Server
 from .game_object import GameObject
 from .messages import WorldServerMsg
-from .interfaces.plugin import ChatCommand
 from .modules.char import CharHandling
 from .modules.chat import ChatHandling
 from .modules.general import GeneralHandling

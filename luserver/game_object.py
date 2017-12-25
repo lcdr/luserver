@@ -7,7 +7,7 @@ from collections import OrderedDict
 from persistent import Persistent
 
 from .ldf import LDF
-from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort
+from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
 from .world import server
 
 log = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ class GameObject:
 		self._serialize_scheduled = False
 
 	def write_construction(self):
-		out = BitStream()
+		out = WriteStream()
 		out.write(c_int64(self.object_id))
 		out.write(c_int(self.lot))
 		out.write(self.name, length_type=c_ubyte)
@@ -160,7 +160,7 @@ class GameObject:
 		return out
 
 	def serialize(self, is_creation=False):
-		out = BitStream()
+		out = WriteStream()
 		out.write(c_bit(self.related_objects_flag or (is_creation and (self.parent is not None or self.children))))
 		if self.related_objects_flag or (is_creation and (self.parent is not None or self.children)):
 			out.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
@@ -210,7 +210,7 @@ class GameObject:
 		if event_name not in self._handlers:
 			return
 		if handler in self._handlers[event_name]:
-			self._handlers.remove(handler)
+			del self._handlers[handler]
 
 	def handlers(self, event_name, silent=False):
 		"""

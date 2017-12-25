@@ -55,7 +55,7 @@ import logging
 
 import persistent.wref
 
-from ..bitstream import BitStream, c_int64, c_bool, c_ubyte, c_uint, c_ushort
+from ..bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, WriteStream
 from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
@@ -109,7 +109,7 @@ class CharHandling:
 		log.info("sending %i characters", len(characters))
 		character_list = [i[1] for i in sorted(characters.items(), key=lambda x: x[0])]
 
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterList)
 		response.write(c_ubyte(len(characters)))
 		ref = characters.selected()
@@ -208,7 +208,7 @@ class CharHandling:
 			return_code = CharacterCreateReturnCode.GeneralFailure
 			server.conn.sync()
 
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterCreateResponse)
 		response.write(c_ubyte(return_code))
 		server.send(response, address)
@@ -227,7 +227,7 @@ class CharHandling:
 				server.conn.transaction_manager.commit()
 				break
 
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterDeleteResponse)
 		response.write(c_ubyte(CharacterDeleteReturnCode.Success))
 		server.send(response, address)

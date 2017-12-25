@@ -1,6 +1,6 @@
 import persistent.wref
 
-from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
+from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
 
@@ -32,7 +32,7 @@ class SocialHandling:
 
 		friends = server.accounts[address].characters.selected().char.friends
 
-		friends_list = BitStream()
+		friends_list = WriteStream()
 		friends_list.write_header(WorldClientMsg.FriendsList)
 		friends_list.write(bytes(1)) # ???
 		friends_list.write(bytes(2)) # length of packet - 1, does not seem to be required
@@ -59,7 +59,7 @@ class SocialHandling:
 		try:
 			requested_friend = server.find_player_by_name(requested_friend_name)
 			# relay request to friend
-			relayed_request = BitStream()
+			relayed_request = WriteStream()
 			relayed_request.write_header(WorldClientMsg.AddFriendRequest)
 			relayed_request.write(server.accounts[address].characters.selected().name, allocated_length=33)
 			relayed_request.write(c_bool(is_best_friend_request))
@@ -69,7 +69,7 @@ class SocialHandling:
 			self.send_add_friend_response(AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
 
 	def send_add_friend_response(self, return_code, address, friend=None, requested_name=None):
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.AddFriendResponse)
 		response.write(c_ubyte(return_code))
 		if friend is not None:
@@ -118,7 +118,7 @@ class SocialHandling:
 		for player1_ref, player2_ref in (players, reversed(players)):
 			player1_ref().char.friends.remove(player2_ref)
 
-			remove_message = BitStream()
+			remove_message = WriteStream()
 			remove_message.write_header(WorldClientMsg.RemoveFriendResponse)
 			remove_message.write(c_bool(True)) # Successful
 			remove_message.write(player2_ref().name, allocated_length=33)
@@ -131,7 +131,7 @@ class SocialHandling:
 		sender = server.accounts[address].characters.selected()
 		invitee = server.find_player_by_name(invitee_name)
 
-		relayed_invite = BitStream()
+		relayed_invite = WriteStream()
 		relayed_invite.write_header(WorldClientMsg.TeamInvite)
 		relayed_invite.write(sender.name, allocated_length=33)
 		relayed_invite.write(c_int64(sender.object_id))

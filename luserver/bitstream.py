@@ -1,7 +1,7 @@
-from pyraknet.bitstream import BitStream, c_bit, c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from pyraknet.bitstream import c_bit, c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, WriteStream
 from pyraknet.messages import Message
 
-class BitStream(BitStream):
+class WriteStream(WriteStream):
 	def write_header(self, subheader):
 		self.write(c_ubyte(Message.LUPacket))
 		self.write(c_ushort(subheader.header()))
