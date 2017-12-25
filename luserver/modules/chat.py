@@ -2,11 +2,10 @@ import argparse
 import datetime
 import functools
 import logging
-import os
 import time
 
 from ..auth import GMLevel
-from ..bitstream import BitStream, c_bool, c_int64, c_ubyte, c_uint, c_ushort
+from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..interfaces.plugin import object_selector
@@ -26,7 +25,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 	def _get_default_metavar_for_optional(self, action):
 		str_ = ""
 		if action.type is not None:
-			str_ += " <"+action.type.__name__ +">"
+			str_ += " <"+action.type.__name__+">"
 		if action.default is not None:
 			str_ += " (def:"+str(action.default)+")"
 		return str_[1:]
@@ -93,7 +92,7 @@ class ChatHandling:
 		request.skip_read(1) # super chat level
 		request_id = request.read(c_ubyte)
 
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.Moderation)
 		response.write(c_bool(True)) # we always greenlight the content
 		response.write(bytes(2))
@@ -115,7 +114,7 @@ class ChatHandling:
 		chat_channel = 4
 		# have to do this because the length is variable but has no length specifier directly before it
 		encoded_text = text.encode("utf-16-le")
-		message = BitStream()
+		message = WriteStream()
 		message.write_header(SocialMsg.GeneralChatMessage)
 		message.write(bytes(8))
 		message.write(c_ubyte(chat_channel))
@@ -139,7 +138,7 @@ class ChatHandling:
 			chat_channel = 4
 			# have to do this because the length is variable but has no length specifier directly before it
 			encoded_text = text.encode("utf-16-le")
-			message = BitStream()
+			message = WriteStream()
 			message.write_header(SocialMsg.GeneralChatMessage)
 			message.write(bytes(8))
 			message.write(c_ubyte(chat_channel))
@@ -159,7 +158,7 @@ class ChatHandling:
 			participants.append((recipient.char.address, 3))
 
 		for address, return_code in participants:
-			message = BitStream()
+			message = WriteStream()
 			message.write_header(SocialMsg.PrivateChatMessage)
 			message.write(c_int64(0))
 			message.write(c_ubyte(7))

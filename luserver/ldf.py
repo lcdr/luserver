@@ -1,7 +1,7 @@
 import enum
 import numbers
 
-from .bitstream import BitStream, c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint
+from .bitstream import c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint, ReadStream, WriteStream
 
 class LDFDataType(enum.Enum):
 	STRING = 0
@@ -20,7 +20,7 @@ class LDF(dict):
 		if source is not None:
 			if isinstance(source, str):
 				self.from_str(source)
-			elif isinstance(source, BitStream):
+			elif isinstance(source, ReadStream):
 				self.from_bitstream(source)
 
 	def __getitem__(self, key):
@@ -120,7 +120,7 @@ class LDF(dict):
 			self.ldf_set(key, data_type, value)
 
 	def to_bitstream(self):
-		uncompressed = BitStream()
+		uncompressed = WriteStream()
 		uncompressed.write(c_uint(len(self)))
 		for key, value in super().items():
 			data_type, value = value
@@ -147,7 +147,7 @@ class LDF(dict):
 				uncompressed.write(c_uint(len(value)))
 				uncompressed.write(value)
 
-		output = BitStream()
+		output = WriteStream()
 		is_compressed = False
 		if not is_compressed:
 			output.write(c_uint(len(uncompressed)+1))

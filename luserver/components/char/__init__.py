@@ -8,7 +8,7 @@ from persistent.mapping import PersistentMapping
 
 from ...amf3 import AMF3
 from ...auth import GMLevel
-from ...bitstream import BitStream, c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ...bitstream import c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
 from ...game_object import GameObject
 from ...messages import broadcast, single, WorldClientMsg
 from ...world import server, World
@@ -284,7 +284,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		self.send_friend_update_notify(FriendUpdateType.WorldChange)
 
 	def send_friend_update_notify(self, update_type):
-		update_notify = BitStream()
+		update_notify = WriteStream()
 		update_notify.write_header(WorldClientMsg.FriendUpdateNotify)
 		update_notify.write(c_ubyte(update_type))
 		update_notify.write(self.object.name, allocated_length=33)
@@ -406,7 +406,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 
 		server_address = await server.address_for_world(world, include_self)
 		log.info("Sending redirect to world %s", server_address)
-		redirect = BitStream()
+		redirect = WriteStream()
 		redirect.write_header(WorldClientMsg.Redirect)
 		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))

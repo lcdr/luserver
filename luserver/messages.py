@@ -5,7 +5,7 @@ from enum import Enum, IntEnum
 from functools import wraps
 
 from pyraknet.messages import Message
-from .bitstream import BitStream, c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, WriteStream
 from .ldf import LDF
 
 log = logging.getLogger(__name__)
@@ -272,7 +272,7 @@ def send_game_message(mode):
 		@wraps(func)
 		def wrapper(self, *args, **kwargs):
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
-			out = BitStream()
+			out = WriteStream()
 			out.write_header(WorldClientMsg.GameMessage)
 			object_id = self.object.object_id
 			out.write(c_int64(object_id))
@@ -341,7 +341,7 @@ def game_message_serialize(out, type, value):
 		out.write(value, length_type=c_uint)
 	elif type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
 		out.write(type(value))
-	elif type == BitStream:
+	elif type == ReadStream:
 		out.write(c_uint(len(value)))
 		out.write(bytes(value))
 	elif type == LDF:
@@ -381,9 +381,9 @@ def game_message_deserialize(message, type):
 		return message.read(str, length_type=c_uint)
 	if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
 		return message.read(type)
-	if type == BitStream:
+	if type == ReadStream:
 		length = message.read(c_uint)
-		return BitStream(message.read(bytes, length=length))
+		return ReadStream(message.read(bytes, length=length))
 	if type == LDF:
 		value = message.read(str, length_type=c_uint)
 		if value:

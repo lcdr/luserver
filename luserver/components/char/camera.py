@@ -1,3 +1,4 @@
+from ...amf3 import AMF3
 from ...bitstream import c_int, c_uint
 from ...game_object import GameObject
 from ...ldf import LDF

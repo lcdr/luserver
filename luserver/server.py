@@ -21,7 +21,7 @@ import os
 import subprocess
 
 import pyraknet.server
-from .bitstream import BitStream, c_uint, c_ushort
+from .bitstream import c_uint, c_ushort, WriteStream
 from .messages import msg_enum, AuthServerMsg, GameMessage, GeneralMsg, Message, SocialMsg, WorldClientMsg, WorldServerMsg
 
 class Server(pyraknet.server.Server):
@@ -80,7 +80,7 @@ class Server(pyraknet.server.Server):
 		super().register_handler(packet_id, handler)
 
 	def send_handshake(self, address):
-		out = BitStream()
+		out = WriteStream()
 		out.write_header(GeneralMsg.Handshake)
 		out.write(c_uint(self.NETWORK_VERSION))
 		out.write(bytes(4))
@@ -106,7 +106,7 @@ class Server(pyraknet.server.Server):
 
 	def close_connection(self, address, reason=None):
 		if reason is not None:
-			disconnect_message = BitStream()
+			disconnect_message = WriteStream()
 			disconnect_message.write_header(GeneralMsg.DisconnectNotify)
 			disconnect_message.write(c_uint(reason))
 			self.send(disconnect_message, address)

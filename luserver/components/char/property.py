@@ -1,10 +1,14 @@
-from ...bitstream import BitStream, c_int, c_int64, c_uint
+import logging
+
+from ...bitstream import c_int, c_int64, c_uint, ReadStream, WriteStream
 from ...game_object import GameObject
-from ...messages import broadcast, single
+from ...messages import broadcast, single, WorldClientMsg
 from ...world import server
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
 from ..inventory import InventoryType
+
+log = logging.getLogger(__file__)
 
 class DeleteReason:
 	PickingModelUp = 0
@@ -59,15 +63,15 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:BitStream=None, time_taken_in_ms:c_uint=None):
-		save_response = BitStream()
+	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:ReadStream=None, time_taken_in_ms:c_uint=None):
+		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
 		save_response.write(c_uint(0))
 		save_response.write(c_uint(1))
 		save_response.write(c_int64(server.new_object_id()))
 		save_response.write(c_uint(len(lxfml_data_compressed)))
-		save_response.write(lxfml_data_compressed)
+		save_response.write(bytes(lxfml_data_compressed))
 		server.send(save_response, self.address)
 
 	@single

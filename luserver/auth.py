@@ -12,7 +12,7 @@ from persistent import Persistent
 from persistent.mapping import PersistentMapping
 
 from . import server
-from .bitstream import BitStream, c_bool, c_ubyte, c_uint, c_ushort
+from .bitstream import c_bool, c_ubyte, c_uint, c_ushort, WriteStream
 from .messages import AuthServerMsg, WorldClientMsg
 
 log = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class AuthServer(server.Server):
 				log.info("Disconnecting duplicate at %s", account.address)
 				self.close_connection(account.address, server.DisconnectReason.DuplicateLogin)
 
-				duplicate_notify = BitStream()
+				duplicate_notify = WriteStream()
 				duplicate_notify.write_header(GeneralMsg.GeneralNotify)
 				duplicate_notify.write(c_uint(server.NotifyReason.DuplicateDisconnected))
 				self.send(duplicate_notify, address)
@@ -112,7 +112,7 @@ class AuthServer(server.Server):
 		else:
 			return_code = LoginReturnCode.Success
 
-		response = BitStream()
+		response = WriteStream()
 		response.write_header(WorldClientMsg.LoginResponse)
 		response.write(c_ubyte(return_code))
 		response.write(bytes(264))

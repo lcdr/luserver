@@ -2,7 +2,7 @@ import logging
 import pprint
 import enum
 
-from ..bitstream import BitStream, c_bit, c_int, c_int64, c_uint, c_uint64
+from ..bitstream import c_bit, c_int, c_int64, c_uint, c_uint64, ReadStream
 from ..messages import broadcast, single
 from ..world import server
 from ..math.quaternion import Quaternion
@@ -159,7 +159,7 @@ class SkillComponent(Component):
 		self.last_ui_skill_handle = self.last_ui_handle
 		self.last_ui_handle += 1
 
-		bitstream = BitStream()
+		bitstream = ReadStream(b"")
 		behavior = server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
 		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
@@ -169,14 +169,14 @@ class SkillComponent(Component):
 		self.last_ui_handle += 1
 		self.delayed_behaviors[ui_behavior_handle] = behavior
 
-		bitstream = BitStream()
+		bitstream = ReadStream(b"")
 		self.serialize_behavior(behavior, bitstream, target)
 
 		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bitstream, ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
 	def cast_projectile(self, proj_behavs, target):
-		bitstream = BitStream()
+		bitstream = ReadStream(b"")
 		proj_id = server.new_spawned_id()
 		for behav in proj_behavs:
 			self.original_target_id = target.object_id
@@ -186,10 +186,10 @@ class SkillComponent(Component):
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:ReadStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:BitStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:ReadStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -221,7 +221,7 @@ class SkillComponent(Component):
 			self.object.stats.imagination -= imagination_cost
 
 		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
+			log.warning("not all read, remaining: %s", bitstream[bitstream.read_offset//8:])
 
 		# remove consumable
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
@@ -239,10 +239,10 @@ class SkillComponent(Component):
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:bool=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def echo_sync_skill(self, done:bool=False, bitstream:ReadStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:BitStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def sync_skill(self, done:bool=False, bitstream:ReadStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -265,11 +265,11 @@ class SkillComponent(Component):
 			self.original_target_id = target.object_id
 			self.deserialize_behavior(behavior, bitstream, target)
 		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream[bitstream._read_offset//8:])
+			log.warning("not all read, remaining: %s", bitstream[bitstream.read_offset//8:])
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:BitStream=None):
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:ReadStream=None):
 		if target_id == 0:
 			target = self.object
 		else:
@@ -279,7 +279,7 @@ class SkillComponent(Component):
 			target = server.game_objects[target_id]
 
 		if local_id not in self.projectile_behaviors:
-			log.warn("Projectile ID %i not in behavior list, it's likely a previous behavior did not parse correctly", local_id)
+			log.warning("Projectile ID %i not in behavior list, it's likely a previous behavior did not parse correctly", local_id)
 			return
 
 		for behav in self.projectile_behaviors[local_id]:

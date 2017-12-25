@@ -8,7 +8,7 @@ import secrets
 import time
 
 from luserver.auth import Account, GMLevel, PasswordState
-from luserver.bitstream import BitStream, c_bool, c_ushort
+from luserver.bitstream import c_bool, c_ushort, WriteStream
 from luserver.ldf import LDF, LDFDataType
 from luserver.messages import WorldClientMsg
 from luserver.world import server
@@ -184,7 +184,7 @@ class Restart(ChatCommand):
 		server.conn.transaction_manager.commit()
 		server_address = await server.address_for_world(server.world_id, include_self=False)
 		log.info("Sending redirect to world %s", server_address)
-		redirect = BitStream()
+		redirect = WriteStream()
 		redirect.write_header(WorldClientMsg.Redirect)
 		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))

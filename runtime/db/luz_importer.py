@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import BTrees
 
 import luserver.world
-from luserver.bitstream import BitStream, c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from luserver.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import World
@@ -94,7 +94,7 @@ class _LUZImporter:
 		self.root = root
 		self.world_data = world_data
 		with open(luz_path, "rb") as file:
-			self.luz = BitStream(file.read())
+			self.luz = ReadStream(file.read())
 		self.parse_luz(luz_path)
 
 	def parse_luz(self, luz_path):
@@ -141,7 +141,7 @@ class _LUZImporter:
 				self.luz.skip_read(20)
 
 		remaining_length = self.luz.read(c_uint)
-		assert len(self.luz) - self.luz._read_offset // 8 == remaining_length
+		assert len(self.luz) - self.luz.read_offset // 8 == remaining_length
 		assert self.luz.read(c_uint) == 1
 
 		self.parse_paths()

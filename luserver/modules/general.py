@@ -9,7 +9,7 @@ import re
 import xml.etree.ElementTree as ET
 
 from ..auth import GMLevel
-from ..bitstream import BitStream, c_bit, c_float, c_int64, c_uint, c_ushort
+from ..bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, WriteStream
 from ..ldf import LDF, LDFDataType
 from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, game_message_deserialize
 from ..world import server, World
@@ -84,7 +84,7 @@ class GeneralHandling:
 		world_id, world_instance, world_clone = destination
 		player = server.accounts[address].characters.selected()
 
-		load_world = BitStream()
+		load_world = WriteStream()
 		load_world.write_header(WorldClientMsg.LoadWorld)
 		load_world.write(c_ushort(world_id))
 		load_world.write(c_ushort(world_instance))
@@ -100,7 +100,7 @@ class GeneralHandling:
 	def on_client_load_complete(self, data, address):
 		player = server.accounts[address].characters.selected()
 
-		chardata = BitStream()
+		chardata = WriteStream()
 		chardata.write_header(WorldClientMsg.CharacterData)
 
 		root = ET.Element("obj")
