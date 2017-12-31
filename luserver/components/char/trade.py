@@ -1,6 +1,6 @@
 from ...bitstream import c_int64, c_uint, c_uint64
 from ...game_object import GameObject
-from ...messages import single
+from ...messages import Mapping, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
@@ -46,14 +46,14 @@ class CharTrade:
 	def server_trade_initial_reply(self, invitee:GameObject=None, result_type:c_uint=None, name:str=None):
 		pass
 
-	def client_trade_update(self, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
+	def client_trade_update(self, currency:c_uint64=None, items:Mapping[c_uint, c_int64, Stack]=None):
 		self.trade.currency_offered = currency
 		self.trade.items_offered = items
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_update(currency=currency, items=items)
 
 	@single
-	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=None, items:(c_uint, c_int64, Stack)=None):
+	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=None, items:Mapping[c_uint, c_int64, Stack]=None):
 		if about_to_perform:
 			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:

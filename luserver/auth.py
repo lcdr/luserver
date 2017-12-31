@@ -36,15 +36,16 @@ class LoginReturnCode:
 	AccountNotActivated = 14
 
 class AuthServer(commonserver.Server):
-	PEER_TYPE = AuthServerMsg.header()
-
 	def __init__(self, host, max_connections, db_conn):
 		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
-		self.register_handler(AuthServerMsg.LoginRequest, self.on_login_request)
+		self.register_handler(AuthServerMsg.LoginRequest, self._on_login_request)
 
-	async def on_login_request(self, request, address):
+	def peer_type(self):
+		return AuthServerMsg.header()
+
+	async def _on_login_request(self, request, address):
 		return_code = LoginReturnCode.InsufficientAccountPermissions # needed to display error message
 		message = ""
 		redirect_host, redirect_port = "", 0

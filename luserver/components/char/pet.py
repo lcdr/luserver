@@ -1,6 +1,6 @@
 from ...bitstream import c_int, c_uint, c_uint64
 from ...game_object import GameObject
-from ...messages import broadcast, single
+from ...messages import broadcast, Sequence, single
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
 from ..pet import PetTamingNotify
@@ -18,10 +18,10 @@ class CharPet:
 		pass
 
 	@broadcast
-	def notify_pet_taming_puzzle_selected(self, bricks:(c_uint, c_uint)=None):
+	def notify_pet_taming_puzzle_selected(self, bricks:Sequence[c_uint, c_uint]=None):
 		pass
 
-	def pet_taming_try_build(self, selections:(c_uint, c_uint64)=None, client_failed:bool=False):
+	def pet_taming_try_build(self, selections:Sequence[c_uint, c_uint64]=None, client_failed:bool=False):
 		if not client_failed:
 			self.pet_taming_try_build_result()
 			self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.NamingPet, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)

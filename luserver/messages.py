@@ -1,10 +1,15 @@
 import inspect
 import logging
 import re
+from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 from functools import wraps
+from typing import Generic, TypeVar
+
+from pyraknet.messages import Address
 
 from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, WriteStream
+from pyraknet.bitstream import _IntStruct
 from .ldf import LDF
 
 log = logging.getLogger(__name__)
@@ -241,15 +246,28 @@ class GameMessage(Enum):
 	NotifyServerLevelProcessingComplete = 1734
 	NotifyLevelRewards = 1735
 
-class Serializable:
+class Serializable(ABC):
+	@abstractmethod
 	def serialize(self, stream):
-		raise NotImplementedError
+		pass
 
 	@staticmethod
+	@abstractmethod
 	def deserialize(stream):
-		raise NotImplementedError
+		pass
 
-def send_game_message(mode):
+# todo: change to UnsignedIntStruct
+T = TypeVar("T")
+U = TypeVar("U")
+V = TypeVar("V")
+
+class Sequence(Generic[T, U]):
+	pass
+
+class Mapping(Generic[T, U, V]):
+	pass
+
+def _send_game_message(mode):
 	"""
 	Send a game message on calling its function.
 	Modes:
@@ -307,7 +325,7 @@ def send_game_message(mode):
 					if param.name not in bound_args.arguments:
 						raise TypeError("\"%s\" needs to be specified" % param.name)
 					value = bound_args.arguments[param.name]
-					game_message_serialize(out, param.annotation, value)
+					_game_message_serialize(out, param.annotation, value)
 			if mode == "broadcast":
 				exclude_address = None
 				if player is not None:
@@ -324,10 +342,10 @@ def send_game_message(mode):
 		return wrapper
 	return decorator
 
-broadcast = send_game_message("broadcast")
-single = send_game_message("single")
+broadcast = _send_game_message("broadcast")
+single = _send_game_message("single")
 
-def game_message_serialize(out, type, value):
+def _game_message_serialize(out, type, value):
 	from .game_object import GameObject
 	if type == float:
 		out.write(c_float(value))
@@ -353,15 +371,17 @@ def game_message_serialize(out, type, value):
 			out.write(c_int64(value.object_id))
 	elif inspect.isclass(type) and issubclass(type, Serializable):
 		type.serialize(value, out)
-	elif isinstance(type, tuple):
-		out.write(type[0](len(value)))
-		if len(type) == 2: # list
-			for i in value:
-				game_message_serialize(out, type[1], i)
-		elif len(type) == 3: # dict
-			for k, v in value.items():
-				game_message_serialize(out, type[1], k)
-				game_message_serialize(out, type[2], v)
+	elif issubclass(type, Sequence):
+		length_type, value_type = type.__args__
+		out.write(length_type(len(value)))
+		for i in value:
+			_game_message_serialize(out, value_type, i)
+	elif issubclass(type, Mapping):
+		length_type, key_type, value_type = type.__args__
+		out.write(length_type(len(value)))
+		for k, v in value.items():
+			_game_message_serialize(out, key_type, k)
+			_game_message_serialize(out, value_type, v)
 		else:
 			raise ValueError(type)
 	else:
@@ -391,18 +411,18 @@ def game_message_deserialize(message, type):
 		return server.get_object(message.read(c_int64))
 	if inspect.isclass(type) and issubclass(type, Serializable):
 		return type.deserialize(message)
-	if isinstance(type, tuple):
-		if len(type) == 2: # list
-			value = []
-			for _ in range(game_message_deserialize(message, type[0])):
-				value.append(game_message_deserialize(message, type[1]))
-		elif len(type) == 3: # dict
-			value = {}
-			for _ in range(game_message_deserialize(message, type[0])):
-				key = game_message_deserialize(message, type[1])
-				val = game_message_deserialize(message, type[2])
-				value[key] = val
-		else:
-			raise ValueError(type)
+	if issubclass(type, Sequence):
+		length_type, value_type = type.__args__
+		value = []
+		for _ in range(game_message_deserialize(message, length_type)):
+			value.append(game_message_deserialize(message, value_type))
+		return value
+	if issubclass(type, Mapping):
+		length_type, key_type, value_type = type.__args__
+		value = {}
+		for _ in range(game_message_deserialize(message, length_type)):
+			key = game_message_deserialize(message, key_type)
+			val = game_message_deserialize(message, value_type)
+			value[key] = val
 		return value
 	raise TypeError(type)

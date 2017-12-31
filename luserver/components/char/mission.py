@@ -3,7 +3,7 @@ from persistent.mapping import PersistentMapping
 from ...bitstream import c_int, c_int64, c_ubyte
 
 from ...game_object import GameObject
-from ...messages import single
+from ...messages import Sequence, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
@@ -162,5 +162,5 @@ class CharMission:
 		pass
 
 	@single
-	def notify_mission_task(self, mission_id:c_int=None, task_mask:c_int=None, updates:(c_ubyte, float)=None):
+	def notify_mission_task(self, mission_id:c_int=None, task_mask:c_int=None, updates:Sequence[c_ubyte, float]=None):
 		pass
