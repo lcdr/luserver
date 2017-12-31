@@ -2,7 +2,7 @@ import logging
 
 from ...bitstream import c_int, c_int64, c_uint, ReadStream, WriteStream
 from ...game_object import GameObject
-from ...messages import broadcast, single, WorldClientMsg
+from ...messages import broadcast, Mapping, single, WorldClientMsg
 from ...world import server
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
@@ -86,5 +86,5 @@ class CharProperty:
 		self.get_models_on_property(models={model: spawner for spawner, model in server.models})
 
 	@broadcast
-	def get_models_on_property(self, models:(c_uint, GameObject, GameObject)=None):
+	def get_models_on_property(self, models:Mapping[c_uint, GameObject, GameObject]=None):
 		pass

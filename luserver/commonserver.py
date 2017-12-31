@@ -20,17 +20,18 @@ import asyncio
 import logging
 import os
 import subprocess
+from abc import ABC, abstractmethod
+from typing import Callable
 
-from .bitstream import c_ubyte, c_uint, c_ushort, WriteStream
-from .messages import GeneralMsg, WorldClientMsg, WorldServerMsg
-from .server import Server
+from .bitstream import c_ubyte, c_uint, c_ushort, ReadStream, WriteStream
+from .messages import Address, GeneralMsg, WorldClientMsg, WorldServerMsg
+from .server import Server as _Server
 
 log = logging.getLogger(__name__)
 
-class Server(Server):
-	NETWORK_VERSION = 171022
-	SERVER_PASSWORD = b"3.25 ND1"
-	EXPECTED_PEER_TYPE = WorldClientMsg.header()
+class Server(_Server, ABC):
+	_NETWORK_VERSION = 171022
+	_EXPECTED_PEER_TYPE = WorldClientMsg.header()
 
 	def __init__(self, address, max_connections, db_conn):
 		super().__init__(address, max_connections)
@@ -39,7 +40,7 @@ class Server(Server):
 		self._packet_handlers = {}
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
 
-	def _on_lu_packet(self, data, address):
+	def _on_lu_packet(self, data: ReadStream, address: Address):
 		super()._on_lu_packet(data, address)
 		header = data.read(c_ushort)
 		subheader = data.read(c_ubyte)
@@ -58,18 +59,22 @@ class Server(Server):
 				else:
 					handler(data, address)
 
-	def register_handler(self, packet_id, handler):
+	def register_handler(self, packet_id, handler: Callable[[ReadStream, Address], None]) -> None:
 		header = packet_id.header()
 		subheader = packet_id
 		packet_id = header, subheader
 		self._packet_handlers.setdefault((header, subheader), []).append(handler)
 
+	@abstractmethod
+	def peer_type(self) -> int:
+		pass
+
 	def _send_handshake(self, address):
 		out = WriteStream()
 		out.write_header(GeneralMsg.Handshake)
-		out.write(c_uint(self.NETWORK_VERSION))
+		out.write(c_uint(self._NETWORK_VERSION))
 		out.write(bytes(4))
-		out.write(c_uint(self.PEER_TYPE))
+		out.write(c_uint(self.peer_type()))
 		self.send(out, address)
 
 	def _on_handshake(self, handshake, address):
@@ -78,9 +83,9 @@ class Server(Server):
 		remote_peer_type = handshake.read(c_uint)
 
 		try:
-			if remote_network_version != self.NETWORK_VERSION:
+			if remote_network_version != self._NETWORK_VERSION:
 				raise ValueError("Unexpected network version %i!" % remote_network_version)
-			if remote_peer_type != self.EXPECTED_PEER_TYPE:
+			if remote_peer_type != self._EXPECTED_PEER_TYPE:
 				raise ValueError("Unexpected peer type %i!" % remote_peer_type)
 		except ValueError:
 			import traceback
@@ -89,7 +94,7 @@ class Server(Server):
 		else:
 			self._send_handshake(address)
 
-	def close_connection(self, address, reason=None):
+	def close_connection(self, address: Address, reason=None) -> None:
 		if reason is not None:
 			disconnect_message = WriteStream()
 			disconnect_message.write_header(GeneralMsg.DisconnectNotify)
@@ -98,7 +103,7 @@ class Server(Server):
 
 		self._server.close_connection(address)
 
-	async def address_for_world(self, world_id, include_self=False):
+	async def address_for_world(self, world_id, include_self=False) -> Address:
 		first = True
 		servers = {}
 		while True:

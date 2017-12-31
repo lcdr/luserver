@@ -50,7 +50,7 @@ class Server:
 
 		if packetname in self.file_logged_packets:
 			with open(os.path.normpath(os.path.join(__main__.__file__, "..", "logs", packetname+str(time.time())+".bin")), "wb") as file:
-				file.write(data)
+				file.write(bytes(data))
 
 		if console_log:
 			if received:

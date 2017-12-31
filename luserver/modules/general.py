@@ -58,9 +58,9 @@ class GeneralHandling:
 		server.general = self
 		self.tracked_objects = {}
 
-		server.register_handler(WorldServerMsg.LoadComplete, self.on_client_load_complete)
-		server.register_handler(WorldServerMsg.PositionUpdate, self.on_position_update)
-		server.register_handler(WorldServerMsg.GameMessage, self.on_game_message)
+		server.register_handler(WorldServerMsg.LoadComplete, self._on_client_load_complete)
+		server.register_handler(WorldServerMsg.PositionUpdate, self._on_position_update)
+		server.register_handler(WorldServerMsg.GameMessage, self._on_game_message)
 
 	def on_validated(self, address):
 		player = server.accounts[address].characters.selected()
@@ -78,9 +78,9 @@ class GeneralHandling:
 					dest = 1100, 0, 0
 				asyncio.ensure_future(player.char.transfer_to_world(dest, respawn_point_name=""))
 			else:
-				self.send_load_world(server.world_id, address)
+				self._send_load_world(server.world_id, address)
 
-	def send_load_world(self, destination, address):
+	def _send_load_world(self, destination, address):
 		world_id, world_instance, world_clone = destination
 		player = server.accounts[address].characters.selected()
 
@@ -97,7 +97,7 @@ class GeneralHandling:
 		load_world.write(bytes(4))
 		server.send(load_world, address)
 
-	def on_client_load_complete(self, data, address):
+	def _on_client_load_complete(self, data, address):
 		player = server.accounts[address].characters.selected()
 
 		chardata = WriteStream()
@@ -197,7 +197,7 @@ class GeneralHandling:
 		server.replica_manager.construct(player)
 		player.char.server_done_loading_all_objects()
 
-	def on_position_update(self, message, address):
+	def _on_position_update(self, message, address):
 		player = server.accounts[address].characters.selected()
 		vehicle = None
 		if player.char.vehicle_id != 0:
@@ -265,7 +265,7 @@ class GeneralHandling:
 
 		player.char.last_collisions = collisions
 
-	def on_game_message(self, message, address):
+	def _on_game_message(self, message, address):
 		object_id = message.read(c_int64)
 		obj = server.get_object(object_id)
 		if obj is None:

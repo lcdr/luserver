@@ -1,7 +1,7 @@
 from ..amf3 import AMF3
 from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..game_object import GameObject
-from ..messages import broadcast, single, Serializable
+from ..messages import broadcast, single, Serializable, Sequence
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -173,7 +173,7 @@ class PropertyEntranceComponent(Component):
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
 	@single
-	def property_select_query(self, nav_offset:c_int=None, there_are_more:bool=None, my_clone_id:c_int=None, has_featured_property:bool=None, was_friends:bool=None, properties:(c_uint, PropertySelectQueryProperty)=None):
+	def property_select_query(self, nav_offset:c_int=None, there_are_more:bool=None, my_clone_id:c_int=None, has_featured_property:bool=None, was_friends:bool=None, properties:Sequence[c_uint, PropertySelectQueryProperty]=None):
 		pass
 
 	@broadcast

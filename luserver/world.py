@@ -103,8 +103,6 @@ class MultiInstanceAccess(ACM):
 		server.commit()
 
 class WorldServer(Server):
-	PEER_TYPE = WorldServerMsg.header()
-
 	def __init__(self, address, external_host, world_id, max_connections, db_conn):
 		Server.__init__(self, address, max_connections, db_conn)
 		self.replica_manager = ReplicaManager(self._server)
@@ -143,6 +141,9 @@ class WorldServer(Server):
 		self.register_handler(WorldServerMsg.SessionInfo, self.on_session_info)
 		self.load_plugins()
 		self.set_world_id(world_id)
+
+	def peer_type(self):
+		return WorldServerMsg.header()
 
 	def on_network_init(self, address):
 		self.external_address = self.external_address[0], address[1] # update port (for OS-chosen port)

@@ -1,7 +1,7 @@
 import logging
 
 from ..bitstream import c_bit, c_int, c_int64, c_uint
-from ..messages import single
+from ..messages import Mapping, single
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -46,5 +46,5 @@ class VendorComponent(Component):
 			log.warning("Item not found")
 
 	@single
-	def vendor_status_update(self, update_only:bool=None, inv:(c_uint, c_int, c_int)=None):
+	def vendor_status_update(self, update_only:bool=None, inv:Mapping[c_uint, c_int, c_int]=None):
 		pass
