@@ -1,7 +1,7 @@
 import asyncio
 
 import luserver.components.script as script
-from luserver.bitstream import c_int
+from pyraknet.bitstream import c_int
 
 class ScriptComponent(script.ScriptComponent):
 	def on_use(self, player, multi_interact_id):

@@ -65,7 +65,7 @@ class MissionProgress(Persistent):
 import logging
 import random
 
-from ..bitstream import c_int
+from pyraknet.bitstream import c_int
 from ..game_object import GameObject
 from ..messages import single
 from ..world import server

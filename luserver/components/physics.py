@@ -1,14 +1,15 @@
 import enum
 import random
 
-from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
+from ..game_object import GameObject
 from ..messages import broadcast
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 
-class PhysicsComponent(Component):
+class _PhysicsComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.physics = self
@@ -34,14 +35,12 @@ class PhysicsComponent(Component):
 		for comp in self.object.components:
 			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 				server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
-				if "proximity_radius" in server._handlers:
-					for handler in server._handlers["proximity_radius"]:
-						handler(self)
+				server.handle("proximity_radius", self)
 				break
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 
-	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner):
+	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner: GameObject) -> None:
 		if currency_min is not None and currency_max is not None:
 			currency = random.randint(currency_min, currency_max)
 			owner.char.drop_client_loot(currency=currency, item_template=-1, loot_id=0, owner=owner, source_obj=self.object)
@@ -51,13 +50,13 @@ class PhysicsComponent(Component):
 			for lot in loot.elements():
 				self.drop_loot(lot, owner)
 
-	def drop_loot(self, lot, owner):
+	def drop_loot(self, lot, owner: GameObject) -> None:
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
 		object_id = server.new_spawned_id()
 		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
-class Controllable(PhysicsComponent):
+class _Controllable(_PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["on_ground"] = "physics_data_flag"
@@ -82,23 +81,15 @@ class Controllable(PhysicsComponent):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
-			out.write(c_float(self.position.x))
-			out.write(c_float(self.position.y))
-			out.write(c_float(self.position.z))
-
-			out.write(c_float(self.rotation.x))
-			out.write(c_float(self.rotation.y))
-			out.write(c_float(self.rotation.z))
-			out.write(c_float(self.rotation.w))
+			out.write(self.position)
+			out.write(self.rotation)
 
 			out.write(c_bit(self.on_ground))
 			out.write(c_bit(self.unknown_bool))
 
 			out.write(c_bit(self.velocity_flag))
 			if self.velocity_flag:
-				out.write(c_float(self.velocity.x))
-				out.write(c_float(self.velocity.y))
-				out.write(c_float(self.velocity.z))
+				out.write(self.velocity)
 				self.velocity_flag = False
 
 			out.write(c_bit(self.angular_velocity_flag))
@@ -131,7 +122,7 @@ class Controllable(PhysicsComponent):
 	def write_vehicle_stuff(self, out, is_creation):
 		pass # hook for vehiclephysics
 
-class ControllablePhysicsComponent(Controllable):
+class ControllablePhysicsComponent(_Controllable):
 	def serialize(self, out, is_creation):
 		if is_creation:
 			out.write(c_bit(False))
@@ -147,7 +138,7 @@ class ControllablePhysicsComponent(Controllable):
 	def lock_node_rotation(self, node_name:bytes=None):
 		pass
 
-class SimplePhysicsComponent(PhysicsComponent):
+class SimplePhysicsComponent(_PhysicsComponent):
 	def serialize(self, out, is_creation):
 		if is_creation:
 			out.write(c_bit(False))
@@ -156,29 +147,19 @@ class SimplePhysicsComponent(PhysicsComponent):
 		out.write(c_bit(False))
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
-			out.write(c_float(self.position.x))
-			out.write(c_float(self.position.y))
-			out.write(c_float(self.position.z))
-			out.write(c_float(self.rotation.x))
-			out.write(c_float(self.rotation.y))
-			out.write(c_float(self.rotation.z))
-			out.write(c_float(self.rotation.w))
+			out.write(self.position)
+			out.write(self.rotation)
 			self.physics_data_flag = False
 
-class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
+class RigidBodyPhantomPhysicsComponent(_PhysicsComponent):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
-			out.write(c_float(self.position.x))
-			out.write(c_float(self.position.y))
-			out.write(c_float(self.position.z))
-			out.write(c_float(self.rotation.x))
-			out.write(c_float(self.rotation.y))
-			out.write(c_float(self.rotation.z))
-			out.write(c_float(self.rotation.w))
+			out.write(self.position)
+			out.write(self.rotation)
 			self.physics_data_flag = False
 
-class VehiclePhysicsComponent(Controllable):
+class VehiclePhysicsComponent(_Controllable):
 	def serialize(self, out, is_creation):
 		super().serialize(out, is_creation)
 		if is_creation:
@@ -190,7 +171,7 @@ class VehiclePhysicsComponent(Controllable):
 		out.write(c_bit(False))
 		out.write(c_float(0))
 
-MODEL_DIMENSIONS = {
+_MODEL_DIMENSIONS = {
 	1656: (Vector3(-1, -1, -1), Vector3(1, 2, 1)), # imagination powerup
 	4734: (Vector3(-5.2644, 0.0051, -0.5011), Vector3(4.7356, 5.0051, 0.4989)), # wall
 	4956: (Vector3(-2, 0, -2), Vector3(2, 4, 2)), # AG monument switch,
@@ -198,8 +179,8 @@ MODEL_DIMENSIONS = {
 	5652: (Vector3(-2.5, -2.5, -2.5), Vector3(2.5, 2.5, 2.5)), # cube
 	10285: (Vector3(-7, 0, -6), Vector3(7, 3, 8)), # lego club ring
 	12384: (Vector3(-0.5, -0.0002, -10.225), Vector3(0.5, 12.9755, 10.225))} # POI wall
-MODEL_DIMENSIONS[5650] = MODEL_DIMENSIONS[4956] # AG monument switch rebuild
-MODEL_DIMENSIONS[8419] = MODEL_DIMENSIONS[4734] # wall 2
+_MODEL_DIMENSIONS[5650] = _MODEL_DIMENSIONS[4956] # AG monument switch rebuild
+_MODEL_DIMENSIONS[8419] = _MODEL_DIMENSIONS[4734] # wall 2
 
 class PrimitiveModelType:
 	Cuboid = 1
@@ -207,7 +188,7 @@ class PrimitiveModelType:
 	Cylinder = 3
 	Sphere = 4
 
-PRIMITIVE_DIMENSIONS = {
+_PRIMITIVE_DIMENSIONS = {
 	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)),
 	PrimitiveModelType.Cylinder: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
 
@@ -215,11 +196,11 @@ PRIMITIVE_DIMENSIONS = {
 class AABB: # axis aligned bounding box
 	def __init__(self, obj):
 		if hasattr(obj, "primitive_model_type"):
-			rel_min = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0].hadamard(obj.primitive_model_scale)
-			rel_max = PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1].hadamard(obj.primitive_model_scale)
+			rel_min = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0].hadamard(obj.primitive_model_scale)
+			rel_max = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1].hadamard(obj.primitive_model_scale)
 		else:
-			rel_min = MODEL_DIMENSIONS[obj.lot][0] * obj.scale
-			rel_max = MODEL_DIMENSIONS[obj.lot][1] * obj.scale
+			rel_min = _MODEL_DIMENSIONS[obj.lot][0] * obj.scale
+			rel_max = _MODEL_DIMENSIONS[obj.lot][1] * obj.scale
 
 		vertices = [
 			Vector3(rel_min.x, rel_min.y, rel_min.z),
@@ -270,7 +251,7 @@ class PhysicsEffect(enum.IntEnum):
 	Gravity = 3
 	Friction = 4
 
-class PhantomPhysicsComponent(PhysicsComponent):
+class PhantomPhysicsComponent(_PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["physics_effect_active"] = "physics_effect_flag"
@@ -287,13 +268,8 @@ class PhantomPhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
-			out.write(c_float(self.position.x))
-			out.write(c_float(self.position.y))
-			out.write(c_float(self.position.z))
-			out.write(c_float(self.rotation.x))
-			out.write(c_float(self.rotation.y))
-			out.write(c_float(self.rotation.z))
-			out.write(c_float(self.rotation.w))
+			out.write(self.position)
+			out.write(self.rotation)
 			self.physics_data_flag = False
 
 		out.write(c_bit(self.physics_effect_flag or is_creation))
@@ -304,13 +280,11 @@ class PhantomPhysicsComponent(PhysicsComponent):
 				out.write(c_float(self.physics_effect_amount))
 				out.write(c_bit(False))
 				out.write(c_bit(True))
-				out.write(c_float(self.physics_effect_direction.x))
-				out.write(c_float(self.physics_effect_direction.y))
-				out.write(c_float(self.physics_effect_direction.z))
+				out.write(self.physics_effect_direction)
 			self.physics_effect_flag = False
 
 	def on_startup(self):
-		if self.object.lot in MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
+		if self.object.lot in _MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
 			for comp in self.object.components:
 				if comp is self:
 					if not hasattr(self, "respawn_data"):

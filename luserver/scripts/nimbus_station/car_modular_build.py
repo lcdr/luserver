@@ -1,6 +1,6 @@
 import luserver.components.script as script
 from luserver.components.mission import MissionState, TaskType
-from luserver.bitstream import c_int, c_ubyte
+from pyraknet.bitstream import c_int, c_ubyte
 from luserver.messages import Sequence
 
 CAR_MISSION = 623

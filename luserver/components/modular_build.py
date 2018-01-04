@@ -1,4 +1,4 @@
-from ..bitstream import c_int, c_int64, c_ubyte
+from pyraknet.bitstream import c_int, c_int64, c_ubyte
 from ..messages import Sequence
 from ..math.vector import Vector3
 from .component import Component

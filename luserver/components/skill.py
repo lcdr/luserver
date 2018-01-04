@@ -2,7 +2,7 @@ import logging
 import pprint
 import enum
 
-from ..bitstream import c_bit, c_int, c_int64, c_uint, c_uint64, ReadStream
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_uint64, ReadStream, WriteStream
 from ..messages import broadcast, single
 from ..world import server
 from ..math.quaternion import Quaternion
@@ -159,30 +159,30 @@ class SkillComponent(Component):
 		self.last_ui_skill_handle = self.last_ui_handle
 		self.last_ui_handle += 1
 
-		bitstream = ReadStream(b"")
+		bitstream = WriteStream()
 		behavior = server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
-		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bitstream)
+		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=ReadStream(bitstream))
 
 	def cast_sync_skill(self, delay, behavior, target):
 		ui_behavior_handle = self.last_ui_handle
 		self.last_ui_handle += 1
 		self.delayed_behaviors[ui_behavior_handle] = behavior
 
-		bitstream = ReadStream(b"")
+		bitstream = WriteStream()
 		self.serialize_behavior(behavior, bitstream, target)
 
-		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bitstream, ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
+		self.object.call_later(delay, lambda: self.sync_skill(bitstream=ReadStream(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
 	def cast_projectile(self, proj_behavs, target):
-		bitstream = ReadStream(b"")
+		bitstream = WriteStream()
 		proj_id = server.new_spawned_id()
 		for behav in proj_behavs:
 			self.original_target_id = target.object_id
 			self.serialize_behavior(behav, bitstream, target)
 		delay = 1
-		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bitstream))
+		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, ReadStream(bitstream)))
 		return proj_id
 
 	@broadcast

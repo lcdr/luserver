@@ -1,15 +1,13 @@
 import inspect
 import logging
 import re
-from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 from functools import wraps
-from typing import Generic, TypeVar
+from typing import Generic, NewType, TypeVar
 
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable
 from pyraknet.messages import Address
-
-from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, WriteStream
-from pyraknet.bitstream import _IntStruct
+from .bitstream import WriteStream
 from .ldf import LDF
 
 log = logging.getLogger(__name__)
@@ -246,15 +244,7 @@ class GameMessage(Enum):
 	NotifyServerLevelProcessingComplete = 1734
 	NotifyLevelRewards = 1735
 
-class Serializable(ABC):
-	@abstractmethod
-	def serialize(self, stream):
-		pass
-
-	@staticmethod
-	@abstractmethod
-	def deserialize(stream):
-		pass
+ObjectID = NewType("ObjectID", int)
 
 # todo: change to UnsignedIntStruct
 T = TypeVar("T")

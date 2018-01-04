@@ -1,8 +1,10 @@
 import luserver.components.script as script
 
 class ScriptComponent(script.ScriptComponent):
+	def on_startup(self):
+		self.object.moving_platform.no_autostart = True
+
 	def complete_rebuild(self, player):
-		self.object.moving_platform.stop_pathing()
 		self.object.physics.proximity_radius(5)
 		self.player = player
 

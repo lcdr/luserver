@@ -8,8 +8,9 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort
 from ..auth import GMLevel
-from ..bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, WriteStream
+from ..bitstream import WriteStream
 from ..ldf import LDF, LDFDataType
 from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, game_message_deserialize
 from ..world import server, World
@@ -55,7 +56,6 @@ _CHECKSUMS = {
 
 class GeneralHandling:
 	def __init__(self):
-		server.general = self
 		self.tracked_objects = {}
 
 		server.register_handler(WorldServerMsg.LoadComplete, self._on_client_load_complete)
@@ -91,9 +91,7 @@ class GeneralHandling:
 		load_world.write(c_uint(world_clone))
 		load_world.write(c_uint(_CHECKSUMS.get(World(world_id), 0)))
 		load_world.write(bytes(2))
-		load_world.write(c_float(player.physics.position.x))
-		load_world.write(c_float(player.physics.position.y))
-		load_world.write(c_float(player.physics.position.z))
+		load_world.write(player.physics.position)
 		load_world.write(bytes(4))
 		server.send(load_world, address)
 

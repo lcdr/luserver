@@ -1,6 +1,6 @@
 import random
 
-from ..bitstream import c_bit, c_int
+from pyraknet.bitstream import c_bit, c_int
 from .component import Component
 
 CYCLE_INTERVAL = 10

@@ -55,7 +55,8 @@ import logging
 
 import persistent.wref
 
-from ..bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, WriteStream
+from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort
+from ..bitstream import WriteStream
 from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
@@ -92,7 +93,6 @@ pants_lot = {
 
 class CharHandling:
 	def __init__(self):
-		server.char = self
 		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request)
 		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request)
 		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request)
@@ -164,7 +164,7 @@ class CharHandling:
 		predef_name_ids = request.read(c_uint), request.read(c_uint), request.read(c_uint)
 
 		if char_name == "":
-			char_name = self.predef_to_name(predef_name_ids)
+			char_name = self._predef_to_name(predef_name_ids)
 
 		return_code = CharacterCreateReturnCode.Success
 
@@ -176,7 +176,7 @@ class CharHandling:
 
 		try:
 			if return_code == CharacterCreateReturnCode.Success:
-				new_char = PersistentObject(1, server.new_object_id())
+				new_char = PersistentObject(server.new_object_id())
 				new_char.name = char_name
 				new_char.char.account = account
 				new_char.char.address = address
@@ -192,7 +192,7 @@ class CharHandling:
 				new_char.char.eye_style = request.read(c_uint)
 				new_char.char.mouth_style = request.read(c_uint)
 
-				shirt = new_char.inventory.add_item(self.shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
+				shirt = new_char.inventory.add_item(self._shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
 				pants = new_char.inventory.add_item(pants_lot[new_char.char.pants_color], notify_client=False)
 				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
 				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
@@ -248,14 +248,14 @@ class CharHandling:
 		else:
 			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, include_self=True))
 
-	def shirt_to_lot(self, color, style):
+	def _shirt_to_lot(self, color, style):
 		# The LOTs for the shirts are for some reason in two batches of IDs
 		lot_start_1 = 4048
 		lot_start_2 = 5729
 		num_styles_1 = 34
 		num_styles_2 = 6
 
-		cc_color_index = self.character_create_color_index(color)
+		cc_color_index = self._character_create_color_index(color)
 
 		if 0 < style < 35:
 			return lot_start_1 + cc_color_index * num_styles_1 + style
@@ -263,7 +263,7 @@ class CharHandling:
 			return lot_start_2 + cc_color_index * num_styles_2 + style-34
 		raise ValueError(style)
 
-	def character_create_color_index(self, color):
+	def _character_create_color_index(self, color):
 		index = 0
 		sorted_colors = [i for i in sorted(server.db.colors.items(), key=lambda x: x[0])]
 		for col, valid_characters in sorted_colors:
@@ -273,7 +273,7 @@ class CharHandling:
 				index += 1
 		return index
 
-	def predef_to_name(self, predef_name_ids):
+	def _predef_to_name(self, predef_name_ids):
 		name = ""
 		for name_type, name_id in enumerate(predef_name_ids):
 			name += server.db.predef_names[name_type][name_id]

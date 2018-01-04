@@ -1,6 +1,6 @@
 import logging
 
-from ..bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort
 from ..world import server
 from ..math.vector import Vector3
 

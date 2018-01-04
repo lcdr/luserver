@@ -1,6 +1,6 @@
 import logging
 
-from ..bitstream import c_bit, c_int, c_int64, c_uint
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint
 from ..messages import Mapping, single
 from ..world import server
 from ..math.vector import Vector3

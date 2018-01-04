@@ -1,4 +1,4 @@
-from ...bitstream import c_int, c_int64
+from pyraknet.bitstream import c_int, c_int64
 from ...ldf import LDF, LDFDataType
 from ...messages import single
 

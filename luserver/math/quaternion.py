@@ -2,8 +2,7 @@ import math
 from numbers import Real
 from typing import ClassVar
 
-from ..bitstream import c_float
-from ..messages import Serializable
+from pyraknet.bitstream import c_float, Serializable
 from .vector import Vector3
 
 class Quaternion(Serializable):

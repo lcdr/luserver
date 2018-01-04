@@ -1,6 +1,7 @@
 import persistent.wref
 
-from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
+from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from ..bitstream import WriteStream
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
 
@@ -19,7 +20,6 @@ class FriendUpdateType:
 
 class SocialHandling:
 	def __init__(self):
-		server.social = self
 		server.register_handler(SocialMsg.GetFriendsList, self.on_get_friends_list)
 		server.register_handler(SocialMsg.AddFriendRequest, self.on_add_friend_request)
 		server.register_handler(SocialMsg.AddFriendResponse, self.on_add_friend_response)

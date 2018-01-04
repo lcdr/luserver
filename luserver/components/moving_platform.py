@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_float, c_int, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -39,6 +39,9 @@ class MovingPlatformComponent(Component):
 		self.current_waypoint_index = 0
 		self.next_waypoint_index = 1
 		self.callbacks = []
+		self.no_autostart = False
+		self.object.add_handler("rebuild_init", self._on_rebuild_init)
+		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
 		if "attached_path" in set_vars:
 			self.path = Path(*server.world_data.paths[set_vars["attached_path"]])
@@ -58,15 +61,21 @@ class MovingPlatformComponent(Component):
 			out.write(c_bit(self.unknown_bool))
 			out.write(c_bit(self.in_reverse))
 			out.write(c_float(0))
-			out.write(c_float(self.current_position.x))
-			out.write(c_float(self.current_position.y))
-			out.write(c_float(self.current_position.z))
+			out.write(self.current_position)
 			out.write(c_uint(self.current_waypoint_index))
 			out.write(c_uint(self.next_waypoint_index))
 			out.write(c_float(0))
 			out.write(c_uint(0))
 
 			self.moving_platform_flag = False
+
+
+	def _on_rebuild_init(self, _obj):
+		self.stop_pathing()
+
+	def _on_rebuild_complete(self, _obj, player):
+		if not self.no_autostart:
+			self.start_pathing()
 
 	def set_movement_state(self, state):
 		self.movement_state = state

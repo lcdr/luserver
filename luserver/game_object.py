@@ -3,14 +3,17 @@ import functools
 import importlib
 import logging
 from collections import OrderedDict
+from typing import Callable, List, NewType
 
 from persistent import Persistent
 
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
 from pyraknet.replicamanager import Replica
-
 from .ldf import LDF
-from .bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
+from .messages import ObjectID
 from .world import server
+
+CallbackID = NewType("CallbackID", int)
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ class GameObject(Replica):
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, lot, object_id, set_vars=None):
+	def __init__(self, lot, object_id: ObjectID, set_vars=None):
 		if set_vars is None:
 			set_vars = {}
 		self._handlers = {}
@@ -118,7 +121,7 @@ class GameObject(Replica):
 	def __repr__(self):
 		return "<GameObject \"%s\", %i, %i>" % (self.name, self.object_id, self.lot)
 
-	def attr_changed(self, name):
+	def attr_changed(self, name: str) -> None:
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
 		if hasattr(self, "_flags") and name in self._flags:
 			setattr(self, self._flags[name], hasattr(self, name))
@@ -126,10 +129,10 @@ class GameObject(Replica):
 
 	def signal_serialize(self):
 		if not self._serialize_scheduled:
-			self.call_later(0, self.do_serialize)
+			self.call_later(0, self._do_serialize)
 			self._serialize_scheduled = True
 
-	def do_serialize(self):
+	def _do_serialize(self):
 		server.replica_manager.serialize(self)
 		self._serialize_scheduled = False
 
@@ -205,16 +208,16 @@ class GameObject(Replica):
 
 		del server.game_objects[self.object_id]
 
-	def add_handler(self, event_name, handler):
+	def add_handler(self, event_name: str, handler: Callable[..., None]) -> None:
 		self._handlers.setdefault(event_name, []).append(functools.partial(handler, self))
 
-	def remove_handler(self, event_name, handler):
+	def remove_handler(self, event_name: str, handler: Callable[..., None]) -> None:
 		if event_name not in self._handlers:
 			return
 		if handler in self._handlers[event_name]:
 			del self._handlers[handler]
 
-	def handlers(self, event_name, silent=False):
+	def handlers(self, event_name: str, silent=False) -> List[Callable]:
 		"""
 		Return matching handlers for an event.
 		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
@@ -238,7 +241,7 @@ class GameObject(Replica):
 
 		return handlers
 
-	def handle(self, event_name, *args, silent=False, **kwargs):
+	def handle(self, event_name: str, *args, silent=False, **kwargs) -> None:
 		"""
 		Calls handlers for an event. See handlers() for the order of handlers.
 		If a handler returns True, it's assumed that the handler has sufficiently handled the event and no further handlers will be called.
@@ -247,7 +250,7 @@ class GameObject(Replica):
 			if handler(*args, **kwargs):
 				break
 
-	def send_game_message(self, handler_name, *args, **kwargs):
+	def send_game_message(self, handler_name: str, *args, **kwargs) -> None:
 		"""For game messages with multiple handlers: call all the handlers but only send one message over the network."""
 		handlers = self.handlers(handler_name)
 		if not handlers:
@@ -258,7 +261,7 @@ class GameObject(Replica):
 		for handler in handlers[1:]:
 			handler.__wrapped__(handler.__self__, *args, **kwargs)
 
-	def call_later(self, delay, callback, *args):
+	def call_later(self, delay: float, callback: Callable[..., None], *args) -> CallbackID:
 		"""
 		Call a callback in delay seconds. The callback's handle is recorded so that when the object is destructed all pending callbacks are automatically cancelled.
 		Return the callback id to be used for cancel_callback.
@@ -268,20 +271,20 @@ class GameObject(Replica):
 		server.last_callback_id += 1
 		return callback_id
 
-	def _callback(self, callback_id, callback, *args):
+	def _callback(self, callback_id: CallbackID, callback: Callable[..., None], *args) -> None:
 		"""Execute a callback and delete the handle from the list because it won't be cancelled."""
 		del server.callback_handles[self.object_id][callback_id]
 		callback(*args)
 
-	def cancel_callback(self, callback_id):
+	def cancel_callback(self, callback_id: CallbackID) -> None:
 		"""Cancel a callback and delete the handle from the list."""
 		if callback_id in server.callback_handles[self.object_id]:
 			server.callback_handles[self.object_id][callback_id].cancel()
 			del server.callback_handles[self.object_id][callback_id]
 
-class PersistentObject(GameObject, Persistent): # possibly just make all game objects persistent?
-	def __init__(self, lot, object_id, set_vars={}):
-		GameObject.__init__(self, lot, object_id, set_vars)
+class PersistentObject(GameObject, Persistent):
+	def __init__(self, object_id):
+		GameObject.__init__(self, 1, object_id)
 		Persistent.__init__(self)
 
 	def __setattr__(self, name, value):

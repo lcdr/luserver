@@ -1,5 +1,5 @@
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..amf3 import AMF3
-from ..bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
 from ..game_object import GameObject
 from ..messages import broadcast, single, Serializable, Sequence
 from ..world import server

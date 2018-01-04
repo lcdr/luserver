@@ -1,5 +1,4 @@
-from .bitstream import c_double, c_ubyte
-from .messages import Serializable
+from pyraknet.bitstream import c_double, c_ubyte, Serializable
 
 UNDEFINED_MARKER = 0
 FALSE_MARKER = 2

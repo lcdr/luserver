@@ -1,4 +1,4 @@
-from ...bitstream import c_int64, c_uint, c_uint64
+from pyraknet.bitstream import c_int64, c_uint, c_uint64
 from ...game_object import GameObject
 from ...messages import Mapping, single
 from ...world import server

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from ..bitstream import c_int, c_int64
+from pyraknet.bitstream import c_int, c_int64
 from ..game_object import GameObject
 from ..messages import broadcast
 from ..world import server
@@ -36,7 +36,7 @@ class LaunchpadComponent(Component):
 		else:
 			player.char.disp_tooltip("You don't have a rocket!")
 
-	def launch(self, player, rocket):
+	def launch(self, player: GameObject, rocket) -> None:
 		player.char.traveling_rocket = rocket.module_lots
 		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 

@@ -102,9 +102,9 @@ class _LUZImporter:
 		assert version in (36, 38, 39, 40, 41), version
 		self.luz.skip_read(4 + 4)
 		if version >= 38:
-			spawnpoint_position = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
+			spawnpoint_position = self.luz.read(Vector3)
 			w, x, y, z = self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float)
-			self.world_data.spawnpoint = Vector3(*spawnpoint_position), Quaternion(x, y, z, w)
+			self.world_data.spawnpoint = spawnpoint_position, Quaternion(x, y, z, w)
 
 		if version >= 37:
 			number_of_scenes = self.luz.read(c_uint)
@@ -196,7 +196,7 @@ class _LUZImporter:
 			waypoints = []
 
 			for _ in range(self.luz.read(c_uint)):
-				position = Vector3(self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float))
+				position = self.luz.read(Vector3)
 
 				if path_type == PathType.MovingPlatform:
 					rotation = Quaternion(self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float), self.luz.read(c_float))

@@ -1,6 +1,6 @@
 import asyncio
 
-from ..bitstream import c_bit, c_float, c_int, c_int64, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_uint
 from ..game_object import GameObject
 from ..world import server
 from ..ldf import LDF

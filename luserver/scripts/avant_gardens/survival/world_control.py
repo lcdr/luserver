@@ -2,8 +2,8 @@ import asyncio
 import time
 
 import luserver.components.script as script
+from pyraknet.bitstream import c_int
 from luserver.ldf import LDF, LDFDataType
-from luserver.bitstream import c_int
 from luserver.messages import single
 from luserver.world import server
 from luserver.components.inventory import InventoryType
