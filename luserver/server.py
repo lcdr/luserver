@@ -4,7 +4,7 @@ import os
 import time
 
 import pyraknet.server
-from .bitstream import c_uint, c_ushort
+from pyraknet.bitstream import c_uint, c_ushort
 from .messages import msg_enum, GameMessage, WorldClientMsg, WorldServerMsg
 
 log = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-from ..bitstream import c_bit
+from pyraknet.bitstream import c_bit
 from ..world import server
 from ..math.quaternion import Quaternion
 from .component import Component
@@ -13,8 +13,10 @@ class BaseCombatAIComponent(Component):
 		self._flags["target"] = "ai_flag"
 		self.skill_range = 7
 		self.target = None
-		self.enabled = False
+		self._enabled = False
 		self.update_handle = None
+		self.object.add_handler("rebuild_init", self._on_rebuild_init)
+		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
 	def on_startup(self):
 		if not hasattr(self.object, "skill"):
@@ -25,29 +27,32 @@ class BaseCombatAIComponent(Component):
 			self.skill_range = min(behavior.max_range, 10)
 		self.object.physics.proximity_radius(self.skill_range)
 
-		self.enable()
-
-	def enable(self):
-		self.enabled = True
-
-	def disable(self):
-		self.enabled = False
-		if self.update_handle is not None:
-			self.object.cancel_callback(self.update_handle)
+		self._enabled = True
 
 	def serialize(self, out, is_creation):
 		out.write(c_bit(False))
 
+	def _on_rebuild_init(self, _obj):
+		self._enabled = False
+
+	def _on_rebuild_complete(self, _obj, player):
+		self._enabled = True
+
+	def _disable(self):
+		self._enabled = False
+		if self.update_handle is not None:
+			self.object.cancel_callback(self.update_handle)
+
 	def on_enter(self, player):
-		if not self.enabled:
+		if not self._enabled:
 			return
-		self.update_handle = self.object.call_later(0, self.update)
+		self.update_handle = self.object.call_later(0, self._update)
 
 	def on_exit(self, player):
 		if self.update_handle is not None:
 			self.object.cancel_callback(self.update_handle)
 
-	def update(self):
+	def _update(self):
 		# todo: move some targeting logic to TacArc
 		self.target = None
 		enemy_factions = server.db.factions.get(self.object.stats.faction, ())
@@ -67,4 +72,4 @@ class BaseCombatAIComponent(Component):
 			for skill_id in self.object.skill.skills:
 				self.object.skill.cast_skill(skill_id, self.target)
 
-			self.update_handle = self.object.call_later(UPDATE_INTERVAL, self.update)
+			self.update_handle = self.object.call_later(UPDATE_INTERVAL, self._update)

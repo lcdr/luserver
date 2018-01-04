@@ -1,6 +1,6 @@
 import luserver.scripts.general.teleport_to_ns_or_nt as script
+from pyraknet.bitstream import c_int
 from luserver.amf3 import AMF3
-from luserver.bitstream import c_int
 from luserver.world import server
 from luserver.components.char import TerminateType
 

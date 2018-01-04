@@ -1,7 +1,7 @@
 import enum
 import numbers
 
-from .bitstream import c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint, ReadStream, WriteStream
+from pyraknet.bitstream import c_bool, c_double, c_float, c_int, c_int64, c_ubyte, c_uint, ReadStream, WriteStream
 
 class LDFDataType(enum.Enum):
 	STRING = 0

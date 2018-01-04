@@ -1,5 +1,5 @@
 import luserver.scripts.general.console_teleport as script
-from luserver.bitstream import c_int
+from pyraknet.bitstream import c_int
 from luserver.components.char import TerminateType
 # todo: implement visited worlds so the NS/NT choice UI can work
 

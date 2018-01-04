@@ -1,4 +1,4 @@
-from luserver.bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import BITS_LOCAL
@@ -158,7 +158,7 @@ class LVLImporter:
 			lot = self.lvl.read(c_uint)
 			unknown1 = self.lvl.read(c_uint)
 			unknown2 = self.lvl.read(c_uint)
-			position = Vector3(self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float))
+			position = self.lvl.read(Vector3)
 			w, x, y, z = self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float)
 			rotation = Quaternion(x, y, z, w)
 			scale = self.lvl.read(c_float)

@@ -18,7 +18,8 @@ import time
 
 import persistent
 
-from ..bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort, WriteStream
+from pyraknet.bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
+from ..bitstream import WriteStream
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..components.inventory import InventoryType, LootType, Stack
@@ -35,10 +36,9 @@ class MailSendReturnCode:
 
 class MailHandling:
 	def __init__(self):
-		server.mail = self
-		server.register_handler(WorldServerMsg.Mail, self.on_mail)
+		server.register_handler(WorldServerMsg.Mail, self._on_mail)
 
-	def on_mail(self, message, address):
+	def _on_mail(self, message, address):
 		mail_id = message.read(c_uint)
 		player = server.accounts[address].characters.selected()
 		if mail_id == MailID.MailSend:

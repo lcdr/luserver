@@ -23,7 +23,8 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Callable
 
-from .bitstream import c_ubyte, c_uint, c_ushort, ReadStream, WriteStream
+from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
+from .bitstream import WriteStream
 from .messages import Address, GeneralMsg, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
 

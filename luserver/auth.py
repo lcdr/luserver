@@ -11,8 +11,9 @@ except ImportError:
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
 
+from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort
 from . import commonserver
-from .bitstream import c_bool, c_ubyte, c_uint, c_ushort, WriteStream
+from .bitstream import WriteStream
 from .messages import AuthServerMsg, WorldClientMsg
 
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 class LoginError(Exception):
 	pass
 
-class LoginReturnCode:
+class _LoginReturnCode:
 	GeneralFailure = 0
 	Success = 1
 	AccountBanned = 2
@@ -46,7 +47,7 @@ class AuthServer(commonserver.Server):
 		return AuthServerMsg.header()
 
 	async def _on_login_request(self, request, address):
-		return_code = LoginReturnCode.InsufficientAccountPermissions # needed to display error message
+		return_code = _LoginReturnCode.InsufficientAccountPermissions # needed to display error message
 		message = ""
 		redirect_host, redirect_port = "", 0
 		session_key = ""
@@ -60,7 +61,7 @@ class AuthServer(commonserver.Server):
 
 			if username not in self.db.accounts:
 				log.info("Login attempt with username %s and invalid password", username)
-				raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
+				raise LoginError(_LoginReturnCode.InvalidUsernameOrPassword)
 
 			account = self.db.accounts[username]
 
@@ -76,7 +77,7 @@ class AuthServer(commonserver.Server):
 				raise LoginError("Password has been set.")
 
 			if not encryption.verify(password, account.password):
-				raise LoginError(LoginReturnCode.InvalidUsernameOrPassword)
+				raise LoginError(_LoginReturnCode.InvalidUsernameOrPassword)
 
 			if account.password_state == PasswordState.Temp:
 				account.password_state = PasswordState.AcceptNew
@@ -111,7 +112,7 @@ class AuthServer(commonserver.Server):
 			traceback.print_exc()
 			message = "Server error during login, contact server operator"
 		else:
-			return_code = LoginReturnCode.Success
+			return_code = _LoginReturnCode.Success
 
 		response = WriteStream()
 		response.write_header(WorldClientMsg.LoginResponse)

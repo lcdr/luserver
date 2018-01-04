@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
 from ..messages import broadcast
 from .scripted_activity import ScriptedActivityComponent
 

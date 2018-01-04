@@ -1,4 +1,4 @@
-from ..bitstream import c_ushort
+from pyraknet.bitstream import c_ushort
 from ..game_object import GameObject
 from ..world import server
 from .component import Component

@@ -1,5 +1,5 @@
+from pyraknet.bitstream import c_bit, c_int, c_int64
 from .. ldf import LDF
-from ..bitstream import c_bit, c_int, c_int64
 from ..game_object import GameObject
 from ..messages import broadcast
 from .component import Component
@@ -16,7 +16,7 @@ class ScriptComponent(Component):
 
 	def serialize(self, out, is_creation):
 		if is_creation:
-			out.write(c_bit(self.script_network_vars))
+			out.write(c_bit(bool(self.script_network_vars)))
 			if self.script_network_vars:
 				out.write(self.script_network_vars.to_bitstream())
 

@@ -1,7 +1,7 @@
 import random
 
 import luserver.components.script as script
-from luserver.bitstream import c_uint
+from pyraknet.bitstream import c_uint
 from luserver.game_object import GameObject
 from luserver.messages import broadcast
 from luserver.components.mission import MissionState

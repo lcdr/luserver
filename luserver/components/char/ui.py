@@ -1,4 +1,4 @@
-from ...bitstream import c_int
+from pyraknet.bitstream import c_int
 from ...game_object import GameObject
 from ...ldf import LDF
 from ...messages import single

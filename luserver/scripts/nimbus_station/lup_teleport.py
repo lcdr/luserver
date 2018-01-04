@@ -1,5 +1,5 @@
 import luserver.scripts.general.teleport_to_ns_or_nt as script
-from luserver.bitstream import c_int
+from pyraknet.bitstream import c_int
 from luserver.world import server
 from luserver.components.char import TerminateType
 

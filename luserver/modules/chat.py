@@ -4,8 +4,9 @@ import functools
 import logging
 import time
 
+from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from ..auth import GMLevel
-from ..bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
+from ..bitstream import WriteStream
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..interfaces.plugin import object_selector
@@ -73,7 +74,6 @@ class CustomArgumentParser(argparse.ArgumentParser):
 
 class ChatHandling:
 	def __init__(self):
-		server.chat = self
 		self.chat_parser = CustomArgumentParser(prog="server command line")
 		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
 

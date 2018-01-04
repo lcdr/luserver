@@ -1,6 +1,7 @@
 import logging
 
-from ...bitstream import c_int, c_int64, c_uint, ReadStream, WriteStream
+from pyraknet.bitstream import c_int, c_int64, c_uint, ReadStream
+from ...bitstream import WriteStream
 from ...game_object import GameObject
 from ...messages import broadcast, Mapping, single, WorldClientMsg
 from ...world import server

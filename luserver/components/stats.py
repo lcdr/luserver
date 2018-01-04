@@ -1,6 +1,6 @@
 import logging
 
-from ..bitstream import c_bit, c_float, c_int, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
 from ..game_object import GameObject
 from ..messages import broadcast
 from .component import Component

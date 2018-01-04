@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_uint
+from pyraknet.bitstream import c_bit, c_uint
 from .component import Component
 from .mission import TaskType
 

@@ -1,6 +1,6 @@
 from persistent.mapping import PersistentMapping
 
-from ...bitstream import c_int, c_int64, c_ubyte
+from pyraknet.bitstream import c_int, c_int64, c_ubyte
 
 from ...game_object import GameObject
 from ...messages import Sequence, single

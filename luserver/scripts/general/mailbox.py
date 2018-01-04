@@ -1,6 +1,6 @@
 import luserver.components.script as script
 from luserver.amf3 import AMF3
-from luserver.bitstream import c_int
+from pyraknet.bitstream import c_int
 from luserver.game_object import GameObject
 
 class ScriptComponent(script.ScriptComponent):

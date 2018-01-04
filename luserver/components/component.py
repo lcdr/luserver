@@ -16,5 +16,5 @@ class Component(ABC):
 			self.object.signal_serialize()
 
 	@abstractmethod
-	def serialize(self, out, is_creation):
+	def serialize(self, out, is_creation) -> None:
 		pass

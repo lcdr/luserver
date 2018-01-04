@@ -1,4 +1,4 @@
-from ..bitstream import c_bit
+from pyraknet.bitstream import c_bit
 from .component import Component
 
 class BouncerComponent(Component):

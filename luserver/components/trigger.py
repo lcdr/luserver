@@ -1,7 +1,7 @@
 import functools
 import logging
 
-from ..bitstream import c_bit
+from pyraknet.bitstream import c_bit
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component

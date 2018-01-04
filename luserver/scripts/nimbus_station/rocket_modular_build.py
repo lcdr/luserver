@@ -1,7 +1,7 @@
 import luserver.components.script as script
-from luserver.components.mission import MissionState, TaskType
-from luserver.bitstream import c_int, c_ubyte
+from pyraknet.bitstream import c_int, c_ubyte
 from luserver.messages import Sequence
+from luserver.components.mission import MissionState, TaskType
 
 MARDOLF_ROCKET_MISSION = 809
 ROCKET_MISSION_PARTS = 9516, 9517, 9518

@@ -1,6 +1,6 @@
 import time
 
-from ..bitstream import c_bit, c_float, c_int, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
 from ..game_object import GameObject
 from ..messages import broadcast
 from ..world import server
@@ -52,10 +52,7 @@ class RebuildComponent(ScriptedActivityComponent):
 
 	def on_startup(self):
 		server.spawn_object(ACTIVATOR_LOT, {"parent": self.object, "position": self.rebuild_activator_position})
-		if hasattr(self.object, "ai"):
-			self.object.ai.disable()
-		if hasattr(self.object, "moving_platform"):
-			self.object.moving_platform.stop_pathing()
+		self.object.handle("rebuild_init", silent=True)
 
 	@property
 	def rebuild_state(self):
@@ -81,9 +78,7 @@ class RebuildComponent(ScriptedActivityComponent):
 			out.write(c_float(0))
 			if is_creation:
 				out.write(c_bit(False))
-				out.write(c_float(self.rebuild_activator_position.x))
-				out.write(c_float(self.rebuild_activator_position.y))
-				out.write(c_float(self.rebuild_activator_position.z))
+				out.write(self.rebuild_activator_position)
 				out.write(c_bit(True))
 			self.rebuild_flag = False
 
@@ -102,12 +97,12 @@ class RebuildComponent(ScriptedActivityComponent):
 		drain_interval = self.complete_time/self.imagination_cost
 		remaining_cost = int((self.complete_time - self.last_progress) // drain_interval)
 		for i in range(remaining_cost):
-			self.callback_handles.append(self.object.call_later(self.last_progress%drain_interval + drain_interval*i, self.drain_imagination, player))
+			self.callback_handles.append(self.object.call_later(self.last_progress % drain_interval + drain_interval * i, self._drain_imagination, player))
 		for handler in self.object.handlers("complete_rebuild"):
 			self.callback_handles.append(self.object.call_later(self.complete_time-self.last_progress, handler, player))
 		return True
 
-	def drain_imagination(self, player):
+	def _drain_imagination(self, player) -> None:
 		if player.stats.imagination == 0:
 			self.rebuild_cancel(early_release=False, user=player)
 		player.stats.imagination -= 1
@@ -132,11 +127,6 @@ class RebuildComponent(ScriptedActivityComponent):
 
 		# drop rewards
 		self.object.physics.drop_rewards(*self.completion_rewards, player)
-
-		if hasattr(self.object, "ai"):
-			self.object.ai.enable()
-		if hasattr(self.object, "moving_platform"):
-			self.object.moving_platform.start_pathing()
 
 	def smash_rebuild(self):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)

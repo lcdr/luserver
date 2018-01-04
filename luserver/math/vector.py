@@ -2,8 +2,7 @@ import math
 from numbers import Real
 from typing import ClassVar, overload
 
-from ..bitstream import c_float
-from ..messages import Serializable
+from pyraknet.bitstream import c_float, Serializable
 
 class Vector3(Serializable):
 	zero: "ClassVar[Vector3]"

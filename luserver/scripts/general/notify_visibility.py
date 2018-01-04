@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from luserver.bitstream import c_int
+from pyraknet.bitstream import c_int
 from luserver.game_object import GameObject
 from luserver.world import server
 from luserver.components.mission import MissionState

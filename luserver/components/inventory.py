@@ -45,7 +45,7 @@ import logging
 from persistent import Persistent
 from persistent.list import PersistentList
 
-from ..bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
 from ..ldf import LDF, LDFDataType
 from ..messages import broadcast, single, Serializable
 from ..world import server

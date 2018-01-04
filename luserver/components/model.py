@@ -1,4 +1,4 @@
-from ..bitstream import c_bit, c_float, c_int
+from pyraknet.bitstream import c_bit, c_float, c_int
 from ..ldf import LDFDataType
 from .component import Component
 
@@ -19,13 +19,11 @@ class ModelComponent(Component):
 		out.write(c_bit(True))
 		out.write(c_bit(False))
 		out.write(c_int(-1))
-		out.write(c_float(self.object.physics.position.x))
-		out.write(c_float(self.object.physics.position.y))
-		out.write(c_float(self.object.physics.position.z))
+		out.write(self.object.physics.position)
 		out.write(c_float(self.object.physics.rotation.w))
-		out.write(c_float(self.object.physics.position.x))
-		out.write(c_float(self.object.physics.position.y))
-		out.write(c_float(self.object.physics.position.z))
+		out.write(c_float(self.object.physics.rotation.x))
+		out.write(c_float(self.object.physics.rotation.y))
+		out.write(c_float(self.object.physics.rotation.z))
 		out.write(c_bit(True))
 		out.write(c_int(0))
 		out.write(c_bit(True))
