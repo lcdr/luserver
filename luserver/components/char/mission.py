@@ -2,8 +2,7 @@ from persistent.mapping import PersistentMapping
 
 from pyraknet.bitstream import c_int, c_int64, c_ubyte
 
-from ...game_object import GameObject
-from ...messages import Sequence, single
+from ...game_object import GameObject, Sequence, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack

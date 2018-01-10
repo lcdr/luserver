@@ -1,8 +1,7 @@
 from ...amf3 import AMF3
 from pyraknet.bitstream import c_int, c_uint
-from ...game_object import GameObject
+from ...game_object import broadcast, GameObject, single
 from ...ldf import LDF
-from ...messages import broadcast, single
 from ...math.vector import Vector3
 
 class EndBehavior:

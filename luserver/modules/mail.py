@@ -18,16 +18,18 @@ import time
 
 import persistent
 
-from pyraknet.bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort
+from pyraknet.bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort, ReadStream
+from pyraknet.messages import Address
 from ..bitstream import WriteStream
+from ..game_object import GameObject
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..components.inventory import InventoryType, LootType, Stack
 from ..math.vector import Vector3
 
-MAIL_SEND_COST = 25
+_MAIL_SEND_COST = 25
 
-class MailSendReturnCode:
+class _MailSendReturnCode:
 	Success = 0
 	ItemCannotBeMailed = 3
 	CannotMailYourself = 4
@@ -38,23 +40,23 @@ class MailHandling:
 	def __init__(self):
 		server.register_handler(WorldServerMsg.Mail, self._on_mail)
 
-	def _on_mail(self, message, address):
+	def _on_mail(self, message: ReadStream, address: Address) -> None:
 		mail_id = message.read(c_uint)
 		player = server.accounts[address].characters.selected()
 		if mail_id == MailID.MailSend:
-			self.on_mail_send(message, player)
+			self._on_mail_send(message, player)
 		elif mail_id == MailID.MailDataRequest:
-			self.send_mail_data(player)
+			self._send_mail_data(player)
 		elif mail_id == MailID.MailAttachmentCollect:
-			self.on_mail_attachment_collect(message, player)
+			self._on_mail_attachment_collect(message, player)
 		elif mail_id == MailID.MailDelete:
-			self.on_mail_delete(message, player)
+			self._on_mail_delete(message, player)
 		elif mail_id == MailID.MailRead:
-			self.on_mail_read(message, player)
+			self._on_mail_read(message, player)
 		elif mail_id == MailID.MailNotificationRequest:
-			self.send_mail_notification(player)
+			self._send_mail_notification(player)
 
-	def on_mail_send(self, data, player):
+	def _on_mail_send(self, data: ReadStream, player: GameObject) -> None:
 		subject = data.read(str, allocated_length=50)
 		body = data.read(str, allocated_length=400)
 		recipient_name = data.read(str, allocated_length=32)
@@ -62,7 +64,7 @@ class MailHandling:
 		attachment_item_object_id = data.read(c_int64)
 		attachment_item_count = data.read(c_ushort)
 
-		return_code = MailSendReturnCode.Success
+		return_code = _MailSendReturnCode.Success
 		try:
 			if attachment_item_count != 0:
 				removed_item = player.inventory.remove_item(InventoryType.Max, object_id=attachment_item_object_id, count=attachment_item_count)
@@ -73,19 +75,19 @@ class MailHandling:
 				attachment = None
 				attachment_cost = 0
 			if recipient_name == player.name:
-				return_code = MailSendReturnCode.CannotMailYourself
+				return_code = _MailSendReturnCode.CannotMailYourself
 				return
 			try:
 				recipient = server.find_player_by_name(recipient_name)
 			except KeyError:
-				return_code = MailSendReturnCode.RecipientNotFound
+				return_code = _MailSendReturnCode.RecipientNotFound
 				return
 			self.send_mail(player.name, subject, body, recipient, attachment)
-			player.char.set_currency(currency=player.char.currency - MAIL_SEND_COST - attachment_cost, loot_type=LootType.Mail, position=Vector3.zero)
+			player.char.set_currency(currency=player.char.currency - _MAIL_SEND_COST - attachment_cost, loot_type=LootType.Mail, position=Vector3.zero)
 		except Exception:
 			import traceback
 			traceback.print_exc()
-			return_code = MailSendReturnCode.UnknownFailure
+			return_code = _MailSendReturnCode.UnknownFailure
 		finally:
 			out = WriteStream()
 			out.write_header(WorldClientMsg.Mail)
@@ -93,14 +95,14 @@ class MailHandling:
 			out.write(c_uint(return_code))
 			server.send(out, player.char.address)
 
-	def send_mail(self, sender_name, subject, body, recipient, attachment=None):
+	def send_mail(self, sender_name: str, subject: str, body: str, recipient: GameObject, attachment=None) -> None:
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		with server.multi:
 			recipient.char.mails.append(mail)
 		if recipient.char.address in server._server._connected:
-			self.send_mail_notification(recipient)
+			self._send_mail_notification(recipient)
 
-	def send_mail_data(self, player):
+	def _send_mail_data(self, player: GameObject) -> None:
 		mails = WriteStream()
 		mails.write_header(WorldClientMsg.Mail)
 		mails.write(c_uint(MailID.MailData))
@@ -132,7 +134,7 @@ class MailHandling:
 			mails.write(bytes(4))
 		server.send(mails, player.char.address)
 
-	def on_mail_attachment_collect(self, data, player):
+	def _on_mail_attachment_collect(self, data: ReadStream, player: GameObject) -> None:
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
 		for mail in player.char.mails:
@@ -147,7 +149,7 @@ class MailHandling:
 				server.send(out, player.char.address)
 				break
 
-	def on_mail_delete(self, data, player):
+	def _on_mail_delete(self, data: ReadStream, player: GameObject) -> None:
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
 		for mail in player.char.mails:
@@ -161,7 +163,7 @@ class MailHandling:
 				server.send(out, player.char.address)
 				break
 
-	def on_mail_read(self, data, player):
+	def _on_mail_read(self, data: ReadStream, player: GameObject) -> None:
 		data.skip_read(4) # ???
 		mail_id = data.read(c_int64)
 		for mail in player.char.mails:
@@ -175,7 +177,7 @@ class MailHandling:
 				server.send(out, player.char.address)
 				break
 
-	def send_mail_notification(self, player):
+	def _send_mail_notification(self, player: GameObject) -> None:
 		unread_mails_count = len([mail for mail in player.char.mails if not mail.is_read])
 		if unread_mails_count == 0:
 			return
@@ -189,7 +191,7 @@ class MailHandling:
 		server.send(notification, player.char.address)
 
 class Mail(persistent.Persistent):
-	def __init__(self, id, sender, subject, body, attachment=None):
+	def __init__(self, id: int, sender: str, subject: str, body: str, attachment=None):
 		self.id = id
 		self.send_time = int(time.time())
 		self.is_read = False

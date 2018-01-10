@@ -2,8 +2,7 @@ import enum
 import random
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -27,11 +26,11 @@ class _PhysicsComponent(Component):
 		elif "parent" in set_vars and hasattr(set_vars["parent"], "physics"):
 			self.rotation.update(set_vars["parent"].physics.rotation)
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		if self.object in server.general.tracked_objects:
 			del server.general.tracked_objects[self.object]
 
-	def proximity_radius(self, radius):
+	def proximity_radius(self, radius: int) -> None:
 		for comp in self.object.components:
 			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 				server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)

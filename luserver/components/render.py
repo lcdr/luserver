@@ -1,6 +1,5 @@
 from pyraknet.bitstream import c_float, c_int, c_int64, c_ubyte, c_uint
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from .component import Component
 
 class RenderComponent(Component):

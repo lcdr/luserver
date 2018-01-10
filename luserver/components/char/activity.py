@@ -1,6 +1,6 @@
 from pyraknet.bitstream import c_int, c_int64
+from ...game_object import single
 from ...ldf import LDF, LDFDataType
-from ...messages import single
 
 class MatchRequestType:
 	Join = 0

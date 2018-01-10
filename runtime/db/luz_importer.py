@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import BTrees
 
 import luserver.world
-from luserver.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
+from pyraknet.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import World
@@ -94,10 +94,12 @@ class _LUZImporter:
 		self.root = root
 		self.world_data = world_data
 		with open(luz_path, "rb") as file:
-			self.luz = ReadStream(file.read())
-		self.parse_luz(luz_path)
+			data = file.read()
+			luz_size = len(data)
+			self.luz = ReadStream(data, unlocked=True)
+		self.parse_luz(luz_path, luz_size)
 
-	def parse_luz(self, luz_path):
+	def parse_luz(self, luz_path, luz_size):
 		version = self.luz.read(c_uint)
 		assert version in (36, 38, 39, 40, 41), version
 		self.luz.skip_read(4 + 4)
@@ -141,7 +143,7 @@ class _LUZImporter:
 				self.luz.skip_read(20)
 
 		remaining_length = self.luz.read(c_uint)
-		assert len(self.luz) - self.luz.read_offset // 8 == remaining_length
+		assert luz_size - self.luz.read_offset // 8 == remaining_length
 		assert self.luz.read(c_uint) == 1
 
 		self.parse_paths()

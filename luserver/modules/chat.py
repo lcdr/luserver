@@ -4,9 +4,11 @@ import functools
 import logging
 import time
 
-from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort
+from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
+from ..game_object import GameObject
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..interfaces.plugin import object_selector
@@ -74,8 +76,8 @@ class CustomArgumentParser(argparse.ArgumentParser):
 
 class ChatHandling:
 	def __init__(self):
-		self.chat_parser = CustomArgumentParser(prog="server command line")
-		self.commands = self.chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
+		self._chat_parser = CustomArgumentParser(prog="server command line")
+		self.commands = self._chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
 
 		clientside_cmds = "backflip", "clap", "cringe", "cry", "dance", "gasp", "giggle", "s", "say", "salute", "shrug", "sigh", "talk", "tell", "victory", "wave", "w", "whisper", "yes"
 		for cmd in clientside_cmds:
@@ -84,11 +86,11 @@ class ChatHandling:
 			parser.set_defaults(func=lambda args, sender: None)
 			parser.set_defaults(perm=GMLevel.Nothing)
 
-		server.register_handler(WorldServerMsg.GeneralChatMessage, self.on_general_chat_message)
-		server.register_handler(SocialMsg.PrivateChatMessage, self.on_private_chat_message)
-		server.register_handler(WorldServerMsg.StringCheck, self.on_moderation_string_check)
+		server.register_handler(WorldServerMsg.GeneralChatMessage, self._on_general_chat_message)
+		server.register_handler(SocialMsg.PrivateChatMessage, self._on_private_chat_message)
+		server.register_handler(WorldServerMsg.StringCheck, self._on_moderation_string_check)
 
-	def on_moderation_string_check(self, request, address):
+	def _on_moderation_string_check(self, request: ReadStream, address: Address) -> None:
 		request.skip_read(1) # super chat level
 		request_id = request.read(c_ubyte)
 
@@ -100,7 +102,7 @@ class ChatHandling:
 
 		server.send(response, address)
 
-	def on_general_chat_message(self, message, address):
+	def _on_general_chat_message(self, message: ReadStream, address: Address) -> None:
 		sender = server.accounts[address].characters.selected()
 		if sender.char.account.gm_level != GMLevel.Admin and sender.char.account.muted_until > time.time():
 			self.system_message("Your account is muted until %s" % datetime.datetime.fromtimestamp(sender.char.account.muted_until), address, broadcast=False)
@@ -110,7 +112,7 @@ class ChatHandling:
 		text = message.read(str, length_type=c_uint)[:-1]
 		self.send_general_chat_message(sender, text)
 
-	def send_general_chat_message(self, sender, text):
+	def send_general_chat_message(self, sender: GameObject, text: str) -> None:
 		chat_channel = 4
 		# have to do this because the length is variable but has no length specifier directly before it
 		encoded_text = text.encode("utf-16-le")
@@ -131,7 +133,7 @@ class ChatHandling:
 
 		server.send(message, broadcast=True)
 
-	def system_message(self, text, address=None, broadcast=True, log_level=logging.INFO):
+	def system_message(self, text, address: Address=None, broadcast: bool=True, log_level=logging.INFO) -> None:
 		if text:
 			text = str(text)
 			log.log(log_level, text)
@@ -150,7 +152,7 @@ class ChatHandling:
 
 			server.send(message, address, broadcast)
 
-	def send_private_chat_message(self, sender, text, recipient):
+	def send_private_chat_message(self, sender: GameObject, text: str, recipient: GameObject) -> None:
 		participants = []
 		if hasattr(sender, "char"):
 			participants.append((sender.char.address, 0))
@@ -184,7 +186,7 @@ class ChatHandling:
 
 			server.send(message, address)
 
-	def on_private_chat_message(self, message, address):
+	def _on_private_chat_message(self, message: ReadStream, address: Address) -> None:
 		assert message.read(c_int64) == 0 # unknown
 		assert message.read(c_ubyte) == 7 # chat channel
 		text_length = message.read(c_uint)
@@ -210,10 +212,10 @@ class ChatHandling:
 			recipient = server.find_player_by_name(recipient_name)
 			self.send_private_chat_message(sender, text, recipient)
 
-	def parse_command(self, command, sender):
+	def parse_command(self, command: str, sender: GameObject) -> None:
 		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)
 		try:
-			args = self.chat_parser.parse_args(command.split())
+			args = self._chat_parser.parse_args(command.split())
 
 			if sender.char.account.gm_level < args.perm:
 				raise ChatPermissionError("Not enough permissions to execute")

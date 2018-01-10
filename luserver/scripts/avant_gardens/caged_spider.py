@@ -1,7 +1,7 @@
 import luserver.components.script as script
 from pyraknet.bitstream import c_int, c_int64
-from luserver.game_object import GameObject
-from luserver.messages import single
+from luserver.game_object import GameObject, single
+
 
 class ScriptComponent(script.ScriptComponent):
 	# hacky workaround incoming:

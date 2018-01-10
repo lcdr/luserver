@@ -1,11 +1,13 @@
 import persistent.wref
 
-from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort
+from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
+from pyraknet.messages import Address
 from ..bitstream import WriteStream
+from ..game_object import GameObject
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
 
-class AddFriendReturnCode:
+class _AddFriendReturnCode:
 	Success = 0
 	IsAlreadyFriend = 1
 	InvalidName = 2
@@ -20,14 +22,14 @@ class FriendUpdateType:
 
 class SocialHandling:
 	def __init__(self):
-		server.register_handler(SocialMsg.GetFriendsList, self.on_get_friends_list)
-		server.register_handler(SocialMsg.AddFriendRequest, self.on_add_friend_request)
-		server.register_handler(SocialMsg.AddFriendResponse, self.on_add_friend_response)
-		server.register_handler(SocialMsg.RemoveFriend, self.on_remove_friend)
-		server.register_handler(SocialMsg.TeamInvite, self.on_team_invite)
-		server.register_handler(SocialMsg.TeamInviteResponse, self.on_team_invite_response)
+		server.register_handler(SocialMsg.GetFriendsList, self._on_get_friends_list)
+		server.register_handler(SocialMsg.AddFriendRequest, self._on_add_friend_request)
+		server.register_handler(SocialMsg.AddFriendResponse, self._on_add_friend_response)
+		server.register_handler(SocialMsg.RemoveFriend, self._on_remove_friend)
+		server.register_handler(SocialMsg.TeamInvite, self._on_team_invite)
+		server.register_handler(SocialMsg.TeamInviteResponse, self._on_team_invite_response)
 
-	def on_get_friends_list(self, data, address):
+	def _on_get_friends_list(self, data: ReadStream, address: Address) -> None:
 		assert data.read(c_uint64) == 0 # seems to always be 0?
 
 		friends = server.accounts[address].characters.selected().char.friends
@@ -51,7 +53,7 @@ class SocialHandling:
 			friends_list.write(bytes(6)) # ???
 		server.send(friends_list, address)
 
-	def on_add_friend_request(self, request, address):
+	def _on_add_friend_request(self, request: ReadStream, address: Address) -> None:
 		assert request.read(c_int64) == 0
 		requested_friend_name = request.read(str, allocated_length=33)
 		is_best_friend_request = request.read(c_bool)
@@ -66,9 +68,9 @@ class SocialHandling:
 			server.send(relayed_request, requested_friend.char.address)
 		except KeyError:
 			# friend cannot be found
-			self.send_add_friend_response(AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
+			self._send_add_friend_response(_AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
 
-	def send_add_friend_response(self, return_code, address, friend=None, requested_name=None):
+	def _send_add_friend_response(self, return_code: int, address: Address, friend: GameObject=None, requested_name: str=None) -> None:
 		response = WriteStream()
 		response.write_header(WorldClientMsg.AddFriendResponse)
 		response.write(c_ubyte(return_code))
@@ -88,7 +90,7 @@ class SocialHandling:
 		response.write(c_bool(False)) # is FTP
 		server.send(response, address)
 
-	def on_add_friend_response(self, response, address):
+	def _on_add_friend_response(self, response: ReadStream, address: Address) -> None:
 		assert response.read(c_int64) == 0
 		request_declined = response.read(c_bool)
 		requester_name = response.read(str, allocated_length=33)
@@ -101,11 +103,11 @@ class SocialHandling:
 				players = requester, responder
 				for player1, player2 in (players, reversed(players)):
 					player1.char.friends.append(persistent.wref.WeakRef(player2))
-					self.send_add_friend_response(AddFriendReturnCode.Success, player1.char.address, friend=player2)
+					self._send_add_friend_response(_AddFriendReturnCode.Success, player1.char.address, friend=player2)
 			except KeyError:
-				self.send_add_friend_response(AddFriendReturnCode.Failure, player1.char.address, requested_name=requester_name)
+				self._send_add_friend_response(_AddFriendReturnCode.Failure, player1.char.address, requested_name=requester_name)
 
-	def on_remove_friend(self, request, address):
+	def _on_remove_friend(self, request: ReadStream, address: Address) -> None:
 		assert request.read(c_int64) == 0
 		requested_friend_name = request.read(str, allocated_length=33)
 
@@ -124,7 +126,7 @@ class SocialHandling:
 			remove_message.write(player2_ref().name, allocated_length=33)
 			server.send(remove_message, player1_ref().char.address)
 
-	def on_team_invite(self, invite, address):
+	def _on_team_invite(self, invite: ReadStream, address: Address) -> None:
 		assert invite.read(c_int64) == 0
 		invitee_name = invite.read(str, allocated_length=33)
 
@@ -138,7 +140,7 @@ class SocialHandling:
 		server.send(relayed_invite, invitee.char.address)
 		# todo: error cases and response
 
-	def on_team_invite_response(self, response, address):
+	def _on_team_invite_response(self, response: ReadStream, address: Address) -> None:
 		assert response.read(c_int64) == 0
 		is_denied = response.read(c_bool)
 		inviter_object_id = response.read(c_int64)

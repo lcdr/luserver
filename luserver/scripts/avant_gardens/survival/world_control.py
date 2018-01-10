@@ -3,8 +3,8 @@ import time
 
 import luserver.components.script as script
 from pyraknet.bitstream import c_int
+from luserver.game_object import single
 from luserver.ldf import LDF, LDFDataType
-from luserver.messages import single
 from luserver.world import server
 from luserver.components.inventory import InventoryType
 from luserver.components.mission import TaskType

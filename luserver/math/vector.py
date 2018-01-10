@@ -2,7 +2,7 @@ import math
 from numbers import Real
 from typing import ClassVar, overload
 
-from pyraknet.bitstream import c_float, Serializable
+from pyraknet.bitstream import c_float, ReadStream, Serializable, WriteStream
 
 class Vector3(Serializable):
 	zero: "ClassVar[Vector3]"
@@ -79,28 +79,28 @@ class Vector3(Serializable):
 	def __truediv__(self, other):
 		return Vector3(self.x / other, self.y / other, self.z / other)
 
-	def magnitude(self):
+	def magnitude(self) -> float:
 		return math.sqrt(self.sq_magnitude())
 
-	def sq_magnitude(self):
+	def sq_magnitude(self) -> float:
 		return self.x**2 + self.y**2 + self.z**2
 
-	def unit(self):
+	def unit(self) -> "Vector3":
 		mag = self.magnitude()
 		if mag == 0:
 			return Vector3(0, 0, 0) # seems like the most reasonable thing to do
 		return Vector3(self.x/mag, self.y/mag, self.z/mag)
 
-	def cross(self, other: "Vector3"):
+	def cross(self, other: "Vector3") -> "Vector3":
 		return Vector3(self.y*other.z - self.z*other.y, self.z*other.x - self.x*other.z, self.x*other.y - self.y*other.x)
 
-	def dot(self, other: "Vector3"):
+	def dot(self, other: "Vector3") -> float:
 		return self.x*other.x + self.y*other.y + self.z*other.z
 
-	def hadamard(self, other: "Vector3"):
+	def hadamard(self, other: "Vector3") -> "Vector3":
 		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
 
-	def sq_distance(self, other: "Vector3"):
+	def sq_distance(self, other: "Vector3") -> float:
 		#diff = self - other
 		#return diff.sq_magnitude()
 		# optimized version without creating a new object
@@ -109,22 +109,22 @@ class Vector3(Serializable):
 		dz = self.z - other.z
 		return dx**2 + dy**2 + dz**2
 
-	def distance(self, other: "Vector3"):
+	def distance(self, other: "Vector3") -> float:
 		return math.sqrt(self.sq_distance(other))
 
-	def rotated(self, quaternion):
+	def rotated(self, quaternion) -> "Vector3":
 		quatvector = Vector3(quaternion.x, quaternion.y, quaternion.z)
 		scalar = quaternion.w
 
 		return 2 * quatvector.dot(self) * quatvector + (scalar*scalar - quatvector.dot(quatvector)) * self + 2 * scalar * quatvector.cross(self)
 
-	def serialize(self, stream):
+	def serialize(self, stream: WriteStream) -> None:
 		stream.write(c_float(self.x))
 		stream.write(c_float(self.y))
 		stream.write(c_float(self.z))
 
 	@staticmethod
-	def deserialize(stream):
+	def deserialize(stream: ReadStream) -> "Vector3":
 		return Vector3(stream.read(c_float), stream.read(c_float), stream.read(c_float))
 
 Vector3.zero = Vector3(0, 0, 0)

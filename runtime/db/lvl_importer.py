@@ -81,14 +81,16 @@ class LVLImporter:
 		self.world_data = world_data
 		self.triggers = triggers
 		with open(lvl_path, "rb") as file:
-			self.lvl = ReadStream(file.read())
+			self.lvl = ReadStream(file.read(), unlocked=True)
 
 		self.parse_lvl()
 
 	def parse_lvl(self):
-		if self.lvl[0:4] == b"CHNK":
+		new_format = self.lvl.read(bytes, length=4) == b"CHNK"
+		self.lvl.read_offset = 0
+		if new_format:
 			while True:
-				if self.lvl.read_offset // 8 == len(self.lvl):  # end of file
+				if self.lvl.all_read():
 					break
 				assert self.lvl.read_offset // 8 % 16 == 0  # seems everything is aligned like this?
 				start_pos = self.lvl.read_offset // 8

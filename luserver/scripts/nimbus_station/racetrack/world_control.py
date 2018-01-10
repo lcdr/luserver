@@ -1,6 +1,5 @@
 import luserver.components.script as script
-from luserver.game_object import GameObject
-from luserver.messages import broadcast, single
+from luserver.game_object import broadcast, GameObject, single
 from luserver.world import server
 from luserver.math.vector import Vector3
 from luserver.components.racing_control import RacingNotificationType

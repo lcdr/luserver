@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 
+from pyraknet.bitstream import WriteStream
+from ..game_object import GameObject
+
 class Component(ABC):
 	def __setattr__(self, name, value):
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars, comp_id):
 		self.object = obj
 		self._flags = {}
 
@@ -16,5 +19,5 @@ class Component(ABC):
 			self.object.signal_serialize()
 
 	@abstractmethod
-	def serialize(self, out, is_creation) -> None:
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass

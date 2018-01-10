@@ -66,8 +66,7 @@ import logging
 import random
 
 from pyraknet.bitstream import c_int
-from ..game_object import GameObject
-from ..messages import single
+from ..game_object import GameObject, single
 from ..world import server
 from .component import Component
 

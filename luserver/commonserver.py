@@ -24,8 +24,9 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.messages import Address
 from .bitstream import WriteStream
-from .messages import Address, GeneralMsg, WorldClientMsg, WorldServerMsg
+from .messages import GeneralMsg, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
 
 log = logging.getLogger(__name__)
@@ -34,15 +35,18 @@ class Server(_Server, ABC):
 	_NETWORK_VERSION = 171022
 	_EXPECTED_PEER_TYPE = WorldClientMsg.header()
 
-	def __init__(self, address, max_connections, db_conn):
+	def __init__(self, address: Address, max_connections: int, db_conn):
 		super().__init__(address, max_connections)
 		self.conn = db_conn
 		self.db = self.conn.root
 		self._packet_handlers = {}
+		self._server.add_handler("user_packet", self._on_lu_packet)
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
 
-	def _on_lu_packet(self, data: ReadStream, address: Address):
+	def _on_lu_packet(self, data: bytes, address: Address) -> None:
 		super()._on_lu_packet(data, address)
+		data = ReadStream(data, unlocked=True)
+		data.skip_read(1)
 		header = data.read(c_ushort)
 		subheader = data.read(c_ubyte)
 		data.skip_read(4)
@@ -70,7 +74,7 @@ class Server(_Server, ABC):
 	def peer_type(self) -> int:
 		pass
 
-	def _send_handshake(self, address):
+	def _send_handshake(self, address: Address) -> None:
 		out = WriteStream()
 		out.write_header(GeneralMsg.Handshake)
 		out.write(c_uint(self._NETWORK_VERSION))
@@ -78,7 +82,7 @@ class Server(_Server, ABC):
 		out.write(c_uint(self.peer_type()))
 		self.send(out, address)
 
-	def _on_handshake(self, handshake, address):
+	def _on_handshake(self, handshake: ReadStream, address: Address) -> None:
 		remote_network_version = handshake.read(c_uint)
 		handshake.skip_read(4)
 		remote_peer_type = handshake.read(c_uint)

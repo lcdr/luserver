@@ -1,6 +1,6 @@
 import luserver.components.script as script
 from pyraknet.bitstream import c_int, c_ubyte
-from luserver.messages import Sequence
+from luserver.game_object import Sequence
 from luserver.components.mission import MissionState, TaskType
 
 MARDOLF_ROCKET_MISSION = 809

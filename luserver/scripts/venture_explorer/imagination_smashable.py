@@ -2,8 +2,7 @@ import random
 
 import luserver.components.script as script
 from pyraknet.bitstream import c_uint
-from luserver.game_object import GameObject
-from luserver.messages import broadcast
+from luserver.game_object import broadcast, GameObject
 from luserver.components.mission import MissionState
 
 # crate chicken easter egg not implemented

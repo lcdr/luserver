@@ -1,8 +1,7 @@
 import logging
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from .component import Component
 
 log = logging.getLogger(__name__)
@@ -139,7 +138,7 @@ class StatsSubcomponent(Component):
 		if self.object.spawner_object is not None:
 			self.object.spawner_object.handle("on_spawned_destruction")
 
-	def refill_stats(self):
+	def refill_stats(self) -> None:
 		self.life = self.max_life
 		self.armor = self.max_armor
 		self.imagination = self.max_imagination

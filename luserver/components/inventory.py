@@ -45,9 +45,9 @@ import logging
 from persistent import Persistent
 from persistent.list import PersistentList
 
-from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort, Serializable
+from ..game_object import broadcast, ObjectID, single
 from ..ldf import LDF, LDFDataType
-from ..messages import broadcast, single, Serializable
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -216,7 +216,7 @@ class InventoryComponent(Component):
 				inventory[slot] = item
 				break
 
-	def add_item(self, lot, count=1, module_lots=None, inventory_type=None, source_type=0, show_flying_loot=True, persistent=True, notify_client=True):
+	def add_item(self, lot, count: int=1, module_lots=None, inventory_type: int=None, source_type=0, show_flying_loot=True, persistent: bool=True, notify_client: bool=True) -> Stack:
 		for component_type, component_id in server.db.components_registry[lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
 				item_type, stack_size = server.db.item_component[component_id][1:3]
@@ -471,14 +471,14 @@ class InventoryComponent(Component):
 				self.remove_item(inventory_type_a, item, count=move_stack_count)
 				return new_item
 
-	def has_item(self, inventory_type, lot):
+	def has_item(self, inventory_type: int, lot: int) -> bool:
 		inv = self.inventory_type_to_inventory(inventory_type)
 		for item in inv:
 			if item is not None and item.lot == lot:
 				return True
 		return False
 
-	def get_stack(self, inventory_type, object_id):
+	def get_stack(self, inventory_type: int, object_id: ObjectID) -> Stack:
 		inv = self.inventory_type_to_inventory(inventory_type)
 		for item in inv:
 			if item is not None and item.object_id == object_id:

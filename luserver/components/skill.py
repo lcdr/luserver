@@ -1,9 +1,9 @@
+import enum
 import logging
 import pprint
-import enum
 
 from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_uint64, ReadStream, WriteStream
-from ..messages import broadcast, single
+from ..game_object import broadcast, single
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -162,7 +162,7 @@ class SkillComponent(Component):
 		bitstream = WriteStream()
 		behavior = server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
-		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=ReadStream(bitstream))
+		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bytes(bitstream))
 
 	def cast_sync_skill(self, delay, behavior, target):
 		ui_behavior_handle = self.last_ui_handle
@@ -172,7 +172,7 @@ class SkillComponent(Component):
 		bitstream = WriteStream()
 		self.serialize_behavior(behavior, bitstream, target)
 
-		self.object.call_later(delay, lambda: self.sync_skill(bitstream=ReadStream(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
+		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bytes(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
 	def cast_projectile(self, proj_behavs, target):
@@ -182,14 +182,14 @@ class SkillComponent(Component):
 			self.original_target_id = target.object_id
 			self.serialize_behavior(behav, bitstream, target)
 		delay = 1
-		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, ReadStream(bitstream)))
+		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bytes(bitstream)))
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:ReadStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:ReadStream=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=None, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=None, skill_id:c_uint=None, ui_skill_handle:c_uint=0):
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -202,6 +202,8 @@ class SkillComponent(Component):
 			player = self.object # exclude self
 
 		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, player=player)
+
+		bitstream = ReadStream(bitstream)
 
 		if hasattr(self.object, "char"):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
@@ -221,7 +223,7 @@ class SkillComponent(Component):
 			self.object.stats.imagination -= imagination_cost
 
 		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream[bitstream.read_offset//8:])
+			log.warning("not all read, remaining: %s", bitstream.read_remaining())
 
 		# remove consumable
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
@@ -239,10 +241,10 @@ class SkillComponent(Component):
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:bool=False, bitstream:ReadStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def echo_sync_skill(self, done:bool=False, bitstream:bytes=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:ReadStream=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
+	def sync_skill(self, done:bool=False, bitstream:bytes=None, ui_behavior_handle:c_uint=None, ui_skill_handle:c_uint=None):
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -251,6 +253,7 @@ class SkillComponent(Component):
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
+		bitstream = ReadStream(bitstream)
 		behavior = self.delayed_behaviors[ui_behavior_handle]
 		target = self.object
 		if behavior is None:
@@ -265,11 +268,12 @@ class SkillComponent(Component):
 			self.original_target_id = target.object_id
 			self.deserialize_behavior(behavior, bitstream, target)
 		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream[bitstream.read_offset//8:])
+			log.warning("not all read, remaining: %s", bitstream.read_remaining())
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:ReadStream=None):
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=None):
+		bitstream = ReadStream(bitstream)
 		if target_id == 0:
 			target = self.object
 		else:
