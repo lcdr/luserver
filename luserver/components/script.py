@@ -1,7 +1,6 @@
 from pyraknet.bitstream import c_bit, c_int, c_int64
 from .. ldf import LDF
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from .component import Component
 
 class ScriptComponent(Component):

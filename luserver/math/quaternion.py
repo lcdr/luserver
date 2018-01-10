@@ -2,7 +2,7 @@ import math
 from numbers import Real
 from typing import ClassVar
 
-from pyraknet.bitstream import c_float, Serializable
+from pyraknet.bitstream import c_float, ReadStream, Serializable, WriteStream
 from .vector import Vector3
 
 class Quaternion(Serializable):
@@ -34,16 +34,16 @@ class Quaternion(Serializable):
 
 	update = __init__
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return "Quaternion(%g, %g, %g, %g)" % (self.x, self.y, self.z, self.w)
 
-	def __eq__(self, other):
+	def __eq__(self, other) -> bool:
 		if isinstance(other, Quaternion):
 			return other.x == self.x and other.y == self.y and other.z == self.z and other.w == self.w
 		return NotImplemented
 
 	@staticmethod
-	def look_rotation(direction):
+	def look_rotation(direction: Vector3) -> "Quaternion":
 		direction = direction.unit()
 		dot = -direction.dot(Vector3.back)
 		if abs(dot - 1) < 0.000001:
@@ -58,19 +58,19 @@ class Quaternion(Serializable):
 		return Quaternion.angle_axis(rot_angle, rot_axis)
 
 	@staticmethod
-	def angle_axis(angle, axis):
+	def angle_axis(angle: float, axis: Vector3) -> "Quaternion":
 		axis = axis.unit()
 		s = math.sin(angle / 2)
 		return Quaternion(axis.x*s, axis.y*s, axis.z*s, math.cos(angle / 2))
 
-	def serialize(self, stream):
+	def serialize(self, stream: WriteStream) -> None:
 		stream.write(c_float(self.x))
 		stream.write(c_float(self.y))
 		stream.write(c_float(self.z))
 		stream.write(c_float(self.w))
 
 	@staticmethod
-	def deserialize(stream):
+	def deserialize(stream: ReadStream) -> "Quaternion":
 		return Quaternion(stream.read(c_float), stream.read(c_float), stream.read(c_float), stream.read(c_float))
 
 Quaternion.identity = Quaternion(0, 0, 0, 1)

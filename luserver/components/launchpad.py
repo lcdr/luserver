@@ -2,8 +2,7 @@ import asyncio
 import logging
 
 from pyraknet.bitstream import c_int, c_int64
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from ..world import server
 from .component import Component
 

@@ -1,9 +1,9 @@
 import logging
 
-from pyraknet.bitstream import c_int, c_int64, c_uint, ReadStream
+from pyraknet.bitstream import c_int, c_int64, c_uint
 from ...bitstream import WriteStream
-from ...game_object import GameObject
-from ...messages import broadcast, Mapping, single, WorldClientMsg
+from ...game_object import broadcast, GameObject, Mapping, single
+from ...messages import WorldClientMsg
 from ...world import server
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
@@ -64,15 +64,14 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:ReadStream=None, time_taken_in_ms:c_uint=None):
+	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:bytes=None, time_taken_in_ms:c_uint=None):
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
 		save_response.write(c_uint(0))
 		save_response.write(c_uint(1))
 		save_response.write(c_int64(server.new_object_id()))
-		save_response.write(c_uint(len(lxfml_data_compressed)))
-		save_response.write(bytes(lxfml_data_compressed))
+		save_response.write(lxfml_data_compressed, length_type=c_uint)
 		server.send(save_response, self.address)
 
 	@single

@@ -75,10 +75,11 @@ import ZODB
 from persistent.mapping import PersistentMapping
 
 from pyraknet.bitstream import ReadStream
+from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
 from .commonserver import DisconnectReason, Server
-from .game_object import GameObject
-from .messages import Address, ObjectID, WorldServerMsg
+from .game_object import GameObject, ObjectID
+from .messages import WorldServerMsg
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
 from .modules.char import CharHandling
@@ -126,7 +127,7 @@ class WorldServer(Server):
 		self.chat = ChatHandling()
 		self.general = GeneralHandling()
 		self.mail = MailHandling()
-		self.social = SocialHandling()
+		SocialHandling()
 
 		self.instance_id = self.db.current_instance_id
 		self.db.current_instance_id += 1
@@ -148,7 +149,7 @@ class WorldServer(Server):
 	def peer_type(self) -> int:
 		return WorldServerMsg.header()
 
-	def _on_network_init(self, address):
+	def _on_network_init(self, address: Address) -> None:
 		self.external_address = self.external_address[0], address[1] # update port (for OS-chosen port)
 		with self.multi:
 			self.db.servers[self.external_address] = self.world_id

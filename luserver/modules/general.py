@@ -7,12 +7,15 @@ import inspect
 import logging
 import re
 import xml.etree.ElementTree as ET
+from typing import Tuple
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadStream
+from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
+from ..game_object import GameObject
 from ..ldf import LDF, LDFDataType
-from ..messages import GameMessage, WorldClientMsg, WorldServerMsg, game_message_deserialize
+from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server, World
 from ..components.mission import TaskType
 
@@ -62,7 +65,7 @@ class GeneralHandling:
 		server.register_handler(WorldServerMsg.PositionUpdate, self._on_position_update)
 		server.register_handler(WorldServerMsg.GameMessage, self._on_game_message)
 
-	def on_validated(self, address):
+	def on_validated(self, address: Address) -> None:
 		player = server.accounts[address].characters.selected()
 		if server.world_id[0] != 0:
 			player.char.address = address
@@ -80,7 +83,7 @@ class GeneralHandling:
 			else:
 				self._send_load_world(server.world_id, address)
 
-	def _send_load_world(self, destination, address):
+	def _send_load_world(self, destination: Tuple[int, int, int], address: Address) -> None:
 		world_id, world_instance, world_clone = destination
 		player = server.accounts[address].characters.selected()
 
@@ -95,7 +98,7 @@ class GeneralHandling:
 		load_world.write(bytes(4))
 		server.send(load_world, address)
 
-	def _on_client_load_complete(self, data, address):
+	def _on_client_load_complete(self, data: ReadStream, address: Address) -> None:
 		player = server.accounts[address].characters.selected()
 
 		chardata = WriteStream()
@@ -195,7 +198,7 @@ class GeneralHandling:
 		server.replica_manager.construct(player)
 		player.char.server_done_loading_all_objects()
 
-	def _on_position_update(self, message, address):
+	def _on_position_update(self, message: ReadStream, address: Address) -> None:
 		player = server.accounts[address].characters.selected()
 		vehicle = None
 		if player.char.vehicle_id != 0:
@@ -244,9 +247,9 @@ class GeneralHandling:
 			player._serialize_scheduled = serialized
 
 		if player.stats.life != 0:
-			self.check_collisions(player)
+			self._check_collisions(player)
 
-	def check_collisions(self, player):
+	def _check_collisions(self, player: GameObject) -> None:
 		collisions = []
 		for obj, coll in self.tracked_objects.items():
 			if coll.is_point_within(player.physics.position):
@@ -263,61 +266,9 @@ class GeneralHandling:
 
 		player.char.last_collisions = collisions
 
-	def _on_game_message(self, message, address):
+	def _on_game_message(self, message: ReadStream, address: Address) -> None:
 		object_id = message.read(c_int64)
 		obj = server.get_object(object_id)
 		if obj is None:
 			return
-
-		message_id = message.read(c_ushort)
-		try:
-			message_name = GameMessage(message_id).name
-		except ValueError:
-			return
-		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
-
-		handlers = obj.handlers(handler_name)
-		if not handlers:
-			return
-
-		signature = inspect.signature(handlers[0])
-		kwargs = {}
-		params = list(signature.parameters.values())
-		if params and params[0].name == "player" and params[0].annotation == inspect.Parameter.empty and params[0].default == inspect.Parameter.empty:
-			params.pop(0)
-		for param in params:
-			if param.annotation == bool:
-				value = message.read(c_bit)
-				if param.default not in (param.empty, None) and value == param.default:
-					continue
-			else:
-				if param.default not in (param.empty, None):
-					is_not_default = message.read(c_bit)
-					if not is_not_default:
-						continue
-
-				value = game_message_deserialize(message, param.annotation)
-
-			kwargs[param.name] = value
-		assert message.all_read()
-
-		if message_name != "ReadyForUpdates": # todo: don't hardcode this
-			if kwargs:
-				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
-
-		player = server.accounts[address].characters.selected()
-		for handler in handlers:
-			if hasattr(handler, "__wrapped__"):
-				handler = functools.partial(handler.__wrapped__, handler.__self__)
-			signature = inspect.signature(handler)
-			playerarg = "player" in signature.parameters
-			if playerarg:
-				it = iter(signature.parameters.keys())
-				playerarg = next(it) == "player"
-				if playerarg:
-					arg = signature.parameters["player"]
-					playerarg = arg.annotation == inspect.Parameter.empty and arg.default == inspect.Parameter.empty
-			if playerarg:
-				handler(player, **kwargs)
-			else:
-				handler(**kwargs)
+		obj.on_game_message(message, address)

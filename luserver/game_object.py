@@ -1,21 +1,39 @@
 import asyncio
 import functools
 import importlib
+import inspect
 import logging
+import re
 from collections import OrderedDict
-from typing import Callable, List, NewType
+from functools import wraps
+from typing import Callable, Generic, List, NewType, TypeVar
 
 from persistent import Persistent
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_ushort, WriteStream
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, Serializable, ReadStream
+from pyraknet.messages import Address
 from pyraknet.replicamanager import Replica
+from .bitstream import WriteStream
 from .ldf import LDF
-from .messages import ObjectID
+from .messages import GameMessage, WorldClientMsg
 from .world import server
 
+log = logging.getLogger(__name__)
+
+ObjectID = NewType("ObjectID", int)
 CallbackID = NewType("CallbackID", int)
 
-log = logging.getLogger(__name__)
+# todo: change to UnsignedIntStruct
+T = TypeVar("T")
+U = TypeVar("U")
+V = TypeVar("V")
+
+class Sequence(Generic[T, U]):
+	pass
+
+class Mapping(Generic[T, U, V]):
+	pass
+
 
 class GameObject(Replica):
 	def __setattr__(self, name, value):
@@ -118,7 +136,7 @@ class GameObject(Replica):
 		for comp, comp_id in comps.items():
 			self.components.append(comp(self, set_vars, comp_id))
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return "<GameObject \"%s\", %i, %i>" % (self.name, self.object_id, self.lot)
 
 	def attr_changed(self, name: str) -> None:
@@ -127,70 +145,66 @@ class GameObject(Replica):
 			setattr(self, self._flags[name], hasattr(self, name))
 			self.signal_serialize()
 
-	def signal_serialize(self):
+	def signal_serialize(self) -> None:
 		if not self._serialize_scheduled:
 			self.call_later(0, self._do_serialize)
 			self._serialize_scheduled = True
 
-	def _do_serialize(self):
+	def _do_serialize(self) -> None:
 		server.replica_manager.serialize(self)
 		self._serialize_scheduled = False
 
-	def write_construction(self):
-		out = WriteStream()
-		out.write(c_int64(self.object_id))
-		out.write(c_int(self.lot))
-		out.write(self.name, length_type=c_ubyte)
+	def write_construction(self, stream: WriteStream) -> None:
+		stream.write(c_int64(self.object_id))
+		stream.write(c_int(self.lot))
+		stream.write(self.name, length_type=c_ubyte)
 
-		out.write(bytes(4)) # time since created on server?
-		out.write(c_bit(self.config))
+		stream.write(bytes(4)) # time since created on server?
+		stream.write(c_bit(self.config))
 		if self.config:
-			out.write(self.config.to_bitstream())
-		out.write(c_bit(hasattr(self, "trigger")))
-		out.write(c_bit(self.spawner_object is not None))
+			stream.write(self.config.to_bitstream())
+		stream.write(c_bit(hasattr(self, "trigger")))
+		stream.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
-			out.write(c_int64(self.spawner_object.object_id))
-		out.write(c_bit(self.spawner_object is not None))
+			stream.write(c_int64(self.spawner_object.object_id))
+		stream.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
-			out.write(c_uint(self.spawner_waypoint_index))
-		out.write(c_bit(self.scale != 1))
+			stream.write(c_uint(self.spawner_waypoint_index))
+		stream.write(c_bit(self.scale != 1))
 		if self.scale != 1:
-			out.write(c_float(self.scale))
-		out.write(c_bit(False))
-		out.write(c_bit(False))
+			stream.write(c_float(self.scale))
+		stream.write(c_bit(False))
+		stream.write(c_bit(False))
 
-		out.write(self.serialize(True))
+		self.serialize(stream, True)
 
 		self._serialize_scheduled = False
-		return out
 
-	def serialize(self, is_creation=False):
-		out = WriteStream()
-		out.write(c_bit(self.related_objects_flag or (is_creation and (self.parent is not None or self.children))))
+	def serialize(self, stream: WriteStream, is_creation=False) -> None:
+		stream.write(c_bit(self.related_objects_flag or (is_creation and (self.parent is not None or self.children))))
 		if self.related_objects_flag or (is_creation and (self.parent is not None or self.children)):
-			out.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
+			stream.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
 			if self.parent_flag or (is_creation and self.parent is not None):
 				if self.parent is not None:
-					out.write(c_int64(self.parent))
+					stream.write(c_int64(self.parent))
 				else:
-					out.write(c_int64(0))
-				out.write(c_bit(False))
+					stream.write(c_int64(0))
+				stream.write(c_bit(False))
 				self.parent_flag = False
 
-			out.write(c_bit(self.children_flag or (is_creation and self.children)))
+			stream.write(c_bit(self.children_flag or (is_creation and self.children)))
 			if self.children_flag or (is_creation and self.children):
-				out.write(c_ushort(len(self.children)))
+				stream.write(c_ushort(len(self.children)))
 				for child in self.children:
-					out.write(c_int64(child))
+					stream.write(c_int64(child))
 				self.children_flag = False
 
 			self.related_objects_flag = False
 
 		for comp in self.components:
-			comp.serialize(out, is_creation)
-		return out
+			comp.serialize(stream, is_creation)
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		self._serialize_scheduled = True # prevent any serializations from now on
 		if self.parent is not None:
 			server.game_objects[self.parent].children.remove(self.object_id)
@@ -282,6 +296,95 @@ class GameObject(Replica):
 			server.callback_handles[self.object_id][callback_id].cancel()
 			del server.callback_handles[self.object_id][callback_id]
 
+	def on_game_message(self, message: ReadStream, address: Address) -> None:
+		message_id = message.read(c_ushort)
+		try:
+			message_name = GameMessage(message_id).name
+		except ValueError:
+			return
+		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
+
+		handlers = self.handlers(handler_name)
+		if not handlers:
+			return
+
+		signature = inspect.signature(handlers[0])
+		kwargs = {}
+		params = list(signature.parameters.values())
+		if params and params[0].name == "player" and params[0].annotation == inspect.Parameter.empty and params[0].default == inspect.Parameter.empty:
+			params.pop(0)
+		for param in params:
+			if param.annotation == bool:
+				value = message.read(c_bit)
+				if param.default not in (param.empty, None) and value == param.default:
+					continue
+			else:
+				if param.default not in (param.empty, None):
+					is_not_default = message.read(c_bit)
+					if not is_not_default:
+						continue
+
+				value = self._game_message_deserialize(message, param.annotation)
+
+			kwargs[param.name] = value
+		assert message.all_read()
+
+		if message_name != "ReadyForUpdates": # todo: don't hardcode this
+			if kwargs:
+				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
+
+		player = server.accounts[address].characters.selected()
+		for handler in handlers:
+			if hasattr(handler, "__wrapped__"):
+				handler = functools.partial(handler.__wrapped__, handler.__self__)
+			signature = inspect.signature(handler)
+			playerarg = "player" in signature.parameters
+			if playerarg:
+				it = iter(signature.parameters.keys())
+				playerarg = next(it) == "player"
+				if playerarg:
+					arg = signature.parameters["player"]
+					playerarg = arg.annotation == inspect.Parameter.empty and arg.default == inspect.Parameter.empty
+			if playerarg:
+				handler(player, **kwargs)
+			else:
+				handler(**kwargs)
+
+	def _game_message_deserialize(self, message: ReadStream, type):
+		if type == float:
+			return message.read(c_float)
+		if type == bytes:
+			return message.read(bytes, length_type=c_uint)
+		if type == str:
+			return message.read(str, length_type=c_uint)
+		if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
+			return message.read(type)
+		if type == LDF:
+			value = message.read(str, length_type=c_uint)
+			if value:
+				assert message.read(c_ushort) == 0  # for some reason has a null terminator
+			# todo: convert to LDF
+			return value
+		if type == GameObject:
+			return server.get_object(message.read(c_int64))
+		if inspect.isclass(type) and issubclass(type, Serializable):
+			return type.deserialize(message)
+		if issubclass(type, Sequence):
+			length_type, value_type = type.__args__
+			value = []
+			for _ in range(self._game_message_deserialize(message, length_type)):
+				value.append(self._game_message_deserialize(message, value_type))
+			return value
+		if issubclass(type, Mapping):
+			length_type, key_type, value_type = type.__args__
+			value = {}
+			for _ in range(self._game_message_deserialize(message, length_type)):
+				key = self._game_message_deserialize(message, key_type)
+				val = self._game_message_deserialize(message, value_type)
+				value[key] = val
+			return value
+		raise TypeError(type)
+
 class PersistentObject(GameObject, Persistent):
 	def __init__(self, object_id):
 		GameObject.__init__(self, 1, object_id)
@@ -291,6 +394,120 @@ class PersistentObject(GameObject, Persistent):
 		if not self._p_setattr(name, value):
 			super().__setattr__(name, value)
 			self._p_changed = True
+
+def _send_game_message(mode):
+	"""
+	Send a game message on calling its function.
+	Modes:
+		broadcast: The game message will be sent to all connected players. If "player" is specified, that player will be excluded.
+		single: The game message will only be sent to the player this game message belongs to. If the object is not a player, specify "player" explicitly.
+	The serialization is handled as follows:
+		The Game Message ID is taken from the function name.
+		The argument serialization order is taken from the function definition.
+		Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
+		The serialization type (c_int, c_float, etc) is taken from the argument annotation.
+
+	If the function has "player" as the first argument, the player that this message will be sent to will be passed to the function as that argument. Note that this only really makes sense to specify in "single" mode.
+	"""
+	def decorator(func):
+		from .world import server
+
+		@wraps(func)
+		def wrapper(self, *args, **kwargs):
+			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
+			out = WriteStream()
+			out.write_header(WorldClientMsg.GameMessage)
+			object_id = self.object.object_id
+			out.write(c_int64(object_id))
+			out.write(c_ushort(game_message_id))
+
+			signature = inspect.signature(func)
+			params = list(signature.parameters.values())[1:]
+
+			if "player" in kwargs:
+				player = kwargs["player"]
+			else:
+				player = None
+			if params and params[0].name == "player":
+				params.pop(0)
+			else:
+				if "player" in kwargs:
+					del kwargs["player"]
+
+			bound_args = signature.bind(self, *args, **kwargs)
+			for param in params:
+				if param.annotation == bool:
+					if param.name in bound_args.arguments:
+						value = bound_args.arguments[param.name]
+					else:
+						value = param.default
+					assert value in (True, False)
+					out.write(c_bit(value))
+				else:
+					if param.default not in (param.empty, None):
+						is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
+						out.write(c_bit(is_not_default))
+						if not is_not_default:
+							continue
+
+					if param.name not in bound_args.arguments:
+						raise TypeError("\"%s\" needs to be specified" % param.name)
+					value = bound_args.arguments[param.name]
+					_game_message_serialize(out, param.annotation, value)
+			if mode == "broadcast":
+				exclude_address = None
+				if player is not None:
+					exclude_address = player.char.address
+				server.send(out, address=exclude_address, broadcast=True)
+			elif mode == "single":
+				if player is None:
+					player = self.object
+				server.send(out, address=player.char.address)
+			if func.__name__ not in ("drop_client_loot", "script_network_var_update"): # todo: don't hardcode this
+				if len(bound_args.arguments) > 1:
+					log.debug(", ".join("%s=%s" % (key, value) for key, value in list(bound_args.arguments.items())[1:]))
+			return func(self, *args, **kwargs)
+		return wrapper
+	return decorator
+
+
+def _game_message_serialize(out, type, value):
+	if type == float:
+		out.write(c_float(value))
+	elif type == bytes:
+		out.write(value, length_type=c_uint)
+	elif type == str:
+		out.write(value, length_type=c_uint)
+	elif type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
+		out.write(type(value))
+	elif type == LDF:
+		ldf_text = value.to_str()
+		out.write(ldf_text, length_type=c_uint)
+		if ldf_text:
+			out.write(bytes(2)) # for some reason has a null terminator
+	elif type == GameObject:
+		if value is None:
+			out.write(c_int64(0))
+		else:
+			out.write(c_int64(value.object_id))
+	elif inspect.isclass(type) and issubclass(type, Serializable):
+		type.serialize(value, out)
+	elif issubclass(type, Sequence):
+		length_type, value_type = type.__args__
+		out.write(length_type(len(value)))
+		for i in value:
+			_game_message_serialize(out, value_type, i)
+	elif issubclass(type, Mapping):
+		length_type, key_type, value_type = type.__args__
+		out.write(length_type(len(value)))
+		for k, v in value.items():
+			_game_message_serialize(out, key_type, k)
+			_game_message_serialize(out, value_type, v)
+	else:
+		raise TypeError(type)
+
+broadcast = _send_game_message("broadcast")
+single = _send_game_message("single")
 
 from .components.ai import BaseCombatAIComponent
 from .components.bouncer import BouncerComponent

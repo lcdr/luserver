@@ -1,10 +1,9 @@
 import asyncio
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_uint
-from ..game_object import GameObject
+from ..game_object import broadcast, GameObject, single
 from ..world import server
 from ..ldf import LDF
-from ..messages import broadcast, single
 from .component import Component
 
 class ScriptedActivityComponent(Component):

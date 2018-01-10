@@ -1,4 +1,4 @@
-from ..messages import single
+from ..game_object import single
 from .component import Component
 
 # only used for world control

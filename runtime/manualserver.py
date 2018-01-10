@@ -10,7 +10,7 @@ import threading
 import time
 import traceback
 
-from luserver.server import Server
+from luserver.server import Server as _Server
 from luserver.world import WorldServer
 
 logging.basicConfig(format="%(levelname).1s:%(message)s", level=logging.DEBUG)
@@ -33,7 +33,7 @@ def atoi(text):
 def natural_keys(text):
 	return [atoi(c) for c in re.split(r"(\d+)", text)]
 
-class Server(Server):
+class Server(_Server):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		print("Enter packet directory path to send packets in directory")

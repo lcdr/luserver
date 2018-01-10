@@ -52,10 +52,12 @@ class MouthStyle:
 
 import asyncio
 import logging
+from typing import Tuple
 
 import persistent.wref
 
-from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort
+from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.messages import Address
 from ..bitstream import WriteStream
 from ..game_object import PersistentObject
 from ..messages import WorldClientMsg, WorldServerMsg
@@ -63,17 +65,17 @@ from ..world import server
 
 log = logging.getLogger(__name__)
 
-class CharacterCreateReturnCode:
+class _CharacterCreateReturnCode:
 	Success = 0
 	GeneralFailure = 1 # I'm just going to use this as general failure indicator
 	NameNotAllowed = 2
 	PredefinedNameInUse = 3
 	CustomNameInUse = 4
 
-class CharacterDeleteReturnCode:
+class _CharacterDeleteReturnCode:
 	Success = 1
 
-pants_lot = {
+_PANTS_LOT = {
 	Color.BrightRed: 2508,
 	Color.BrightOrange: 2509,
 	Color.BrickYellow: 2511,
@@ -93,12 +95,12 @@ pants_lot = {
 
 class CharHandling:
 	def __init__(self):
-		server.register_handler(WorldServerMsg.CharacterListRequest, self.on_character_list_request)
-		server.register_handler(WorldServerMsg.CharacterCreateRequest, self.on_character_create_request)
-		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self.on_character_delete_request)
-		server.register_handler(WorldServerMsg.EnterWorld, self.on_enter_world)
+		server.register_handler(WorldServerMsg.CharacterListRequest, self._on_character_list_request)
+		server.register_handler(WorldServerMsg.CharacterCreateRequest, self._on_character_create_request)
+		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self._on_character_delete_request)
+		server.register_handler(WorldServerMsg.EnterWorld, self._on_enter_world)
 
-	def on_character_list_request(self, data, address):
+	def _on_character_list_request(self, data: ReadStream, address: Address) -> None:
 		selected = server.accounts[address].characters.selected()
 
 		if server.world_id[0] != 0:
@@ -158,7 +160,7 @@ class CharHandling:
 
 		server.send(response, address)
 
-	def on_character_create_request(self, request, address):
+	def _on_character_create_request(self, request: ReadStream, address: Address) -> None:
 		account = server.accounts[address]
 		char_name = request.read(str, allocated_length=33)
 		predef_name_ids = request.read(c_uint), request.read(c_uint), request.read(c_uint)
@@ -166,16 +168,16 @@ class CharHandling:
 		if char_name == "":
 			char_name = self._predef_to_name(predef_name_ids)
 
-		return_code = CharacterCreateReturnCode.Success
+		return_code = _CharacterCreateReturnCode.Success
 
 		all_characters = [j for i in server.db.accounts.values() for j in i.characters.values()]
 		for char in all_characters:
 			if char.name == char_name:
-				return_code = CharacterCreateReturnCode.CustomNameInUse
+				return_code = _CharacterCreateReturnCode.CustomNameInUse
 				break
 
 		try:
-			if return_code == CharacterCreateReturnCode.Success:
+			if return_code == _CharacterCreateReturnCode.Success:
 				new_char = PersistentObject(server.new_object_id())
 				new_char.name = char_name
 				new_char.char.account = account
@@ -193,7 +195,7 @@ class CharHandling:
 				new_char.char.mouth_style = request.read(c_uint)
 
 				shirt = new_char.inventory.add_item(self._shirt_to_lot(new_char.char.shirt_color, new_char.char.shirt_style), notify_client=False)
-				pants = new_char.inventory.add_item(pants_lot[new_char.char.pants_color], notify_client=False)
+				pants = new_char.inventory.add_item(_PANTS_LOT[new_char.char.pants_color], notify_client=False)
 				new_char.inventory.equip_inventory(item_to_equip=shirt.object_id)
 				new_char.inventory.equip_inventory(item_to_equip=pants.object_id)
 
@@ -205,7 +207,7 @@ class CharHandling:
 		except Exception:
 			import traceback
 			traceback.print_exc()
-			return_code = CharacterCreateReturnCode.GeneralFailure
+			return_code = _CharacterCreateReturnCode.GeneralFailure
 			server.conn.sync()
 
 		response = WriteStream()
@@ -213,10 +215,10 @@ class CharHandling:
 		response.write(c_ubyte(return_code))
 		server.send(response, address)
 
-		if return_code == CharacterCreateReturnCode.Success:
-			self.on_character_list_request(b"", address)
+		if return_code == _CharacterCreateReturnCode.Success:
+			self._on_character_list_request(ReadStream(b""), address)
 
-	def on_character_delete_request(self, request, address):
+	def _on_character_delete_request(self, request: ReadStream, address: Address) -> None:
 		characters = server.accounts[address].characters
 		char_id = request.read(c_int64)
 
@@ -229,12 +231,12 @@ class CharHandling:
 
 		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterDeleteResponse)
-		response.write(c_ubyte(CharacterDeleteReturnCode.Success))
+		response.write(c_ubyte(_CharacterDeleteReturnCode.Success))
 		server.send(response, address)
 
 		# todo: delete property
 
-	def on_enter_world(self, request, address):
+	def _on_enter_world(self, request: ReadStream, address: Address) -> None:
 		char_id = request.read(c_int64)
 
 		characters = server.accounts[address].characters
@@ -248,7 +250,7 @@ class CharHandling:
 		else:
 			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, include_self=True))
 
-	def _shirt_to_lot(self, color, style):
+	def _shirt_to_lot(self, color: int, style: int):
 		# The LOTs for the shirts are for some reason in two batches of IDs
 		lot_start_1 = 4048
 		lot_start_2 = 5729
@@ -263,7 +265,7 @@ class CharHandling:
 			return lot_start_2 + cc_color_index * num_styles_2 + style-34
 		raise ValueError(style)
 
-	def _character_create_color_index(self, color):
+	def _character_create_color_index(self, color: int) -> int:
 		index = 0
 		sorted_colors = [i for i in sorted(server.db.colors.items(), key=lambda x: x[0])]
 		for col, valid_characters in sorted_colors:
@@ -273,7 +275,7 @@ class CharHandling:
 				index += 1
 		return index
 
-	def _predef_to_name(self, predef_name_ids):
+	def _predef_to_name(self, predef_name_ids: Tuple[int, int, int]) -> str:
 		name = ""
 		for name_type, name_id in enumerate(predef_name_ids):
 			name += server.db.predef_names[name_type][name_id]

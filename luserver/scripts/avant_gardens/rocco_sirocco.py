@@ -1,7 +1,6 @@
 import luserver.components.script as script
 from pyraknet.bitstream import c_int
-from luserver.game_object import GameObject
-from luserver.messages import single
+from luserver.game_object import GameObject, single
 from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 

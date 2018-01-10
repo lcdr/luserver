@@ -1,6 +1,5 @@
 from pyraknet.bitstream import c_bit, c_int
-from ..game_object import GameObject
-from ..messages import broadcast
+from ..game_object import broadcast, GameObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component

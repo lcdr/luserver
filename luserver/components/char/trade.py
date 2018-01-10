@@ -1,6 +1,5 @@
 from pyraknet.bitstream import c_int64, c_uint, c_uint64
-from ...game_object import GameObject
-from ...messages import Mapping, single
+from ...game_object import GameObject, Mapping, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack

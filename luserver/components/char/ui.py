@@ -1,7 +1,6 @@
 from pyraknet.bitstream import c_int
-from ...game_object import GameObject
+from ...game_object import GameObject, single
 from ...ldf import LDF
-from ...messages import single
 
 class CharUI:
 	@single

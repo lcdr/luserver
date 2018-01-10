@@ -147,6 +147,8 @@ class LDF(dict):
 				uncompressed.write(c_uint(len(value)))
 				uncompressed.write(value)
 
+		uncompressed = bytes(uncompressed)
+
 		output = WriteStream()
 		is_compressed = False
 		if not is_compressed:

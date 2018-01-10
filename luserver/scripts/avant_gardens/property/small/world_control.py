@@ -1,8 +1,7 @@
 import luserver.components.script as script
 from pyraknet.bitstream import c_int64
-from luserver.game_object import GameObject
+from luserver.game_object import GameObject, single
 from luserver.ldf import LDFDataType
-from luserver.messages import single
 from luserver.world import server
 from luserver.components.mission import MissionState, TaskType
 
