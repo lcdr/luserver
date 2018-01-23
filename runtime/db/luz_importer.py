@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import BTrees
 
 import luserver.world
-from pyraknet.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
+from pyraknet.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, ReadStream
 from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import World

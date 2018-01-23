@@ -1,6 +1,5 @@
 import luserver.components.script as script
-from pyraknet.bitstream import c_int64
-from luserver.game_object import GameObject, single
+from luserver.game_object import c_int64_, GameObject, single
 from luserver.ldf import LDFDataType
 from luserver.world import server
 from luserver.components.mission import MissionState, TaskType
@@ -128,15 +127,15 @@ class ScriptComponent(script.ScriptComponent):
 	def on_model_put_away(self, player):
 		player.char.set_flag(True, 111)
 
-	def zone_property_model_rotated(self, player:GameObject=0, property_id:c_int64=0):
+	def zone_property_model_rotated(self, player:GameObject=0, property_id:c_int64_=0):
 		if not player.char.get_flag(110):
 			player.char.set_flag(True, 110)
 			if 891 in player.char.missions and player.char.missions[891].state == MissionState.Active:
 				self.set_network_var("Tooltip", LDFDataType.STRING, "PlaceModel")
 				self.tutorial = "place_model"
 
-	def zone_property_model_removed_while_equipped(self, player:GameObject=0, property_id:c_int64=0):
+	def zone_property_model_removed_while_equipped(self, player:GameObject=0, property_id:c_int64_=0):
 		self.on_model_put_away(player)
 
-	def zone_property_model_equipped(self, player:GameObject=0, property_id:c_int64=0):
+	def zone_property_model_equipped(self, player:GameObject=0, property_id:c_int64_=0):
 		self.set_network_var("PlayerAction", LDFDataType.STRING, "ModelEquipped")

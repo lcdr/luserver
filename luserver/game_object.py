@@ -6,11 +6,11 @@ import logging
 import re
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Generic, List, NewType, TypeVar
+from typing import Callable, Generic, List, NewType, TypeVar, Union
 
 from persistent import Persistent
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, Serializable, ReadStream
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, UnsignedIntStruct
 from pyraknet.messages import Address
 from pyraknet.replicamanager import Replica
 from .bitstream import WriteStream
@@ -23,8 +23,7 @@ log = logging.getLogger(__name__)
 ObjectID = NewType("ObjectID", int)
 CallbackID = NewType("CallbackID", int)
 
-# todo: change to UnsignedIntStruct
-T = TypeVar("T")
+T = TypeVar("T", bound=UnsignedIntStruct)
 U = TypeVar("U")
 V = TypeVar("V")
 
@@ -34,6 +33,11 @@ class Sequence(Generic[T, U]):
 class Mapping(Generic[T, U, V]):
 	pass
 
+# These definitions are so I can set size info on game message parameters while not being annoyed by the type system.
+c_int_ = Union[int, c_int]
+c_uint_ = Union[int, c_uint]
+c_int64_ = Union[int, c_int64]
+c_uint64_ = Union[int, c_uint64]
 
 class GameObject(Replica):
 	def __setattr__(self, name, value):
@@ -350,40 +354,41 @@ class GameObject(Replica):
 			else:
 				handler(**kwargs)
 
-	def _game_message_deserialize(self, message: ReadStream, type):
-		if type == float:
+	def _game_message_deserialize(self, message: ReadStream, type_):
+		if type_ == float:
 			return message.read(c_float)
-		if type == bytes:
+		if type_ == bytes:
 			return message.read(bytes, length_type=c_uint)
-		if type == str:
+		if type_ == str:
 			return message.read(str, length_type=c_uint)
-		if type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
-			return message.read(type)
-		if type == LDF:
+		if type(type_) == type(Union):
+			actual_type = type_.__args__[1]
+			return message.read(actual_type)
+		if type_ == LDF:
 			value = message.read(str, length_type=c_uint)
 			if value:
 				assert message.read(c_ushort) == 0  # for some reason has a null terminator
 			# todo: convert to LDF
 			return value
-		if type == GameObject:
+		if type_ == GameObject:
 			return server.get_object(message.read(c_int64))
-		if inspect.isclass(type) and issubclass(type, Serializable):
-			return type.deserialize(message)
-		if issubclass(type, Sequence):
-			length_type, value_type = type.__args__
+		if issubclass(type_, Serializable):
+			return type_.deserialize(message)
+		if issubclass(type_, Sequence):
+			length_type, value_type = type_.__args__
 			value = []
 			for _ in range(self._game_message_deserialize(message, length_type)):
 				value.append(self._game_message_deserialize(message, value_type))
 			return value
-		if issubclass(type, Mapping):
-			length_type, key_type, value_type = type.__args__
+		if issubclass(type_, Mapping):
+			length_type, key_type, value_type = type_.__args__
 			value = {}
 			for _ in range(self._game_message_deserialize(message, length_type)):
 				key = self._game_message_deserialize(message, key_type)
 				val = self._game_message_deserialize(message, value_type)
 				value[key] = val
 			return value
-		raise TypeError(type)
+		raise TypeError(type_)
 
 class PersistentObject(GameObject, Persistent):
 	def __init__(self, object_id):
@@ -405,7 +410,7 @@ def _send_game_message(mode):
 		The Game Message ID is taken from the function name.
 		The argument serialization order is taken from the function definition.
 		Any arguments with defaults (a default of None is ignored)(also according to the function definition) will be wrapped in a flag and only serialized if the argument is not the default.
-		The serialization type (c_int, c_float, etc) is taken from the argument annotation.
+		The serialization type (c_int, float, etc) is taken from the argument annotation.
 
 	If the function has "player" as the first argument, the player that this message will be sent to will be passed to the function as that argument. Note that this only really makes sense to specify in "single" mode.
 	"""
@@ -471,40 +476,41 @@ def _send_game_message(mode):
 	return decorator
 
 
-def _game_message_serialize(out, type, value):
-	if type == float:
+def _game_message_serialize(out, type_, value):
+	if type_ == float:
 		out.write(c_float(value))
-	elif type == bytes:
+	elif type_ == bytes:
 		out.write(value, length_type=c_uint)
-	elif type == str:
+	elif type_ == str:
 		out.write(value, length_type=c_uint)
-	elif type in (c_int, c_int64, c_ubyte, c_uint, c_uint64):
-		out.write(type(value))
-	elif type == LDF:
+	elif type(type_) == type(Union):
+		actual_type = type_.__args__[1]
+		out.write(actual_type(value))
+	elif type_ == LDF:
 		ldf_text = value.to_str()
 		out.write(ldf_text, length_type=c_uint)
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
-	elif type == GameObject:
+	elif type_ == GameObject:
 		if value is None:
 			out.write(c_int64(0))
 		else:
 			out.write(c_int64(value.object_id))
-	elif inspect.isclass(type) and issubclass(type, Serializable):
-		type.serialize(value, out)
-	elif issubclass(type, Sequence):
-		length_type, value_type = type.__args__
+	elif inspect.isclass(type_) and issubclass(type_, Serializable):
+		type_.serialize(value, out)
+	elif issubclass(type_, Sequence):
+		length_type, value_type = type_.__args__
 		out.write(length_type(len(value)))
 		for i in value:
 			_game_message_serialize(out, value_type, i)
-	elif issubclass(type, Mapping):
-		length_type, key_type, value_type = type.__args__
+	elif issubclass(type_, Mapping):
+		length_type, key_type, value_type = type_.__args__
 		out.write(length_type(len(value)))
 		for k, v in value.items():
 			_game_message_serialize(out, key_type, k)
 			_game_message_serialize(out, value_type, v)
 	else:
-		raise TypeError(type)
+		raise TypeError(type_)
 
 broadcast = _send_game_message("broadcast")
 single = _send_game_message("single")

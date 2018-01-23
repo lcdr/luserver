@@ -2,10 +2,7 @@
 For world server packet handling that is general enough not to be grouped in a specialized handling module.
 """
 import asyncio
-import functools
-import inspect
 import logging
-import re
 import xml.etree.ElementTree as ET
 from typing import Tuple
 

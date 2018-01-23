@@ -51,32 +51,36 @@ class Vector3(Serializable):
 	def __repr__(self):
 		return "Vector3(%g, %g, %g)" % (self.x, self.y, self.z)
 
-	def __neg__(self):
+	def __neg__(self) -> "Vector3":
 		return Vector3(-self.x, -self.y, -self.z)
 
-	def __eq__(self, other):
+	def __eq__(self, other: object) -> bool:
 		if not isinstance(other, Vector3):
 			return NotImplemented
 		return other.x == self.x and other.y == self.y and other.z == self.z
 
-	def __add__(self, other):
+	def __add__(self, other: object) -> "Vector3":
 		if not isinstance(other, Vector3):
 			return NotImplemented
 		return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
 
-	def __sub__(self, other):
+	def __sub__(self, other: object) -> "Vector3":
 		if not isinstance(other, Vector3):
 			return NotImplemented
 		return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 
-	def __mul__(self, other):
+	def __mul__(self, other: object) -> "Vector3":
 		if isinstance(other, Vector3):
 			raise TypeError("Multiple multiplications for vectors possible, choose one of cross, dot, hadamard")
+		if not isinstance(other, Real):
+			return NotImplemented
 		return Vector3(self.x * other, self.y * other, self.z * other)
 
 	__rmul__ = __mul__
 
-	def __truediv__(self, other):
+	def __truediv__(self, other: object) -> "Vector3":
+		if not isinstance(other, Real):
+			return NotImplemented
 		return Vector3(self.x / other, self.y / other, self.z / other)
 
 	def magnitude(self) -> float:

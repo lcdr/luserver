@@ -65,8 +65,7 @@ class MissionProgress(Persistent):
 import logging
 import random
 
-from pyraknet.bitstream import c_int
-from ..game_object import GameObject, single
+from ..game_object import c_int_, GameObject, single
 from ..world import server
 from .component import Component
 
@@ -143,10 +142,10 @@ class MissionNPCComponent(Component):
 		return offer is not None
 
 	@single
-	def offer_mission(self, mission_id:c_int=None, offerer:GameObject=None):
+	def offer_mission(self, mission_id:c_int_=None, offerer:GameObject=None):
 		pass
 
-	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int=None, mission_id:c_int=None, player:GameObject=None):
+	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int_=None, mission_id:c_int_=None, player:GameObject=None):
 		if mission_state == MissionState.Available:
 			assert not is_complete
 			player.char.add_mission(mission_id)
@@ -155,7 +154,7 @@ class MissionNPCComponent(Component):
 			player.char.complete_mission(mission_id)
 			self.clear_random_missions(player)
 
-	def request_linked_mission(self, player:GameObject=None, mission_id:c_int=None, mission_offered:bool=None):
+	def request_linked_mission(self, player:GameObject=None, mission_id:c_int_=None, mission_offered:bool=None):
 		self.on_use(player, None)
 
 	def clear_random_missions(self, player):

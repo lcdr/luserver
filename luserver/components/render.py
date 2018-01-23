@@ -1,5 +1,5 @@
 from pyraknet.bitstream import c_float, c_int, c_int64, c_ubyte, c_uint
-from ..game_object import broadcast, GameObject
+from ..game_object import broadcast, c_int_, c_int64_, GameObject
 from .component import Component
 
 class RenderComponent(Component):
@@ -28,7 +28,7 @@ class RenderComponent(Component):
 		pass
 
 	@broadcast
-	def play_f_x_effect(self, effect_id:c_int=-1, effect_type:str=None, scale:float=1, name:bytes=None, priority:float=1, secondary:c_int64=0, serialize:bool=True):
+	def play_f_x_effect(self, effect_id:c_int_=-1, effect_type:str=None, scale:float=1, name:bytes=None, priority:float=1, secondary:c_int64_=0, serialize:bool=True):
 		self.effects[name] = effect_id, effect_type
 
 	@broadcast
@@ -41,7 +41,7 @@ class RenderComponent(Component):
 		pass
 
 	@broadcast
-	def play_n_d_audio_emitter(self, callback_message_data:c_int64=0, emitter_id:c_int=0, event_guid:bytes=None, meta_event_name:bytes=None, result:bool=False, target_object_id_for_ndaudio_callback_messages:c_int64=0):
+	def play_n_d_audio_emitter(self, callback_message_data:c_int64_=0, emitter_id:c_int_=0, event_guid:bytes=None, meta_event_name:bytes=None, result:bool=False, target_object_id_for_ndaudio_callback_messages:c_int64_=0):
 		pass
 
 	@broadcast

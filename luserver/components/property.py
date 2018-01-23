@@ -1,6 +1,6 @@
 from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, Serializable
 from ..amf3 import AMF3
-from ..game_object import broadcast, GameObject, Sequence, single
+from ..game_object import broadcast, c_int_, c_int64_, c_uint_, GameObject, Sequence, single
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -154,7 +154,7 @@ class PropertyEntranceComponent(Component):
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
-	def enter_property1(self, player, index:c_int=None, return_to_zone:bool=True):
+	def enter_property1(self, player, index:c_int_=None, return_to_zone:bool=True):
 		clone_id = 0
 		if not return_to_zone and index == -1:
 			clone_id = player.char.clone_id
@@ -164,7 +164,7 @@ class PropertyEntranceComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, player, include_null_address:bool=None, include_null_description:bool=None, players_own:bool=None, update_ui:bool=None, num_results:c_int=None, reputation_time:c_int=None, sort_method:c_int=None, start_index:c_int=None, filter_text:bytes=None):
+	def property_entrance_sync(self, player, include_null_address:bool=None, include_null_description:bool=None, players_own:bool=None, update_ui:bool=None, num_results:c_int_=None, reputation_time:c_int_=None, sort_method:c_int_=None, start_index:c_int_=None, filter_text:bytes=None):
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		#my_property.is_owned = True
@@ -172,11 +172,11 @@ class PropertyEntranceComponent(Component):
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
 	@single
-	def property_select_query(self, nav_offset:c_int=None, there_are_more:bool=None, my_clone_id:c_int=None, has_featured_property:bool=None, was_friends:bool=None, properties:Sequence[c_uint, PropertySelectQueryProperty]=None):
+	def property_select_query(self, nav_offset:c_int_=None, there_are_more:bool=None, my_clone_id:c_int_=None, has_featured_property:bool=None, was_friends:bool=None, properties:Sequence[c_uint, PropertySelectQueryProperty]=None):
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:str=None, obj:GameObject=None, param1:c_int64=0, param2:c_int=-1, sender:GameObject=None):
+	def fire_event_client_side(self, args:str=None, obj:GameObject=None, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=None):
 		pass
 
 	@single
@@ -200,7 +200,7 @@ class PropertyManagementComponent(Component):
 
 		self.download_property_data(property, player=player)
 
-	def start_building_with_item(self, player, first_time:bool=True, success:bool=None, source_bag:c_int=None, source_id:c_int64=None, source_lot:c_int=None, source_type:c_int=None, target_id:c_int64=None, target_lot:c_int=None, target_pos:Vector3=None, target_type:c_int=None):
+	def start_building_with_item(self, player, first_time:bool=True, success:bool=None, source_bag:c_int_=None, source_id:c_int64_=None, source_lot:c_int_=None, source_type:c_int_=None, target_id:c_int64_=None, target_lot:c_int_=None, target_pos:Vector3=None, target_type:c_int_=None):
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
@@ -209,12 +209,12 @@ class PropertyManagementComponent(Component):
 
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
-	def set_build_mode(self, start:bool=None, distance_type:c_int=-1, mode_paused:bool=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
+	def set_build_mode(self, start:bool=None, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=None, start_pos:Vector3=Vector3.zero):
 		server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
 	@broadcast
-	def set_build_mode_confirmed(self, start:bool=None, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int=1, player_id:c_int64=None, start_pos:Vector3=Vector3.zero):
+	def set_build_mode_confirmed(self, start:bool=None, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=None, start_pos:Vector3=Vector3.zero):
 		pass
 
 class PropertyVendorComponent(Component):
@@ -242,12 +242,12 @@ class PropertyVendorComponent(Component):
 	def open_property_vendor(self):
 		pass
 
-	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int=1, item:c_int=None):
+	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int_=1, item:c_int_=None):
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)
 		server.world_control_object.script.on_property_rented(player)
 
 	@single
-	def property_rental_response(self, clone_id:c_uint=None, code:c_int=None, property_id:c_int64=None, rentdue:c_int64=None):
+	def property_rental_response(self, clone_id:c_uint_=None, code:c_int_=None, property_id:c_int64_=None, rentdue:c_int64_=None):
 		pass

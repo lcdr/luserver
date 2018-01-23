@@ -1,5 +1,5 @@
-from pyraknet.bitstream import c_int64, c_uint, c_uint64
-from ...game_object import GameObject, Mapping, single
+from pyraknet.bitstream import c_int64, c_uint
+from ...game_object import c_uint_, c_uint64_, GameObject, Mapping, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
@@ -42,17 +42,17 @@ class CharTrade:
 		pass
 
 	@single
-	def server_trade_initial_reply(self, invitee:GameObject=None, result_type:c_uint=None, name:str=None):
+	def server_trade_initial_reply(self, invitee:GameObject=None, result_type:c_uint_=None, name:str=None):
 		pass
 
-	def client_trade_update(self, currency:c_uint64=None, items:Mapping[c_uint, c_int64, Stack]=None):
+	def client_trade_update(self, currency:c_uint64_=None, items:Mapping[c_uint, c_int64, Stack]=None):
 		self.trade.currency_offered = currency
 		self.trade.items_offered = items
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_update(currency=currency, items=items)
 
 	@single
-	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=None, items:Mapping[c_uint, c_int64, Stack]=None):
+	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64_=None, items:Mapping[c_uint, c_int64, Stack]=None):
 		if about_to_perform:
 			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:
