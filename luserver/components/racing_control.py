@@ -1,5 +1,5 @@
-from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort
-from ..game_object import broadcast
+from pyraknet.bitstream import c_bit, c_int64, c_uint, c_ushort
+from ..game_object import broadcast, c_int_, c_int64_, c_uint_
 from .scripted_activity import ScriptedActivityComponent
 
 class RacingNotificationType:
@@ -40,5 +40,5 @@ class RacingControlComponent(ScriptedActivityComponent):
 		out.write(c_bit(False))
 
 	@broadcast
-	def notify_racing_client(self, event_type:c_uint=RacingNotificationType.Invalid, param1:c_int=None, param_obj:c_int64=None, param_str:str=None, single_client:c_int64=None):
+	def notify_racing_client(self, event_type:c_uint_=RacingNotificationType.Invalid, param1:c_int_=None, param_obj:c_int64_=None, param_str:str=None, single_client:c_int64_=None):
 		pass

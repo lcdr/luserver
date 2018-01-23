@@ -2,8 +2,7 @@ import asyncio
 import time
 
 import luserver.components.script as script
-from pyraknet.bitstream import c_int
-from luserver.game_object import single
+from luserver.game_object import c_int_, single
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server
 from luserver.components.inventory import InventoryType
@@ -128,7 +127,7 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.set_player_spawn_points()
 
-	def message_box_respond(self, player, button:c_int=None, id:str=None, user_data:str=None):
+	def message_box_respond(self, player, button:c_int_=None, id:str=None, user_data:str=None):
 		if id == "RePlay":
 			self.start()
 

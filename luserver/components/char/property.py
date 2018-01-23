@@ -1,8 +1,8 @@
 import logging
 
-from pyraknet.bitstream import c_int, c_int64, c_uint
+from pyraknet.bitstream import c_int64, c_uint
 from ...bitstream import WriteStream
-from ...game_object import broadcast, GameObject, Mapping, single
+from ...game_object import broadcast, c_int_, c_int64_, c_uint_, GameObject, Mapping, single
 from ...messages import WorldClientMsg
 from ...world import server
 from ...math.vector import Vector3
@@ -18,10 +18,10 @@ class DeleteReason:
 
 class CharProperty:
 	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=0, response:c_int=0, rotation:Quaternion=Quaternion.identity):
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=0, response:c_int_=0, rotation:Quaternion=Quaternion.identity):
 		pass
 
-	def update_model_from_client(self, model_id:c_int64=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
+	def update_model_from_client(self, model_id:c_int64_=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = server.new_object_id()
@@ -43,7 +43,7 @@ class CharProperty:
 				self.handle_u_g_c_equip_pre_create_based_on_edit_mode(0, spawner_id)
 				break
 
-	def delete_model_from_client(self, model_id:c_int64=0, reason:c_uint=DeleteReason.PickingModelUp):
+	def delete_model_from_client(self, model_id:c_int64_=0, reason:c_uint_=DeleteReason.PickingModelUp):
 		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
 		if reason == DeleteReason.PickingModelUp:
 			server.world_control_object.script.on_model_picked_up(self.object)
@@ -64,7 +64,7 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64=None, lxfml_data_compressed:bytes=None, time_taken_in_ms:c_uint=None):
+	def b_b_b_save_request(self, local_id:c_int64_=None, lxfml_data_compressed:bytes=None, time_taken_in_ms:c_uint_=None):
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
@@ -75,11 +75,11 @@ class CharProperty:
 		server.send(save_response, self.address)
 
 	@single
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64=None, items_total:c_int=0):
+	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=None, items_total:c_int_=0):
 		pass
 
 	@single
-	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=None, model_id:c_int64=None):
+	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int_=None, model_id:c_int64_=None):
 		pass
 
 	def property_contents_from_client(self, query_db:bool=False):

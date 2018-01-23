@@ -1,7 +1,7 @@
 import logging
 
-from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint
-from ..game_object import Mapping, single
+from pyraknet.bitstream import c_bit, c_int, c_uint
+from ..game_object import c_int_, c_int64_, Mapping, single
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -28,11 +28,11 @@ class VendorComponent(Component):
 	def vendor_open_window(self):
 		pass
 
-	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int=1, item:c_int=None):
+	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int_=1, item:c_int_=None):
 		new_item = player.inventory.add_item(item, count)
 		player.char.set_currency(currency=player.char.currency - new_item.base_value*count, position=Vector3.zero)
 
-	def sell_to_vendor(self, player, count:c_int=1, item_obj_id:c_int64=None):
+	def sell_to_vendor(self, player, count:c_int_=1, item_obj_id:c_int64_=None):
 		found = False
 		for inv_type in (InventoryType.Items, InventoryType.Models, InventoryType.Bricks):
 			inv = player.inventory.inventory_type_to_inventory(inv_type)

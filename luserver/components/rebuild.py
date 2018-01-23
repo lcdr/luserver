@@ -1,7 +1,7 @@
 import time
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
-from ..game_object import broadcast, GameObject
+from pyraknet.bitstream import c_bit, c_float, c_uint
+from ..game_object import broadcast, c_int_, c_uint_, GameObject
 from ..world import server
 from ..math.vector import Vector3
 from .char import TerminateType
@@ -149,9 +149,9 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
 
 	@broadcast
-	def enable_rebuild(self, enable:bool=None, fail:bool=None, success:bool=None, fail_reason:c_uint=FailReason.NotGiven, duration:float=None, user:GameObject=None):
+	def enable_rebuild(self, enable:bool=None, fail:bool=None, success:bool=None, fail_reason:c_uint_=FailReason.NotGiven, duration:float=None, user:GameObject=None):
 		pass
 
 	@broadcast
-	def rebuild_notify_state(self, prev_state:c_int=None, state:c_int=None, player:GameObject=None):
+	def rebuild_notify_state(self, prev_state:c_int_=None, state:c_int_=None, player:GameObject=None):
 		pass

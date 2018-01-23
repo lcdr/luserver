@@ -1,6 +1,6 @@
 import math
 from numbers import Real
-from typing import ClassVar
+from typing import ClassVar, overload
 
 from pyraknet.bitstream import c_float, ReadStream, Serializable, WriteStream
 from .vector import Vector3
@@ -12,6 +12,18 @@ class Quaternion(Serializable):
 	z: float
 	w: float
 	__slots__ = "x", "y", "z", "w"
+
+	@overload
+	def __init__(self):
+		pass
+
+	@overload
+	def __init__(self, x: Real, y: Real, z: Real, w: Real):
+		pass
+
+	@overload
+	def __init__(self, x: "Quaternion"):
+		pass
 
 	def __init__(self, x=None, y=None, z=None, w=None):
 		if x is None:

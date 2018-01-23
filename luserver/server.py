@@ -1,15 +1,18 @@
 import __main__
 import logging
 import os
+import struct
 import time
 from typing import SupportsBytes, Union
 
 import pyraknet.server
-from pyraknet.bitstream import c_uint, c_ushort
 from pyraknet.messages import Address
 from .messages import msg_enum, GameMessage, WorldClientMsg, WorldServerMsg
 
 log = logging.getLogger(__name__)
+
+c_uint = struct.Struct("<I")
+c_ushort = struct.Struct("<H")
 
 class Server:
 	SERVER_PASSWORD = b"3.25 ND1"

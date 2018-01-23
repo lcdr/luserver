@@ -1,5 +1,5 @@
-from pyraknet.bitstream import c_bit, c_int
-from ..game_object import broadcast, GameObject
+from pyraknet.bitstream import c_bit
+from ..game_object import broadcast, c_int_, GameObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -45,11 +45,11 @@ class DestructibleComponent(Component):
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
-	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=None):
+	def simply_die(self, death_type:str="", kill_type:c_int_=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=None):
 		"""Shorthand for request_die with default values."""
 		self.request_die(False, death_type, 0, 0, 10, kill_type, killer, loot_owner)
 
-	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=None):
+	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int_=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=None):
 		if self.object.stats.life == 0:
 			# already dead
 			return

@@ -1,6 +1,5 @@
 import luserver.components.script as script
-from pyraknet.bitstream import c_int
-from luserver.game_object import GameObject
+from luserver.game_object import c_int_, GameObject
 from luserver.world import server
 from luserver.components.mission import MissionState
 
@@ -11,7 +10,7 @@ class ScriptComponent(script.ScriptComponent):
 	def set_missions(self, missions):
 		self.missions = missions
 
-	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int=None, mission_id:c_int=None, player:GameObject=None):
+	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int_=None, mission_id:c_int_=None, player:GameObject=None):
 		if mission_id in self.missions:
 			if mission_state in (MissionState.Available, MissionState.CompletedAvailable):
 				visible = 1

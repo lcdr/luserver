@@ -1,7 +1,7 @@
 import logging
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
-from ..game_object import broadcast, GameObject
+from ..game_object import broadcast, c_uint_, GameObject
 from .component import Component
 
 log = logging.getLogger(__name__)
@@ -144,5 +144,5 @@ class StatsSubcomponent(Component):
 		self.imagination = self.max_imagination
 
 	@broadcast
-	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_uint=0, killer:GameObject=None, loot_owner:GameObject=0):
+	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_uint_=0, killer:GameObject=None, loot_owner:GameObject=0):
 		self.object.handle("on_death", killer, silent=True)
