@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Dict
 
 from pyraknet.bitstream import WriteStream
 from ..game_object import GameObject
@@ -10,7 +11,7 @@ class Component(ABC):
 
 	def __init__(self, obj: GameObject, set_vars, comp_id):
 		self.object = obj
-		self._flags = {}
+		self._flags: Dict[str, str] = {}
 
 	def attr_changed(self, name: str) -> None:
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""

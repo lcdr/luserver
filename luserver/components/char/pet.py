@@ -1,19 +1,22 @@
-from pyraknet.bitstream import c_uint, c_uint64
-from ...game_object import broadcast, c_int_, c_uint_, GameObject, Sequence, single
+from pyraknet.bitstream import c_uint
+from ...game_object import broadcast, c_int, c_uint64, E, GameObject, Player, Sequence, single
+from ...game_object import c_uint as c_uint_
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
 from ..pet import PetTamingNotify
 
 class CharPet:
+	object: Player
+
 	@single
-	def notify_pet_taming_minigame(self, pet:GameObject=None, player_taming:GameObject=None, force_teleport:bool=None, notify_type:c_uint_=None, pets_dest_pos:Vector3=None, tele_pos:Vector3=None, tele_rot:Quaternion=Quaternion.identity):
+	def notify_pet_taming_minigame(self, pet:GameObject=E, player_taming:GameObject=E, force_teleport:bool=E, notify_type:c_uint_=E, pets_dest_pos:Vector3=E, tele_pos:Vector3=E, tele_rot:Quaternion=Quaternion.identity):
 		pass
 
 	def client_exit_taming_minigame(self, voluntary_exit:bool=True):
 		self.notify_pet_taming_minigame(pet=None, player_taming=None, force_teleport=False, notify_type=PetTamingNotify.Quit, pets_dest_pos=self.object.physics.position, tele_pos=self.object.physics.position, tele_rot=self.object.physics.rotation)
 
 	@broadcast
-	def pet_taming_try_build_result(self, success:bool=True, num_correct:c_int_=0):
+	def pet_taming_try_build_result(self, success:bool=True, num_correct:c_int=0):
 		pass
 
 	@broadcast

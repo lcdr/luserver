@@ -1,5 +1,5 @@
 import luserver.scripts.general.teleport_to_ns_or_nt as script
-from luserver.game_object import c_int_
+from luserver.game_object import c_int, E
 from luserver.world import server
 from luserver.components.char import TerminateType
 
@@ -16,7 +16,7 @@ class ScriptComponent(script.ScriptComponent):
 			text = "UI_TRAVEL_TO_LUP_STATION"
 		player.char.disp_message_box(id="TransferBox", text=text, callback=self.object)
 
-	def message_box_respond(self, player, button:c_int_=None, id:str=None, user_data:str=None):
+	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
 		if id == "TransferBox":
 			if button == 1:
 				# todo: display zone summary (callback not working right now for some reason)

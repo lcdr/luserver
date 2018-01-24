@@ -21,7 +21,7 @@ import logging
 import os
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Dict, List, Tuple
 
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
@@ -39,30 +39,30 @@ class Server(_Server, ABC):
 		super().__init__(address, max_connections)
 		self.conn = db_conn
 		self.db = self.conn.root
-		self._packet_handlers = {}
+		self._packet_handlers: Dict[Tuple[int, int], List[Callable[..., None]]] = {}
 		self._server.add_handler("user_packet", self._on_lu_packet)
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
 
 	def _on_lu_packet(self, data: bytes, address: Address) -> None:
 		super()._on_lu_packet(data, address)
-		data = ReadStream(data, unlocked=True)
-		data.skip_read(1)
-		header = data.read(c_ushort)
-		subheader = data.read(c_ubyte)
-		data.skip_read(4)
+		stream = ReadStream(data, unlocked=True)
+		stream.skip_read(1)
+		header = stream.read(c_ushort)
+		subheader = stream.read(c_ubyte)
+		stream.skip_read(4)
 		if header == WorldServerMsg.header() and subheader == WorldServerMsg.Routing:
-			data.skip_read(4)
-			header = data.read(c_ushort)
-			subheader = data.read(c_ubyte)
-			data.skip_read(4)
-		read_offset = data.read_offset
+			stream.skip_read(4)
+			header = stream.read(c_ushort)
+			subheader = stream.read(c_ubyte)
+			stream.skip_read(4)
+		read_offset = stream.read_offset
 		if (header, subheader) in self._packet_handlers:
 			for handler in self._packet_handlers[(header, subheader)]:
-				data.read_offset = read_offset
+				stream.read_offset = read_offset
 				if asyncio.iscoroutinefunction(handler):
-					asyncio.ensure_future(handler(data, address))
+					asyncio.ensure_future(handler(stream, address))
 				else:
-					handler(data, address)
+					handler(stream, address)
 
 	def register_handler(self, packet_id, handler: Callable[[ReadStream, Address], None]) -> None:
 		header = packet_id.header()

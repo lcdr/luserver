@@ -1,10 +1,10 @@
 import luserver.components.script as script
-from luserver.game_object import c_int_, GameObject, single
+from luserver.game_object import c_int, E, GameObject, single
 from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int_=None, mission_id:c_int_=None, player:GameObject=None):
+	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:GameObject=E):
 		if mission_id == 1728:
 			if mission_state == MissionState.Available:
 				# needed to send the mission mail
@@ -17,5 +17,5 @@ class ScriptComponent(script.ScriptComponent):
 	# manually changed from broadcast to single because the client script abuses this message
 	# see also caged_spider
 	@single
-	def notify_client_object(self, name:str=None, param1:c_int_=None, param2:c_int_=None, param_obj:GameObject=None, param_str:bytes=None):
+	def notify_client_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E):
 		pass

@@ -222,12 +222,8 @@ class WorldServer(Server):
 					spec.loader.exec_module(module)
 
 	def spawn_model(self, spawner_id, lot, position: Vector3, rotation: Quaternion) -> None:
-		spawned_vars = {}
-		spawned_vars["position"] = position
-		spawned_vars["rotation"] = rotation
-		spawner_vars = {}
-		spawner_vars["spawntemplate"] = lot
-		spawner_vars["spawner_waypoints"] = spawned_vars,
+		spawned_vars = {"position": position, "rotation": rotation}
+		spawner_vars = {"spawntemplate": lot, "spawner_waypoints": spawned_vars}
 		spawner = GameObject(176, spawner_id, set_vars=spawner_vars)
 		self.models.append((spawner, spawner.spawner.spawn()))
 
@@ -306,7 +302,7 @@ class WorldServer(Server):
 			set_vars = {}
 
 		if is_world_control:
-			object_id = 70368744177662
+			object_id = ObjectID(70368744177662)
 		else:
 			object_id = self.new_spawned_id()
 		obj = GameObject(lot, object_id, set_vars)

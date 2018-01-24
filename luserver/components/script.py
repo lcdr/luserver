@@ -1,6 +1,6 @@
 from pyraknet.bitstream import c_bit
 from .. ldf import LDF
-from ..game_object import broadcast, c_int_, c_int64_, GameObject
+from ..game_object import broadcast, c_int, c_int64, E, GameObject
 from .component import Component
 
 class ScriptComponent(Component):
@@ -27,13 +27,13 @@ class ScriptComponent(Component):
 		self.script_network_var_update(temp_ldf)
 
 	@broadcast
-	def script_network_var_update(self, script_vars:LDF=None):
+	def script_network_var_update(self, script_vars:LDF=E):
 		pass
 
 	@broadcast
-	def notify_client_object(self, name:str=None, param1:c_int_=None, param2:c_int_=None, param_obj:GameObject=None, param_str:bytes=None):
+	def notify_client_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E):
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:str=None, obj:GameObject=None, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=None):
+	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64=0, param2:c_int=-1, sender:GameObject=E):
 		pass

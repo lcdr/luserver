@@ -1,5 +1,5 @@
 from pyraknet.bitstream import c_bit, c_int64
-from ..game_object import c_int_, GameObject
+from ..game_object import c_int, E, GameObject
 from ..world import server
 from .component import Component
 
@@ -31,6 +31,6 @@ class Comp108Component(Component):
 		if self.driver_id != 0:
 			server.game_objects[self.driver_id].char.dismount()
 
-	def request_die(self, unknown_bool:bool=None, death_type:str=None, direction_relative_angle_xz:float=None, direction_relative_angle_y:float=None, direction_relative_force:float=None, kill_type:c_int_=0, killer:GameObject=None, loot_owner:GameObject=None):
+	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=0, killer:GameObject=E, loot_owner:GameObject=E):
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash
 		self.object.call_later(3, self.object.destructible.resurrect)

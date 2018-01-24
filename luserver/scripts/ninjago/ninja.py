@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from luserver.game_object import GameObject, c_int_
+from luserver.game_object import c_int, E, GameObject
 from luserver.components.mission import MissionState
 from luserver.components.inventory import InventoryType
 
@@ -16,7 +16,7 @@ flag = {
 	1962: 2033}
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=None, mission_state:c_int_=None, mission_id:c_int_=None, player:GameObject=None):
+	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:GameObject=E):
 		if mission_state == MissionState.ReadyToComplete:
 			if mission_id in package:
 				player.inventory.remove_item(InventoryType.Items, lot=package[mission_id])

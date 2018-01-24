@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from luserver.game_object import broadcast, GameObject, single
+from luserver.game_object import broadcast, E, GameObject, single
 from luserver.world import server
 from luserver.math.vector import Vector3
 from luserver.components.racing_control import RacingNotificationType
@@ -19,5 +19,5 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.scripted_activity.activity_start()
 
 	@broadcast
-	def racing_player_loaded(self, player:GameObject=None, vehicle:GameObject=None):
+	def racing_player_loaded(self, player:GameObject=E, vehicle:GameObject=E):
 		pass

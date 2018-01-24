@@ -1,7 +1,7 @@
 import asyncio
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint
-from ..game_object import broadcast, c_int_, GameObject, single
+from ..game_object import broadcast, c_int, E, GameObject, single
 from ..world import server
 from ..ldf import LDF
 from .component import Component
@@ -43,14 +43,14 @@ class ScriptedActivityComponent(Component):
 	def activity_start(self):
 		pass
 
-	def message_box_respond(self, player, button:c_int_=None, id:str=None, user_data:str=None):
+	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
 		if id == "LobbyReady" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 
 	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int_=None, info_type:c_int_=None, leaderboard_data:LDF=None, throttled:bool=None, weekly:bool=None):
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=E, info_type:c_int=E, leaderboard_data:LDF=E, throttled:bool=E, weekly:bool=E):
 		pass
 
 	@broadcast
-	def notify_client_zone_object(self, name:str=None, param1:c_int_=None, param2:c_int_=None, param_obj:GameObject=None, param_str:bytes=None):
+	def notify_client_zone_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E):
 		pass

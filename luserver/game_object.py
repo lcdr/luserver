@@ -6,14 +6,20 @@ import logging
 import re
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Generic, List, NewType, TypeVar, Union
+from typing import Callable, Dict, Generic, List, NewType, Tuple, Type, TypeVar, TYPE_CHECKING
+from typing import Sequence as Sequence_
+from typing import Mapping as Mapping_
 
 from persistent import Persistent
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, UnsignedIntStruct
+from pyraknet.bitstream import c_bit, c_float, c_ubyte, c_ushort, ReadStream, Serializable, UnsignedIntStruct, WriteStream
+from pyraknet.bitstream import c_int as c_int_
+from pyraknet.bitstream import c_int64 as c_int64_
+from pyraknet.bitstream import c_uint as c_uint_
+from pyraknet.bitstream import c_uint64 as c_uint64_
 from pyraknet.messages import Address
 from pyraknet.replicamanager import Replica
-from .bitstream import WriteStream
+from .bitstream import WriteStream as WriteStream_
 from .ldf import LDF
 from .messages import GameMessage, WorldClientMsg
 from .world import server
@@ -22,22 +28,28 @@ log = logging.getLogger(__name__)
 
 ObjectID = NewType("ObjectID", int)
 CallbackID = NewType("CallbackID", int)
+if TYPE_CHECKING:
+	E = inspect.Parameter.empty
+	c_int = int
+	c_int64 = int
+	c_uint = int
+	c_uint64 = int
+else:
+	E = "empty"
+	c_int = c_int_
+	c_int64 = c_int64_
+	c_uint = c_uint_
+	c_uint64 = c_uint64_
 
 T = TypeVar("T", bound=UnsignedIntStruct)
 U = TypeVar("U")
 V = TypeVar("V")
 
-class Sequence(Generic[T, U]):
+class Sequence(Generic[T, U], Sequence_[U]):
 	pass
 
-class Mapping(Generic[T, U, V]):
+class Mapping(Generic[T, U, V], Mapping_[U, V]):
 	pass
-
-# These definitions are so I can set size info on game message parameters while not being annoyed by the type system.
-c_int_ = Union[int, c_int]
-c_uint_ = Union[int, c_uint]
-c_int64_ = Union[int, c_int64]
-c_uint64_ = Union[int, c_uint64]
 
 class GameObject(Replica):
 	def __setattr__(self, name, value):
@@ -47,12 +59,12 @@ class GameObject(Replica):
 	def __init__(self, lot, object_id: ObjectID, set_vars=None):
 		if set_vars is None:
 			set_vars = {}
-		self._handlers = {}
-		self._flags = {}
-		self._flags["parent_flag"] = "related_objects_flag"
-		self._flags["children_flag"] = "related_objects_flag"
-		self._flags["parent"] = "parent_flag"
-		self._flags["children"] = "children_flag"
+		self._handlers: Dict[str, List[Callable[..., None]]] = {}
+		self._flags: Dict[str, str] = {
+			"parent_flag": "related_objects_flag",
+			"children_flag": "related_objects_flag",
+			"parent": "parent_flag",
+			"children": "children_flag"}
 		self._serialize_scheduled = True
 		self.lot = lot
 		self.object_id = object_id
@@ -85,9 +97,9 @@ class GameObject(Replica):
 			self.primitive_model_type = set_vars["primitive_model_type"]
 		if "primitive_model_scale" in set_vars:
 			self.primitive_model_scale = set_vars["primitive_model_scale"]
-		self.components = []
+		self.components: List[Component] = []
 
-		comps = OrderedDict()
+		comps: Dict[Type[Component], int] = OrderedDict()
 
 		comp_ids = list(server.db.components_registry[self.lot])
 		if "custom_script" in set_vars:
@@ -159,8 +171,8 @@ class GameObject(Replica):
 		self._serialize_scheduled = False
 
 	def write_construction(self, stream: WriteStream) -> None:
-		stream.write(c_int64(self.object_id))
-		stream.write(c_int(self.lot))
+		stream.write(c_int64_(self.object_id))
+		stream.write(c_int_(self.lot))
 		stream.write(self.name, length_type=c_ubyte)
 
 		stream.write(bytes(4)) # time since created on server?
@@ -170,10 +182,10 @@ class GameObject(Replica):
 		stream.write(c_bit(hasattr(self, "trigger")))
 		stream.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
-			stream.write(c_int64(self.spawner_object.object_id))
+			stream.write(c_int64_(self.spawner_object.object_id))
 		stream.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
-			stream.write(c_uint(self.spawner_waypoint_index))
+			stream.write(c_uint_(self.spawner_waypoint_index))
 		stream.write(c_bit(self.scale != 1))
 		if self.scale != 1:
 			stream.write(c_float(self.scale))
@@ -190,9 +202,9 @@ class GameObject(Replica):
 			stream.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
 			if self.parent_flag or (is_creation and self.parent is not None):
 				if self.parent is not None:
-					stream.write(c_int64(self.parent))
+					stream.write(c_int64_(self.parent))
 				else:
-					stream.write(c_int64(0))
+					stream.write(c_int64_(0))
 				stream.write(c_bit(False))
 				self.parent_flag = False
 
@@ -200,7 +212,7 @@ class GameObject(Replica):
 			if self.children_flag or (is_creation and self.children):
 				stream.write(c_ushort(len(self.children)))
 				for child in self.children:
-					stream.write(c_int64(child))
+					stream.write(c_int64_(child))
 				self.children_flag = False
 
 			self.related_objects_flag = False
@@ -233,14 +245,14 @@ class GameObject(Replica):
 		if event_name not in self._handlers:
 			return
 		if handler in self._handlers[event_name]:
-			del self._handlers[handler]
+			self._handlers[event_name].remove(handler)
 
 	def handlers(self, event_name: str, silent=False) -> List[Callable]:
 		"""
 		Return matching handlers for an event.
 		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
 		"""
-		handlers = []
+		handlers: List[Callable] = []
 		script_handler = None
 		if event_name in self._handlers:
 			handlers.extend(self._handlers[event_name])
@@ -320,10 +332,10 @@ class GameObject(Replica):
 		for param in params:
 			if param.annotation == bool:
 				value = message.read(c_bit)
-				if param.default not in (param.empty, None) and value == param.default:
+				if param.default not in (param.empty, E) and value == param.default:
 					continue
 			else:
-				if param.default not in (param.empty, None):
+				if param.default not in (param.empty, E):
 					is_not_default = message.read(c_bit)
 					if not is_not_default:
 						continue
@@ -358,20 +370,19 @@ class GameObject(Replica):
 		if type_ == float:
 			return message.read(c_float)
 		if type_ == bytes:
-			return message.read(bytes, length_type=c_uint)
+			return message.read(bytes, length_type=c_uint_)
 		if type_ == str:
-			return message.read(str, length_type=c_uint)
-		if type(type_) == type(Union):
-			actual_type = type_.__args__[1]
-			return message.read(actual_type)
+			return message.read(str, length_type=c_uint_)
+		if type_ in (c_int_, c_uint_, c_int64_, c_uint64_):
+			return message.read(type_)
 		if type_ == LDF:
-			value = message.read(str, length_type=c_uint)
+			value = message.read(str, length_type=c_uint_)
 			if value:
 				assert message.read(c_ushort) == 0  # for some reason has a null terminator
 			# todo: convert to LDF
 			return value
-		if type_ == GameObject:
-			return server.get_object(message.read(c_int64))
+		if issubclass(type_, GameObject):
+			return server.get_object(message.read(c_int64_))
 		if issubclass(type_, Serializable):
 			return type_.deserialize(message)
 		if issubclass(type_, Sequence):
@@ -390,7 +401,9 @@ class GameObject(Replica):
 			return value
 		raise TypeError(type_)
 
-class PersistentObject(GameObject, Persistent):
+class Player(GameObject, Persistent):
+	char: "CharacterComponent"
+
 	def __init__(self, object_id):
 		GameObject.__init__(self, 1, object_id)
 		Persistent.__init__(self)
@@ -399,6 +412,9 @@ class PersistentObject(GameObject, Persistent):
 		if not self._p_setattr(name, value):
 			super().__setattr__(name, value)
 			self._p_changed = True
+
+# backwards compatibility
+PersistentObject = Player
 
 def _send_game_message(mode):
 	"""
@@ -420,10 +436,10 @@ def _send_game_message(mode):
 		@wraps(func)
 		def wrapper(self, *args, **kwargs):
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
-			out = WriteStream()
+			out = WriteStream_()
 			out.write_header(WorldClientMsg.GameMessage)
 			object_id = self.object.object_id
-			out.write(c_int64(object_id))
+			out.write(c_int64_(object_id))
 			out.write(c_ushort(game_message_id))
 
 			signature = inspect.signature(func)
@@ -449,7 +465,7 @@ def _send_game_message(mode):
 					assert value in (True, False)
 					out.write(c_bit(value))
 				else:
-					if param.default not in (param.empty, None):
+					if param.default not in (param.empty, E):
 						is_not_default = param.name in bound_args.arguments and bound_args.arguments[param.name] != param.default
 						out.write(c_bit(is_not_default))
 						if not is_not_default:
@@ -480,22 +496,21 @@ def _game_message_serialize(out, type_, value):
 	if type_ == float:
 		out.write(c_float(value))
 	elif type_ == bytes:
-		out.write(value, length_type=c_uint)
+		out.write(value, length_type=c_uint_)
 	elif type_ == str:
-		out.write(value, length_type=c_uint)
-	elif type(type_) == type(Union):
-		actual_type = type_.__args__[1]
-		out.write(actual_type(value))
+		out.write(value, length_type=c_uint_)
+	elif type_ in (c_int_, c_uint_, c_int64_, c_uint64_):
+		out.write(type_(value))
 	elif type_ == LDF:
 		ldf_text = value.to_str()
-		out.write(ldf_text, length_type=c_uint)
+		out.write(ldf_text, length_type=c_uint_)
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
-	elif type_ == GameObject:
+	elif issubclass(type_, GameObject):
 		if value is None:
-			out.write(c_int64(0))
+			out.write(c_int64_(0))
 		else:
-			out.write(c_int64(value.object_id))
+			out.write(c_int64_(value.object_id))
 	elif inspect.isclass(type_) and issubclass(type_, Serializable):
 		type_.serialize(value, out)
 	elif issubclass(type_, Sequence):
@@ -521,6 +536,7 @@ from .components.char import CharacterComponent
 from .components.collectible import CollectibleComponent
 from .components.comp107 import Comp107Component
 from .components.comp108 import Comp108Component
+from .components.component import Component
 from .components.destructible import DestructibleComponent
 from .components.exhibit import ExhibitComponent
 from .components.inventory import InventoryComponent, ItemComponent
@@ -546,7 +562,7 @@ from .components.switch import SwitchComponent
 from .components.trigger import TriggerComponent
 from .components.vendor import VendorComponent
 
-component = OrderedDict()
+component: Dict[int, Tuple[Type[Component], ...]] = OrderedDict()
 component[108] = Comp108Component,
 component[1] = ControllablePhysicsComponent,
 component[3] = SimplePhysicsComponent,

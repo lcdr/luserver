@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from luserver.game_object import c_int_, GameObject
+from luserver.game_object import c_int, E, GameObject
 from luserver.components.mission import TaskType
 from luserver.math.quaternion import Quaternion
 from luserver.math.vector import Vector3
@@ -100,6 +100,6 @@ class ScriptComponent(script.ScriptComponent):
 	def on_player_destruction(self, player):
 		self.object.destructible.simply_die()
 
-	def fire_event_server_side(self, args:str=None, param1:c_int_=-1, param2:c_int_=-1, param3:c_int_=-1, sender:GameObject=None):
+	def fire_event_server_side(self, args:str=E, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=E):
 		if args == "stopPlaying":
 			self.stop_playing()

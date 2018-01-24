@@ -1,8 +1,11 @@
 import logging
+from typing import cast
 
 from pyraknet.bitstream import c_int64, c_uint
 from ...bitstream import WriteStream
-from ...game_object import broadcast, c_int_, c_int64_, c_uint_, GameObject, Mapping, single
+from ...game_object import broadcast, c_int, E, GameObject, Mapping, Player, single
+from ...game_object import c_int64 as c_int64_
+from ...game_object import c_uint as c_uint_
 from ...messages import WorldClientMsg
 from ...world import server
 from ...math.vector import Vector3
@@ -17,11 +20,13 @@ class DeleteReason:
 	BreakingModelApart = 2
 
 class CharProperty:
+	object: Player
+
 	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=0, response:c_int_=0, rotation:Quaternion=Quaternion.identity):
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=None, response:c_int=0, rotation:Quaternion=Quaternion.identity):
 		pass
 
-	def update_model_from_client(self, model_id:c_int64_=None, position:Vector3=None, rotation:Quaternion=Quaternion.identity):
+	def update_model_from_client(self, model_id:c_int64_=E, position:Vector3=E, rotation:Quaternion=Quaternion.identity):
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = server.new_object_id()
@@ -64,10 +69,10 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64_=None, lxfml_data_compressed:bytes=None, time_taken_in_ms:c_uint_=None):
+	def b_b_b_save_request(self, local_id:c_int64_=E, lxfml_data_compressed:bytes=E, time_taken_in_ms:c_uint_=E):
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
-		save_response.write(c_int64(local_id))
+		save_response.write(c_int64(cast(int, local_id)))
 		save_response.write(c_uint(0))
 		save_response.write(c_uint(1))
 		save_response.write(c_int64(server.new_object_id()))
@@ -75,11 +80,11 @@ class CharProperty:
 		server.send(save_response, self.address)
 
 	@single
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=None, items_total:c_int_=0):
+	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=E, items_total:c_int=0):
 		pass
 
 	@single
-	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int_=None, model_id:c_int64_=None):
+	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=E, model_id:c_int64_=E):
 		pass
 
 	def property_contents_from_client(self, query_db:bool=False):
