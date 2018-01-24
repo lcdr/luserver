@@ -3,7 +3,7 @@ import persistent.wref
 from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream
 from pyraknet.messages import Address
 from ..bitstream import WriteStream
-from ..game_object import GameObject
+from ..game_object import Player
 from ..messages import SocialMsg, WorldClientMsg
 from ..world import server
 
@@ -70,7 +70,7 @@ class SocialHandling:
 			# friend cannot be found
 			self._send_add_friend_response(_AddFriendReturnCode.Failure, address, requested_name=requested_friend_name)
 
-	def _send_add_friend_response(self, return_code: int, address: Address, friend: GameObject=None, requested_name: str=None) -> None:
+	def _send_add_friend_response(self, return_code: int, address: Address, friend: Player=None, requested_name: str=None) -> None:
 		response = WriteStream()
 		response.write_header(WorldClientMsg.AddFriendResponse)
 		response.write(c_ubyte(return_code))

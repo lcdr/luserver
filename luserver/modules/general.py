@@ -10,7 +10,7 @@ from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadSt
 from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
-from ..game_object import GameObject
+from ..game_object import Player
 from ..ldf import LDF, LDFDataType
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server, World
@@ -102,8 +102,8 @@ class GeneralHandling:
 		chardata.write_header(WorldClientMsg.CharacterData)
 
 		root = ET.Element("obj")
-		char_ = ET.SubElement(root, "char", cc=str(player.char.currency))
-		unlocked_emotes = ET.SubElement(char_, "ue")
+		char = ET.SubElement(root, "char", cc=str(player.char.currency))
+		unlocked_emotes = ET.SubElement(char, "ue")
 		for emote_id in player.char.unlocked_emotes:
 			ET.SubElement(unlocked_emotes, "e", id=str(emote_id))
 		inv = ET.SubElement(root, "inv")
@@ -120,14 +120,14 @@ class GeneralHandling:
 				optional = {}
 				if item.count != 1:
 					optional["c"] = str(item.count)
-				ET.SubElement(in_0, "i", l=str(item.lot), id=str(item.object_id), s=str(index), **optional)
+				ET.SubElement(in_0, "i", optional, l=str(item.lot), id=str(item.object_id), s=str(index))
 
 		in_2 = ET.SubElement(items, "in", t="2")
 		for index, brick in enumerate(player.inventory.bricks):
 			optional = {}
 			if brick.count != 1:
 				optional["c"] = str(brick.count)
-			ET.SubElement(in_2, "i", l=str(brick.lot), id=str(brick.object_id), s=str(index), **optional)
+			ET.SubElement(in_2, "i", optional, l=str(brick.lot), id=str(brick.object_id), s=str(index))
 
 		in_5 = ET.SubElement(items, "in", t="5")
 		for index, model in enumerate(player.inventory.models):
@@ -135,11 +135,10 @@ class GeneralHandling:
 				optional = {}
 				if model.count != 1:
 					optional["c"] = str(model.count)
-				i = ET.SubElement(in_5, "i", l=str(model.lot), id=str(model.object_id), s=str(index), **optional)
+				i = ET.SubElement(in_5, "i", optional, l=str(model.lot), id=str(model.object_id), s=str(index))
 				if hasattr(model, "module_lots"):
 					module_lots = [(LDFDataType.INT32, i) for i in model.module_lots]
-					module_lots = LDF().to_str_type(LDFDataType.STRING, module_lots)
-					ET.SubElement(i, "x", ma=module_lots)
+					ET.SubElement(i, "x", ma=LDF().to_str_type(LDFDataType.STRING, module_lots))
 
 		in_7 = ET.SubElement(items, "in", t="7")
 		for index, behavior in enumerate(player.inventory.behaviors):
@@ -147,18 +146,18 @@ class GeneralHandling:
 				optional = {}
 				if behavior.count != 1:
 					optional["c"] = str(behavior.count)
-				ET.SubElement(in_7, "i", l=str(behavior.lot), id=str(behavior.object_id), s=str(index), **optional)
+				ET.SubElement(in_7, "i", optional, l=str(behavior.lot), id=str(behavior.object_id), s=str(index))
 
 		flag = ET.SubElement(root, "flag")
-		i = 0
+		j = 0
 		while True:
 			# split the flags into 64 bit chunks
-			chunk = player.char.flags >> (64*i)
+			chunk = player.char.flags >> (64*j)
 			if not chunk:
 				break
 			chunk &= 0xffffffffffffffff
-			ET.SubElement(flag, "f", id=str(i), v=str(chunk))
-			i += 1
+			ET.SubElement(flag, "f", id=str(j), v=str(chunk))
+			j += 1
 
 		mis = ET.SubElement(root, "mis")
 		done = ET.SubElement(mis, "done")
@@ -246,7 +245,7 @@ class GeneralHandling:
 		if player.stats.life != 0:
 			self._check_collisions(player)
 
-	def _check_collisions(self, player: GameObject) -> None:
+	def _check_collisions(self, player: Player) -> None:
 		collisions = []
 		for obj, coll in self.tracked_objects.items():
 			if coll.is_point_within(player.physics.position):

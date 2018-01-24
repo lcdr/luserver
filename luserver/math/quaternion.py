@@ -18,7 +18,7 @@ class Quaternion(Serializable):
 		pass
 
 	@overload
-	def __init__(self, x: Real, y: Real, z: Real, w: Real):
+	def __init__(self, x: float, y: float, z: float, w: float):
 		pass
 
 	@overload

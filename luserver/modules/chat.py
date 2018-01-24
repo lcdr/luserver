@@ -8,7 +8,7 @@ from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, ReadS
 from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
-from ..game_object import GameObject
+from ..game_object import GameObject, Player
 from ..messages import SocialMsg, WorldClientMsg, WorldServerMsg
 from ..world import server
 from ..interfaces.plugin import object_selector
@@ -212,7 +212,7 @@ class ChatHandling:
 			recipient = server.find_player_by_name(recipient_name)
 			self.send_private_chat_message(sender, text, recipient)
 
-	def parse_command(self, command: str, sender: GameObject) -> None:
+	def parse_command(self, command: str, sender: Player) -> None:
 		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)
 		try:
 			args = self._chat_parser.parse_args(command.split())

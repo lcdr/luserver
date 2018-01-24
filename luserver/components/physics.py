@@ -2,7 +2,7 @@ import enum
 import random
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
-from ..game_object import broadcast, GameObject
+from ..game_object import broadcast, E, Player
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -39,7 +39,7 @@ class _PhysicsComponent(Component):
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 
-	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner: GameObject) -> None:
+	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner: Player) -> None:
 		if currency_min is not None and currency_max is not None:
 			currency = random.randint(currency_min, currency_max)
 			owner.char.drop_client_loot(currency=currency, item_template=-1, loot_id=0, owner=owner, source_obj=self.object)
@@ -49,7 +49,7 @@ class _PhysicsComponent(Component):
 			for lot in loot.elements():
 				self.drop_loot(lot, owner)
 
-	def drop_loot(self, lot, owner: GameObject) -> None:
+	def drop_loot(self, lot, owner: Player) -> None:
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
 		object_id = server.new_spawned_id()
 		owner.char.dropped_loot[object_id] = lot
@@ -134,7 +134,7 @@ class ControllablePhysicsComponent(_Controllable):
 
 	# not sure which component this belongs to, putting it here for now
 	@broadcast
-	def lock_node_rotation(self, node_name:bytes=None):
+	def lock_node_rotation(self, node_name:bytes=E):
 		pass
 
 class SimplePhysicsComponent(_PhysicsComponent):

@@ -1,4 +1,5 @@
 from pyraknet.bitstream import c_bit, c_uint
+from ..game_object import E
 from .component import Component
 from .mission import TaskType
 
@@ -30,6 +31,6 @@ class PetComponent(Component):
 		player.char.notify_pet_taming_puzzle_selected(bricks=[30367, 21, 48729, 1, 6141, 1, 6143, 21])
 		#self.flags = 80
 
-	def pet_taming_minigame_result(self, player, success:bool=None):
+	def pet_taming_minigame_result(self, player, success:bool=E):
 		if success:
 			player.char.update_mission_task(TaskType.TamePet, self.object.lot)

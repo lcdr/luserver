@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from ..game_object import broadcast, c_int_, c_int64_, GameObject
+from ..game_object import broadcast, c_int, c_int64, E, GameObject, Player
 from ..world import server
 from .component import Component
 
@@ -34,16 +34,16 @@ class LaunchpadComponent(Component):
 		else:
 			player.char.disp_tooltip("You don't have a rocket!")
 
-	def launch(self, player: GameObject, rocket) -> None:
+	def launch(self, player: Player, rocket) -> None:
 		player.char.traveling_rocket = rocket.module_lots
 		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 
-	def fire_event_server_side(self, player, args:str=None, param1:c_int_=-1, param2:c_int_=-1, param3:c_int_=-1, sender:GameObject=None):
+	def fire_event_server_side(self, player, args:str=E, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=E):
 		if args == "ZonePlayer":
 			if param2:
 				param3 = self._default_world_id
 			asyncio.ensure_future(player.char.transfer_to_world((param3, 0, param1), self._respawn_point_name))
 
 	@broadcast
-	def fire_event_client_side(self, args:str=None, obj:GameObject=None, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=None):
+	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64=0, param2:c_int=-1, sender:GameObject=E):
 		pass

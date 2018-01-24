@@ -3,7 +3,8 @@ import logging
 import pprint
 
 from pyraknet.bitstream import c_bit, c_uint, c_uint64, ReadStream, WriteStream
-from ..game_object import broadcast, c_int_, c_int64_, c_uint_, single
+from ..game_object import broadcast, c_int, c_int64, E, single
+from ..game_object import c_uint as c_uint_
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
@@ -186,10 +187,10 @@ class SkillComponent(Component):
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int_=0, last_clicked_posit:Vector3=(0, 0, 0), optional_originator_id:c_int64_=None, optional_target_id:c_int64_=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=None, skill_id:c_uint_=None, ui_skill_handle:c_uint_=0):
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0):
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64_=0, caster_latency:float=0, cast_type:c_int_=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64_=None, optional_target_id:c_int64_=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=None, skill_id:c_uint_=None, ui_skill_handle:c_uint_=0):
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0):
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -203,7 +204,7 @@ class SkillComponent(Component):
 
 		self.echo_start_skill(used_mouse, caster_latency, cast_type, last_clicked_posit, optional_originator_id, optional_target_id, originator_rot, bitstream, skill_id, ui_skill_handle, player=player)
 
-		bitstream = ReadStream(bitstream)
+		stream = ReadStream(bitstream)
 
 		if hasattr(self.object, "char"):
 			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
@@ -218,33 +219,33 @@ class SkillComponent(Component):
 		behavior, imagination_cost = server.db.skill_behavior[skill_id]
 		self.original_target_id = target.object_id
 		self.skill_cast_failed = False
-		self.deserialize_behavior(behavior, bitstream, target)
+		self.deserialize_behavior(behavior, stream, target)
 		if not self.skill_cast_failed:
 			self.object.stats.imagination -= imagination_cost
 
-		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream.read_remaining())
+		if not stream.all_read():
+			log.warning("not all read, remaining: %s", stream.read_remaining())
 
 		# remove consumable
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
 			self.object.inventory.remove_item(InventoryType.Items, object_id=consumable_item_id)
 
-	def select_skill(self, from_skill_set:bool=False, skill_id:c_int_=None):
+	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=E):
 		pass
 
 	@broadcast
-	def add_skill(self, ai_combat_weight:c_int_=0, from_skill_set:bool=False, cast_type:c_int_=0, time_secs:float=-1, times_can_cast:c_int_=-1, skill_id:c_uint_=None, slot_id:c_int_=-1, temporary:bool=True):
+	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint_=E, slot_id:c_int=-1, temporary:bool=True):
 		pass
 
 	@single
-	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=None):
+	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=E):
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:bool=False, bitstream:bytes=None, ui_behavior_handle:c_uint_=None, ui_skill_handle:c_uint_=None):
+	def echo_sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E):
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:bytes=None, ui_behavior_handle:c_uint_=None, ui_skill_handle:c_uint_=None):
+	def sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E):
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -253,12 +254,12 @@ class SkillComponent(Component):
 		if ui_behavior_handle not in self.delayed_behaviors:
 			log.error("Handle %i not handled!", ui_behavior_handle)
 			return
-		bitstream = ReadStream(bitstream)
+		stream = ReadStream(bitstream)
 		behavior = self.delayed_behaviors[ui_behavior_handle]
 		target = self.object
 		if behavior is None:
-			behavior_id = bitstream.read(c_uint)
-			target_id = bitstream.read(c_uint64)
+			behavior_id = stream.read(c_uint)
+			target_id = stream.read(c_uint64)
 			if behavior_id != 0:
 				behavior = server.db.behavior[behavior_id]
 			if target_id != 0:
@@ -266,14 +267,14 @@ class SkillComponent(Component):
 
 		if behavior is not None: # no, this is not an "else" from above
 			self.original_target_id = target.object_id
-			self.deserialize_behavior(behavior, bitstream, target)
-		if not bitstream.all_read():
-			log.warning("not all read, remaining: %s", bitstream.read_remaining())
+			self.deserialize_behavior(behavior, stream, target)
+		if not stream.all_read():
+			log.warning("not all read, remaining: %s", stream.read_remaining())
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64_=0, target_id:c_int64_=0, bitstream:bytes=None):
-		bitstream = ReadStream(bitstream)
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=E):
+		stream = ReadStream(bitstream)
 		if target_id == 0:
 			target = self.object
 		else:
@@ -288,7 +289,7 @@ class SkillComponent(Component):
 
 		for behav in self.projectile_behaviors[local_id]:
 			self.original_target_id = target.object_id
-			self.deserialize_behavior(behav, bitstream, target)
+			self.deserialize_behavior(behav, stream, target)
 		del self.projectile_behaviors[local_id]
 		# todo: do client projectile impact
 

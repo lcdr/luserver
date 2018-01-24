@@ -3,7 +3,7 @@ import logging
 import os
 import struct
 import time
-from typing import SupportsBytes, Union
+from typing import Set, SupportsBytes, Union
 
 import pyraknet.server
 from pyraknet.messages import Address
@@ -19,8 +19,8 @@ class Server:
 
 	def __init__(self, address: Address, max_connections: int):
 		self._server = pyraknet.server.Server(address, max_connections, Server.SERVER_PASSWORD)
-		self.not_console_logged_packets = set()
-		self.file_logged_packets = set()
+		self.not_console_logged_packets: Set[str] = set()
+		self.file_logged_packets: Set[str] = set()
 
 	def _on_lu_packet(self, data: bytes, address: Address) -> None:
 		self._log_packet(data, received=True)

@@ -23,7 +23,7 @@ class Vector3(Serializable):
 		pass
 
 	@overload
-	def __init__(self, x: Real, y: Real, z: Real):
+	def __init__(self, x: float, y: float, z: float):
 		pass
 
 	@overload

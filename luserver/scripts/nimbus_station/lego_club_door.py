@@ -1,6 +1,6 @@
 import luserver.scripts.general.teleport_to_ns_or_nt as script
 from luserver.amf3 import AMF3
-from luserver.game_object import c_int_
+from luserver.game_object import c_int, E
 from luserver.world import server
 from luserver.components.char import TerminateType
 
@@ -16,7 +16,7 @@ class ScriptComponent(script.ScriptComponent):
 		else:
 			player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "Lobby", "context": {"user": str(player.object_id), "callbackObj": str(self.object.object_id), "HelpVisible": "show", "type": "Lego_Club_Valid"}}))
 
-	def message_box_respond(self, player, button:c_int_=None, id:str=None, user_data:str=None):
+	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
 		if id == "PlayButton":
 			self.transfer(player, (1700, 0, 0), "")
 		elif id == "TransferBox":

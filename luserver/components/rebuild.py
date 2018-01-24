@@ -1,7 +1,9 @@
 import time
 
 from pyraknet.bitstream import c_bit, c_float, c_uint
-from ..game_object import broadcast, c_int_, c_uint_, GameObject
+from ..game_object import broadcast, E, GameObject, Player
+from ..game_object import c_int as c_int_
+from ..game_object import c_uint as c_uint_
 from ..world import server
 from ..math.vector import Vector3
 from .char import TerminateType
@@ -131,7 +133,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)
 		server.replica_manager.destruct(self.object)
 
-	def rebuild_cancel(self, early_release:bool=None, user:GameObject=None):
+	def rebuild_cancel(self, early_release:bool=E, user:Player=E):
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
 				self.object.cancel_callback(handle)
@@ -149,9 +151,9 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
 
 	@broadcast
-	def enable_rebuild(self, enable:bool=None, fail:bool=None, success:bool=None, fail_reason:c_uint_=FailReason.NotGiven, duration:float=None, user:GameObject=None):
+	def enable_rebuild(self, enable:bool=E, fail:bool=E, success:bool=E, fail_reason:c_uint_=FailReason.NotGiven, duration:float=E, user:GameObject=E):
 		pass
 
 	@broadcast
-	def rebuild_notify_state(self, prev_state:c_int_=None, state:c_int_=None, player:GameObject=None):
+	def rebuild_notify_state(self, prev_state:c_int_=E, state:c_int_=E, player:GameObject=E):
 		pass
