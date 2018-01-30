@@ -25,7 +25,7 @@ class ModularBuildComponent(Component):
 		new_item = player.inventory.move_item_between_inventory_types(inventory_type_a=InventoryType.TempModels, inventory_type_b=InventoryType.Models, object_id=0, template_id=template_id)
 		player.inventory.equip_inventory(item_to_equip=new_item.object_id)
 
-	def modular_build_finish(self, player, module_lots:Sequence[c_ubyte, c_int]=None):
+	def modular_build_finish(self, player, module_lots:Sequence[c_ubyte, c_int]=E):
 		for model in player.inventory.temp_models.copy():
 			if model.lot in module_lots:
 				player.inventory.remove_item(InventoryType.TempModels, model)

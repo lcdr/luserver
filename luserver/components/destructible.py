@@ -1,5 +1,7 @@
+from typing import Union
+
 from pyraknet.bitstream import c_bit
-from ..game_object import broadcast, c_int, E, GameObject
+from ..game_object import broadcast, c_int, E, GameObject, OBJ_NONE, PhysicsObject, Player, StatsObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -9,7 +11,12 @@ class KillType:
 	Violent = 0
 	Silent = 1
 
+class PS(PhysicsObject, StatsObject):
+	pass
+
 class DestructibleComponent(Component):
+	object: PS # safe to assume that a destructible object is also a physics object - only 2 entries (6622, 6908) in the database didn't match, and those were test objects
+
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.comp_id = comp_id
@@ -41,15 +48,19 @@ class DestructibleComponent(Component):
 
 		if damage > self.object.stats.armor:
 			if damage >= self.object.stats.armor + self.object.stats.life:
-				self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=dealer, loot_owner=dealer)
+				if isinstance(dealer, Player):
+					loot_owner = dealer
+				else:
+					loot_owner = OBJ_NONE
+				self.request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=dealer, loot_owner=loot_owner)
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
-	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=None, loot_owner:GameObject=None):
+	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=OBJ_NONE, loot_owner:Player=OBJ_NONE):
 		"""Shorthand for request_die with default values."""
 		self.request_die(False, death_type, 0, 0, 10, kill_type, killer, loot_owner)
 
-	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=KillType.Violent, killer:GameObject=E, loot_owner:GameObject=E):
+	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=KillType.Violent, killer:GameObject=E, loot_owner:Player=E):
 		if self.object.stats.life == 0:
 			# already dead
 			return

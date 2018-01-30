@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import logging
 import random
@@ -41,7 +42,7 @@ class AuthServer(commonserver.Server):
 		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
-		self.register_handler(AuthServerMsg.LoginRequest, self._on_login_request)
+		self.register_handler(AuthServerMsg.LoginRequest, lambda request, address: asyncio.ensure_future(self._on_login_request(request, address)))
 
 	def peer_type(self):
 		return AuthServerMsg.header()

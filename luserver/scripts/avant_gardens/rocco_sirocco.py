@@ -1,10 +1,10 @@
 import luserver.components.script as script
-from luserver.game_object import c_int, E, GameObject, single
+from luserver.game_object import c_int, E, GameObject, Player, single
 from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:GameObject=E):
+	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:Player=E):
 		if mission_id == 1728:
 			if mission_state == MissionState.Available:
 				# needed to send the mission mail

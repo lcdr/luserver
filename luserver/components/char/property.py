@@ -1,9 +1,8 @@
 import logging
-from typing import cast
 
 from pyraknet.bitstream import c_int64, c_uint
 from ...bitstream import WriteStream
-from ...game_object import broadcast, c_int, E, GameObject, Mapping, Player, single
+from ...game_object import broadcast, c_int, E, GameObject, Mapping, OBJ_NONE, Player, single
 from ...game_object import c_int64 as c_int64_
 from ...game_object import c_uint as c_uint_
 from ...messages import WorldClientMsg
@@ -23,7 +22,7 @@ class CharProperty:
 	object: Player
 
 	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=None, response:c_int=0, rotation:Quaternion=Quaternion.identity):
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=OBJ_NONE, response:c_int=0, rotation:Quaternion=Quaternion.identity):
 		pass
 
 	def update_model_from_client(self, model_id:c_int64_=E, position:Vector3=E, rotation:Quaternion=Quaternion.identity):
@@ -72,7 +71,7 @@ class CharProperty:
 	def b_b_b_save_request(self, local_id:c_int64_=E, lxfml_data_compressed:bytes=E, time_taken_in_ms:c_uint_=E):
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
-		save_response.write(c_int64(cast(int, local_id)))
+		save_response.write(c_int64(local_id))
 		save_response.write(c_uint(0))
 		save_response.write(c_uint(1))
 		save_response.write(c_int64(server.new_object_id()))
@@ -91,5 +90,5 @@ class CharProperty:
 		self.get_models_on_property(models={model: spawner for spawner, model in server.models})
 
 	@broadcast
-	def get_models_on_property(self, models:Mapping[c_uint, GameObject, GameObject]=None):
+	def get_models_on_property(self, models:Mapping[c_uint, GameObject, GameObject]=E):
 		pass

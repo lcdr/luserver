@@ -6,7 +6,7 @@ import logging
 import re
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, Dict, Generic, List, NewType, Tuple, Type, TypeVar, TYPE_CHECKING
+from typing import Callable, cast, Dict, Generic, List, NewType, Tuple, Type, TypeVar, TYPE_CHECKING, Union
 from typing import Sequence as Sequence_
 from typing import Mapping as Mapping_
 
@@ -89,7 +89,7 @@ class GameObject(Replica):
 		else:
 			self.parent = None
 
-		self.children = []
+		self.children: List[int] = []
 		self.groups = set_vars.get("groups", ())
 		if "respawn_name" in set_vars:
 			self.respawn_name = set_vars["respawn_name"]
@@ -367,6 +367,7 @@ class GameObject(Replica):
 				handler(**kwargs)
 
 	def _game_message_deserialize(self, message: ReadStream, type_):
+		value: Union[str, list, dict]
 		if type_ == float:
 			return message.read(c_float)
 		if type_ == bytes:
@@ -415,6 +416,16 @@ class Player(GameObject, Persistent):
 
 # backwards compatibility
 PersistentObject = Player
+
+OBJ_NONE = cast(Player, None)
+
+# these are for static typing and shouldn't actually be used
+class PhysicsObject(GameObject):
+	physics: "PhysicsComponent"
+
+class StatsObject(GameObject):
+	stats: "StatsSubcomponent"
+
 
 def _send_game_message(mode):
 	"""
@@ -507,7 +518,7 @@ def _game_message_serialize(out, type_, value):
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
 	elif issubclass(type_, GameObject):
-		if value is None:
+		if value is OBJ_NONE:
 			out.write(c_int64_(0))
 		else:
 			out.write(c_int64_(value.object_id))
@@ -547,7 +558,7 @@ from .components.model import ModelComponent
 from .components.modular_build import ModularBuildComponent
 from .components.moving_platform import MovingPlatformComponent
 from .components.pet import PetComponent
-from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
+from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, PhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
 from .components.property import PropertyEntranceComponent, PropertyManagementComponent, PropertyVendorComponent
 from .components.racing_control import RacingControlComponent
 from .components.rail import RailActivatorComponent
