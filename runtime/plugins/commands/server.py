@@ -155,6 +155,8 @@ class PhysicsDebug(ChatCommand):
 			set_vars["position"] = coll.position
 			set_vars["scale"] = math.sqrt(coll.sq_radius)/5
 			marker = server.spawn_object(6548, set_vars)
+		else:
+			raise TypeError(coll)
 		self.debug_markers.append(marker)
 
 class ResetPassword(ChatCommand):

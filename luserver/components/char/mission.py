@@ -163,5 +163,5 @@ class CharMission:
 		pass
 
 	@single
-	def notify_mission_task(self, mission_id:c_int=E, task_mask:c_int=E, updates:Sequence[c_ubyte, float]=None):
+	def notify_mission_task(self, mission_id:c_int=E, task_mask:c_int=E, updates:Sequence[c_ubyte, float]=E):
 		pass

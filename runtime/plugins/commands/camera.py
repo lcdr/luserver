@@ -29,10 +29,10 @@ class CamLookAt(ChatCommand):
 				server.chat.sys_msg_sender("Object not found")
 				return
 		else:
-			args.pos = Vector3(*args.pos)
-			config.ldf_set("xPos", LDFDataType.FLOAT, args.pos.x)
-			config.ldf_set("yPos", LDFDataType.FLOAT, args.pos.y)
-			config.ldf_set("zPos", LDFDataType.FLOAT, args.pos.z)
+			pos = Vector3(*args.pos)
+			config.ldf_set("xPos", LDFDataType.FLOAT, pos.x)
+			config.ldf_set("yPos", LDFDataType.FLOAT, pos.y)
+			config.ldf_set("zPos", LDFDataType.FLOAT, pos.z)
 
 		config.ldf_set("leadIn", LDFDataType.FLOAT, args.leadin)
 		config.ldf_set("leadOut", LDFDataType.FLOAT, args.leadout)
@@ -47,13 +47,17 @@ class CamShake(ChatCommand):
 		self.command.add_argument("--duration", type=float, default=1)
 		self.command.add_argument("--posfreq", type=float, default=1)
 		self.command.add_argument("--rotfreq", type=float, default=1)
-		self.command.add_argument("--ampl", nargs=3, type=float, default=Vector3.up)
-		self.command.add_argument("--rot", nargs=3, type=float, default=Vector3.up)
+		self.command.add_argument("--ampl", nargs=3, type=float, default=None)
+		self.command.add_argument("--rot", nargs=3, type=float, default=None)
 
 	def run(self, args, sender):
-		if not isinstance(args.ampl, Vector3):
+		if args.ampl is None:
+			args.ampl = Vector3.up
+		else:
 			args.ampl = Vector3(*args.ampl)
-		if not isinstance(args.rot, Vector3):
+		if args.rot is None:
+			args.rot = Vector3.up
+		else:
 			args.rot = Vector3(*args.rot)
 
 		config = LDF()

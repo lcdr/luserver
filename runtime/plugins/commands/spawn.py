@@ -38,7 +38,7 @@ class SpawnPhantom(ChatCommand):
 		self.command.add_argument("--type", choices=("wall", "cube"), default="cube")
 		self.command.add_argument("--effect", choices=("push", "attract", "repulse", "gravity", "friction"), default="push")
 		self.command.add_argument("--amount", type=float, default=500)
-		self.command.add_argument("--direction", nargs=3, type=float, default=Vector3.up)
+		self.command.add_argument("--direction", nargs=3, type=float, default=None)
 		self.command.add_argument("--scale", type=float, default=1)
 
 	def run(self, args, sender):
@@ -48,7 +48,11 @@ class SpawnPhantom(ChatCommand):
 		elif args.type == "cube":
 			lot = 5652
 			displacement = Vector3(0, 2.5, 0)
-		if not isinstance(args.direction, Vector3):
+		else:
+			raise ValueError
+		if args.direction is None:
+			args.direction = Vector3.up
+		else:
 			args.direction = Vector3(*args.direction)
 		set_vars = {
 			"scale": args.scale,

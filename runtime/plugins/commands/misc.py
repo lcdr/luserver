@@ -176,8 +176,7 @@ class Knockback(ChatCommand):
 		self.command.add_argument("direction", nargs=3, type=float)
 
 	def run(self, args, sender):
-		args.direction = Vector3(*args.direction)
-		sender.char.knockback(vector=args.direction)
+		sender.char.knockback(vector=Vector3(*args.direction))
 
 class Level(ChatCommand):
 	def __init__(self):
@@ -359,6 +358,8 @@ class Vendor(ChatCommand):
 			items = Vendor.MOD_ITEMS
 		elif args.items == "models":
 			items = Vendor.ALL_MODELS
+		else:
+			raise ValueError
 
 		vendor = server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
 		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]

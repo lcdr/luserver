@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from luserver.game_object import c_int64, GameObject, Player, single
+from luserver.game_object import c_int64, GameObject, OBJ_NONE, Player, single
 from luserver.ldf import LDFDataType
 from luserver.world import server
 from luserver.components.mission import MissionState, TaskType
@@ -39,7 +39,7 @@ class ScriptComponent(script.ScriptComponent):
 		fx.render.play_f_x_effect(name=b"TornadoVortex", effect_type="VortexOn")
 		fx.render.play_f_x_effect(name=b"silhouette", effect_type="onSilhouette")
 
-		self.notify_client_object(name="maelstromSkyOn", param1=0, param2=0, param_str=b"", param_obj=None)
+		self.notify_client_object(name="maelstromSkyOn", param1=0, param2=0, param_str=b"", param_obj=OBJ_NONE)
 
 	def on_spider_defeated(self):
 		player = [obj for obj in server.game_objects.values() if obj.lot == 1][0]
@@ -52,7 +52,7 @@ class ScriptComponent(script.ScriptComponent):
 			server.spawners["ROF_Targets_0"+str(i)].spawner.destroy()
 		for i in range(1, 9):
 			server.spawners["Zone"+str(i)+"Vol"].spawner.destroy()
-		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"DestroyMaelstrom", param_obj=None)
+		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"DestroyMaelstrom", param_obj=OBJ_NONE)
 		player.char.set_flag(True, FLAG_DEFEATED_SPIDER)
 		self.object.call_later(0.5, self.tornado_off)
 
@@ -71,10 +71,10 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.call_later(8, self.kill_fx_object)
 
 	def turn_sky_off(self):
-		self.notify_client_object(name="SkyOff", param1=0, param2=0, param_str=b"", param_obj=None)
+		self.notify_client_object(name="SkyOff", param1=0, param2=0, param_str=b"", param_obj=OBJ_NONE)
 
 	def show_vendor(self):
-		self.notify_client_object(name="vendorOn", param1=0, param2=0, param_str=b"", param_obj=None)
+		self.notify_client_object(name="vendorOn", param1=0, param2=0, param_str=b"", param_obj=OBJ_NONE)
 
 	def kill_fx_object(self):
 		fx = server.get_objects_in_group("FXObject")[0]
@@ -82,12 +82,12 @@ class ScriptComponent(script.ScriptComponent):
 		server.spawners["FXObject"].spawner.destroy()
 
 	def on_property_rented(self, player):
-		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"ShowProperty", param_obj=None)
+		self.notify_client_object(name="PlayCinematic", param1=0, param2=0, param_str=b"ShowProperty", param_obj=OBJ_NONE)
 		player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=951)
 		self.object.call_later(2, self.bounds_on)
 
 	def bounds_on(self):
-		self.notify_client_object(name="boundsAnim", param1=0, param2=0, param_str=b"", param_obj=None)
+		self.notify_client_object(name="boundsAnim", param1=0, param2=0, param_str=b"", param_obj=OBJ_NONE)
 
 
 	def on_build_mode(self, start):
@@ -127,15 +127,15 @@ class ScriptComponent(script.ScriptComponent):
 	def on_model_put_away(self, player):
 		player.char.set_flag(True, 111)
 
-	def zone_property_model_rotated(self, player:Player=0, property_id:c_int64=0):
+	def zone_property_model_rotated(self, player:Player=OBJ_NONE, property_id:c_int64=0):
 		if not player.char.get_flag(110):
 			player.char.set_flag(True, 110)
 			if 891 in player.char.missions and player.char.missions[891].state == MissionState.Active:
 				self.set_network_var("Tooltip", LDFDataType.STRING, "PlaceModel")
 				self.tutorial = "place_model"
 
-	def zone_property_model_removed_while_equipped(self, player:Player=0, property_id:c_int64=0):
+	def zone_property_model_removed_while_equipped(self, player:Player=OBJ_NONE, property_id:c_int64=0):
 		self.on_model_put_away(player)
 
-	def zone_property_model_equipped(self, player:GameObject=None, property_id:c_int64=0):
+	def zone_property_model_equipped(self, player:GameObject=OBJ_NONE, property_id:c_int64=0):
 		self.set_network_var("PlayerAction", LDFDataType.STRING, "ModelEquipped")

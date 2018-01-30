@@ -48,14 +48,14 @@ class CharTrade:
 	def server_trade_initial_reply(self, invitee:GameObject=E, result_type:c_uint_=E, name:str=E):
 		pass
 
-	def client_trade_update(self, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=None):
+	def client_trade_update(self, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E):
 		self.trade.currency_offered = currency
 		self.trade.items_offered = items
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_update(currency=currency, items=items)
 
 	@single
-	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=None):
+	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E):
 		if about_to_perform:
 			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:

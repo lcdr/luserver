@@ -8,7 +8,7 @@ from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 
-class _PhysicsComponent(Component):
+class PhysicsComponent(Component):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.physics = self
@@ -55,7 +55,7 @@ class _PhysicsComponent(Component):
 		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
-class _Controllable(_PhysicsComponent):
+class _Controllable(PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["on_ground"] = "physics_data_flag"
@@ -137,7 +137,7 @@ class ControllablePhysicsComponent(_Controllable):
 	def lock_node_rotation(self, node_name:bytes=E):
 		pass
 
-class SimplePhysicsComponent(_PhysicsComponent):
+class SimplePhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
 		if is_creation:
 			out.write(c_bit(False))
@@ -150,7 +150,7 @@ class SimplePhysicsComponent(_PhysicsComponent):
 			out.write(self.rotation)
 			self.physics_data_flag = False
 
-class RigidBodyPhantomPhysicsComponent(_PhysicsComponent):
+class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
 	def serialize(self, out, is_creation):
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
@@ -250,7 +250,7 @@ class PhysicsEffect(enum.IntEnum):
 	Gravity = 3
 	Friction = 4
 
-class PhantomPhysicsComponent(_PhysicsComponent):
+class PhantomPhysicsComponent(PhysicsComponent):
 	def __init__(self, obj, set_vars, comp_id):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["physics_effect_active"] = "physics_effect_flag"

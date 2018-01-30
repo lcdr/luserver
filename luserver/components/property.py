@@ -175,7 +175,7 @@ class PropertyEntranceComponent(Component):
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
 	@single
-	def property_select_query(self, nav_offset:c_int_=E, there_are_more:bool=E, my_clone_id:c_int_=E, has_featured_property:bool=E, was_friends:bool=E, properties:Sequence[c_uint, PropertySelectQueryProperty]=None):
+	def property_select_query(self, nav_offset:c_int_=E, there_are_more:bool=E, my_clone_id:c_int_=E, has_featured_property:bool=E, was_friends:bool=E, properties:Sequence[c_uint, PropertySelectQueryProperty]=E):
 		pass
 
 	@broadcast

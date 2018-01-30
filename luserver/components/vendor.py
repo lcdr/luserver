@@ -46,5 +46,5 @@ class VendorComponent(Component):
 			log.warning("Item not found")
 
 	@single
-	def vendor_status_update(self, update_only:bool=E, inv:Mapping[c_uint, c_int, c_int]=None):
+	def vendor_status_update(self, update_only:bool=E, inv:Mapping[c_uint, c_int, c_int]=E):
 		pass

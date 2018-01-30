@@ -25,6 +25,7 @@ from typing import Callable, Dict, List, Tuple
 
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
+from pyraknet.server import Event
 from .bitstream import WriteStream
 from .messages import GeneralMsg, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
@@ -40,7 +41,7 @@ class Server(_Server, ABC):
 		self.conn = db_conn
 		self.db = self.conn.root
 		self._packet_handlers: Dict[Tuple[int, int], List[Callable[..., None]]] = {}
-		self._server.add_handler("user_packet", self._on_lu_packet)
+		self._server.add_handler(Event.UserPacket, self._on_lu_packet)
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
 
 	def _on_lu_packet(self, data: bytes, address: Address) -> None:
@@ -59,10 +60,7 @@ class Server(_Server, ABC):
 		if (header, subheader) in self._packet_handlers:
 			for handler in self._packet_handlers[(header, subheader)]:
 				stream.read_offset = read_offset
-				if asyncio.iscoroutinefunction(handler):
-					asyncio.ensure_future(handler(stream, address))
-				else:
-					handler(stream, address)
+				handler(stream, address)
 
 	def register_handler(self, packet_id, handler: Callable[[ReadStream, Address], None]) -> None:
 		header = packet_id.header()

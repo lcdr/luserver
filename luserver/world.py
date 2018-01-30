@@ -77,6 +77,7 @@ from persistent.mapping import PersistentMapping
 from pyraknet.bitstream import ReadStream
 from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
+from pyraknet.server import Event
 from .commonserver import DisconnectReason, Server
 from .game_object import GameObject, ObjectID
 from .messages import WorldServerMsg
@@ -113,8 +114,8 @@ class WorldServer(Server):
 		global _server
 		_server = self
 		self.external_address = external_host, address[1]
-		self._server.add_handler("network_init", self._on_network_init)
-		self._server.add_handler("disconnect_or_connection_lost", self._on_disconnect_or_connection_lost)
+		self._server.add_handler(Event.NetworkInit, self._on_network_init)
+		self._server.add_handler(Event.Disconnect, self._on_disconnect_or_connection_lost)
 		self._server.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")

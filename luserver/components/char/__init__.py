@@ -10,7 +10,7 @@ from pyraknet.bitstream import c_bit, c_bool, c_ubyte, c_uint64, c_ushort
 from ...amf3 import AMF3
 from ...auth import GMLevel
 from ...bitstream import WriteStream
-from ...game_object import broadcast, c_int, c_int64, c_uint, E, GameObject, Player, single
+from ...game_object import broadcast, c_int, c_int64, c_uint, E, GameObject, OBJ_NONE, Player, single
 from ...messages import WorldClientMsg
 from ...world import server, World
 from ...math.quaternion import Quaternion
@@ -451,7 +451,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
 
 	@single
-	def set_currency(self, currency:c_int64=E, loot_type:c_int=0, position:Vector3=E, source_lot:c_int=-1, source_object:GameObject=None, source_trade:GameObject=None, source_type:c_int=0):
+	def set_currency(self, currency:c_int64=E, loot_type:c_int=0, position:Vector3=E, source_lot:c_int=-1, source_object:GameObject=OBJ_NONE, source_trade:GameObject=OBJ_NONE, source_type:c_int=0):
 		self.currency = currency
 
 	def pickup_currency(self, currency:c_uint=E, position:Vector3=E):
@@ -476,7 +476,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		self.object.stats.imagination = 6
 
 	@broadcast
-	def knockback(self, caster:GameObject=None, originator:GameObject=None, knock_back_time_ms:c_int=0, vector:Vector3=E):
+	def knockback(self, caster:GameObject=OBJ_NONE, originator:GameObject=OBJ_NONE, knock_back_time_ms:c_int=0, vector:Vector3=E):
 		pass
 
 	@single
@@ -573,7 +573,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		pass
 
 	@broadcast
-	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=None, build_start_pos:Vector3=E, source_bag:c_int=E, source_id:c_int64=E, source_lot:c_int=E, source_type:c_int=E, target_id:c_int64=E, target_lot:c_int=E, target_pos:Vector3=E, target_type:c_int=E):
+	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=OBJ_NONE, build_start_pos:Vector3=E, source_bag:c_int=E, source_id:c_int64=E, source_lot:c_int=E, source_type:c_int=E, target_id:c_int64=E, target_lot:c_int=E, target_pos:Vector3=E, target_type:c_int=E):
 		self.object.inventory.push_equipped_items_state()
 
 	@broadcast
@@ -638,7 +638,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		pass
 
 	@single
-	def start_rail_movement(self, damage_immune:bool=True, no_aggro:bool=True, notify_activator:bool=False, show_name_billboard:bool=True, camera_locked:bool=True, collision_enabled:bool=True, loop_sound:str=E, path_go_forward:bool=True, path_name:str=E, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator:GameObject=None, start_sound:str=E, stop_sound:str=E, use_db:bool=True):
+	def start_rail_movement(self, damage_immune:bool=True, no_aggro:bool=True, notify_activator:bool=False, show_name_billboard:bool=True, camera_locked:bool=True, collision_enabled:bool=True, loop_sound:str=E, path_go_forward:bool=True, path_name:str=E, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator:GameObject=OBJ_NONE, start_sound:str=E, stop_sound:str=E, use_db:bool=True):
 		pass
 
 	@single
