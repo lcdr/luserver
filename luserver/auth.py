@@ -12,7 +12,8 @@ except ImportError:
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
 
-from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort
+from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.messages import Address
 from . import commonserver
 from .bitstream import WriteStream
 from .messages import AuthServerMsg, WorldClientMsg
@@ -38,7 +39,7 @@ class _LoginReturnCode:
 	AccountNotActivated = 14
 
 class AuthServer(commonserver.Server):
-	def __init__(self, host, max_connections, db_conn):
+	def __init__(self, host: str, max_connections: int, db_conn):
 		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
@@ -47,7 +48,7 @@ class AuthServer(commonserver.Server):
 	def peer_type(self):
 		return AuthServerMsg.header()
 
-	async def _on_login_request(self, request, address):
+	async def _on_login_request(self, request: ReadStream, address: Address):
 		return_code = _LoginReturnCode.InsufficientAccountPermissions # needed to display error message
 		message = ""
 		redirect_host, redirect_port = "", 0
@@ -156,7 +157,7 @@ class PasswordState:
 	Set = 2
 
 class Account(Persistent):
-	def __init__(self, username, password):
+	def __init__(self, username: str, password: str):
 		self.username = username
 		self.password = encryption.encrypt(password)
 		self.password_state = PasswordState.Set
@@ -167,7 +168,7 @@ class Account(Persistent):
 		self.characters = PersistentMapping()
 		self.characters.selected = nothing
 
-	def set_password(self, password):
+	def set_password(self, password: str) -> None:
 		self.password = encryption.encrypt(password)
 
 # I'd use a lambda but that isn't well handled by the db

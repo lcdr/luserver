@@ -1,9 +1,12 @@
-from pyraknet.bitstream import c_bit, c_float, c_int
+from typing import Dict
+
+from pyraknet.bitstream import c_bit, c_float, c_int, WriteStream
+from ..game_object import GameObject
 from ..ldf import LDFDataType
 from .component import Component
 
 class ModelComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		if hasattr(self.object, "pet"):
 			return
@@ -13,7 +16,7 @@ class ModelComponent(Component):
 		self.object.config.ldf_set("componentWhitelist", LDFDataType.INT32, 1)
 		self.object.config.ldf_set("modelType", LDFDataType.INT32, -1)
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if hasattr(self.object, "pet"):
 			return
 		out.write(c_bit(True))

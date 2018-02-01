@@ -24,7 +24,7 @@ class ScriptComponent(script.ScriptComponent):
 	def banana_pos(self):
 		offset = Vector3(-5, 12, 0)
 		pos = self.object.physics.position
-		return pos + offset.rotated(self.object.physics.rotation)
+		return pos + self.object.physics.rotation.rotate(offset)
 
 	def on_banana_death(self, banana, killer):
 		if killer != self.object:

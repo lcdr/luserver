@@ -59,7 +59,7 @@ import persistent.wref
 from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from ..bitstream import WriteStream
-from ..game_object import PersistentObject
+from ..game_object import Player
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
 
@@ -94,7 +94,7 @@ _PANTS_LOT = {
 	Color.DarkRed: 2527}
 
 class CharHandling:
-	def __init__(self):
+	def __init__(self) -> None:
 		server.register_handler(WorldServerMsg.CharacterListRequest, self._on_character_list_request)
 		server.register_handler(WorldServerMsg.CharacterCreateRequest, self._on_character_create_request)
 		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self._on_character_delete_request)
@@ -178,7 +178,7 @@ class CharHandling:
 
 		try:
 			if return_code == _CharacterCreateReturnCode.Success:
-				new_char = PersistentObject(server.new_object_id())
+				new_char = Player(server.new_object_id())
 				new_char.name = char_name
 				new_char.char.account = account
 				new_char.char.address = address
@@ -250,7 +250,7 @@ class CharHandling:
 		else:
 			asyncio.ensure_future(selected_char.char.transfer_to_world(selected_char.char.world, include_self=True))
 
-	def _shirt_to_lot(self, color: int, style: int):
+	def _shirt_to_lot(self, color: int, style: int) -> int:
 		# The LOTs for the shirts are for some reason in two batches of IDs
 		lot_start_1 = 4048
 		lot_start_2 = 5729

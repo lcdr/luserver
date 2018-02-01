@@ -1,8 +1,12 @@
+from typing import Dict
+
+from pyraknet.bitstream import WriteStream
+from ..game_object import GameObject
 from ..world import server
 from .component import Component
 
 class SpawnerComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.spawner = self
 		self._active = set_vars.get("active_on_load", True)
@@ -17,10 +21,10 @@ class SpawnerComponent(Component):
 		self.last_waypoint_index = 0
 		self.num_spawned = 0
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_startup(self):
+	def on_startup(self) -> None:
 		if self.name is not None:
 			server.spawners[self.name] = self.object
 		if self._active:
@@ -29,11 +33,11 @@ class SpawnerComponent(Component):
 				return
 			self.spawn_all()
 
-	def spawn_all(self):
+	def spawn_all(self) -> None:
 		for _ in range(min(self.num_to_maintain, len(self.waypoints))):
 			self.spawn()
 
-	def spawn(self):
+	def spawn(self) -> GameObject:
 		if not self._active or self.num_spawned >= self.num_to_maintain:
 			return
 
@@ -47,27 +51,27 @@ class SpawnerComponent(Component):
 		self.num_spawned += 1
 		return spawned
 
-	def activate(self):
+	def activate(self) -> None:
 		self._active = True
 		self.spawn_all()
 
-	def deactivate(self):
+	def deactivate(self) -> None:
 		self._active = False
 
-	def destroy(self):
+	def destroy(self) -> None:
 		self.deactivate()
 		for obj in server.game_objects.copy().values():
 			if obj.spawner_object == self.object:
 				server.replica_manager.destruct(obj)
 
-	def on_spawned_destruction(self):
+	def on_spawned_destruction(self) -> None:
 		self.num_spawned -= 1
 		if self._active:
 			self.object.call_later(self.respawn_time, self.spawn)
 		if self.spawn_net_on_smash:
 			self._active = True
 
-	def spawn_on_smash(self, spawner):
+	def spawn_on_smash(self, spawner: GameObject) -> None:
 		if self._active:
 			self.spawn()
 			self._active = False

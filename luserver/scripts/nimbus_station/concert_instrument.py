@@ -44,7 +44,7 @@ class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
 		self.player = None
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		if self.player is not None:
 			self.stop_playing()
 			self.player.remove_handler("on_destruction", self.on_player_destruction)
@@ -63,7 +63,7 @@ class ScriptComponent(script.ScriptComponent):
 		self.player.render.play_animation(config["play_anim"])
 
 		offset = config["player_offset"]
-		new_pos = self.object.physics.position + offset.rotated(self.object.physics.rotation)
+		new_pos = self.object.physics.position + self.object.physics.rotation.rotate(offset)
 
 		if self.object.lot == KEYBOARD:
 			rotation = Quaternion.angle_axis(-0.3, Vector3.up)

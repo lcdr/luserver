@@ -1,4 +1,7 @@
-from pyraknet.bitstream import c_bit, c_float, c_int, c_uint
+from typing import Dict, List, Tuple
+
+from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
+from ..game_object import CallbackID, GameObject, Player
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -6,7 +9,7 @@ from .component import Component
 # all of this is still quite uncertain
 
 class Path:
-	def __init__(self, behavior, waypoints):
+	def __init__(self, behavior: int, waypoints: List[Tuple[Vector3, float, float]]):
 		self.behavior = behavior
 		self.waypoints = waypoints
 
@@ -21,7 +24,7 @@ class MovementState:
 	Stopped = 28
 
 class MovingPlatformComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.moving_platform = self
 		self._flags["movement_state"] = "moving_platform_flag"
@@ -38,7 +41,7 @@ class MovingPlatformComponent(Component):
 		self.current_position = Vector3()
 		self.current_waypoint_index = 0
 		self.next_waypoint_index = 1
-		self.callbacks = []
+		self.callbacks: List[CallbackID] = []
 		self.no_autostart = False
 		self.object.add_handler("rebuild_init", self._on_rebuild_init)
 		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
@@ -48,7 +51,7 @@ class MovingPlatformComponent(Component):
 			assert len(self.path.waypoints) > 1
 			self.start_pathing()
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.moving_platform_flag))
 		out.write(c_bit(False))
 		if self.moving_platform_flag:
@@ -69,22 +72,21 @@ class MovingPlatformComponent(Component):
 
 			self.moving_platform_flag = False
 
-
-	def _on_rebuild_init(self, _obj):
+	def _on_rebuild_init(self, _obj: GameObject) -> None:
 		self.stop_pathing()
 
-	def _on_rebuild_complete(self, _obj, player):
+	def _on_rebuild_complete(self, _obj: GameObject, player: Player) -> None:
 		if not self.no_autostart:
 			self.start_pathing()
 
-	def set_movement_state(self, state):
+	def set_movement_state(self, state: int) -> None:
 		self.movement_state = state
 
-	def go_to_waypoint(self, index):
+	def go_to_waypoint(self, index: int) -> None:
 		self.desired_waypoint_index = index
 		self.start_pathing()
 
-	def start_pathing(self):
+	def start_pathing(self) -> None:
 		self.unknown_bool = True
 
 		self.movement_state = MovementState.Stationary
@@ -96,7 +98,7 @@ class MovingPlatformComponent(Component):
 		travel_time = target_position.distance(self.current_position) / speed
 		self.callbacks.append(self.object.call_later(wait_time+travel_time, self.continue_pathing))
 
-	def continue_pathing(self):
+	def continue_pathing(self) -> None:
 		assert 0 <= self.current_waypoint_index < len(self.path.waypoints)
 		assert 0 <= self.next_waypoint_index < len(self.path.waypoints)
 
@@ -136,7 +138,7 @@ class MovingPlatformComponent(Component):
 		travel_time = Vector3(target_position).distance(Vector3(position)) / speed
 		self.callbacks.append(self.object.call_later(wait_time+travel_time, self.continue_pathing))
 
-	def stop_pathing(self):
+	def stop_pathing(self) -> None:
 		for callback in self.callbacks:
 			self.object.cancel_callback(callback)
 		self.callbacks.clear()

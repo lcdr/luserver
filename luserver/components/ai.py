@@ -1,4 +1,7 @@
-from pyraknet.bitstream import c_bit
+from typing import Dict
+
+from pyraknet.bitstream import c_bit, WriteStream
+from ..game_object import GameObject, Player
 from ..world import server
 from ..math.quaternion import Quaternion
 from .component import Component
@@ -7,7 +10,7 @@ from .skill import BehaviorTemplate
 UPDATE_INTERVAL = 1 # todo: make interval skill-dependent
 
 class BaseCombatAIComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.ai = self
 		self._flags["target"] = "ai_flag"
@@ -18,7 +21,7 @@ class BaseCombatAIComponent(Component):
 		self.object.add_handler("rebuild_init", self._on_rebuild_init)
 		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
-	def on_startup(self):
+	def on_startup(self) -> None:
 		if not hasattr(self.object, "skill"):
 			return
 		if self.object.skill.skills:
@@ -29,30 +32,30 @@ class BaseCombatAIComponent(Component):
 
 		self._enabled = True
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(False))
 
-	def _on_rebuild_init(self, _obj):
+	def _on_rebuild_init(self, _obj: GameObject) -> None:
 		self._enabled = False
 
-	def _on_rebuild_complete(self, _obj, player):
+	def _on_rebuild_complete(self, _obj: GameObject, player: Player) -> None:
 		self._enabled = True
 
-	def _disable(self):
+	def _disable(self) -> None:
 		self._enabled = False
 		if self.update_handle is not None:
 			self.object.cancel_callback(self.update_handle)
 
-	def on_enter(self, player):
+	def on_enter(self, player: Player) -> None:
 		if not self._enabled:
 			return
 		self.update_handle = self.object.call_later(0, self._update)
 
-	def on_exit(self, player):
+	def on_exit(self, player: Player) -> None:
 		if self.update_handle is not None:
 			self.object.cancel_callback(self.update_handle)
 
-	def _update(self):
+	def _update(self) -> None:
 		# todo: move some targeting logic to TacArc
 		self.target = None
 		enemy_factions = server.db.factions.get(self.object.stats.faction, ())

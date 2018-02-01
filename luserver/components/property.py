@@ -1,6 +1,8 @@
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, Serializable
+from typing import Optional
+
+from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, WriteStream
 from ..amf3 import AMF3
-from ..game_object import broadcast, E, GameObject, Sequence, single
+from ..game_object import broadcast, E, GameObject, Player, Sequence, single
 from ..game_object import c_int as c_int_
 from ..game_object import c_uint as c_uint_
 from ..game_object import c_int64 as c_int64_
@@ -13,88 +15,88 @@ class PropertyData(Serializable):
 		self.owner = None
 		self.path = []
 
-	def serialize(self, out):
-		out.write(c_int64(0))
-		out.write(c_int(25166))
-		out.write(c_ushort(0))
-		out.write(c_ushort(0))
-		out.write(c_uint(0))
-		out.write("", length_type=c_uint)
-		out.write("", length_type=c_uint)
-		out.write(self.owner.name, length_type=c_uint)
-		out.write(c_int64(self.owner.object_id))
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_uint64(0))
-		out.write(c_uint(0))
-		out.write(c_uint64(0))
-		out.write("", length_type=c_uint)
-		out.write("", length_type=c_uint)
-		out.write("", length_type=c_uint)
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_ubyte(0))
-		out.write(c_uint64(0))
-		out.write(c_uint(0))
-		out.write("", length_type=c_uint)
-		out.write(c_uint64(0))
-		out.write(c_uint(0))
-		out.write(c_uint(0))
-		out.write(c_float(0))
-		out.write(c_float(0))
-		out.write(c_float(0))
-		out.write(c_float(1000))
-		out.write(c_uint64(0))
-		out.write(c_ubyte(0))
-		out.write(c_uint(len(self.path)))
+	def serialize(self, stream: WriteStream) -> None:
+		stream.write(c_int64(0))
+		stream.write(c_int(25166))
+		stream.write(c_ushort(0))
+		stream.write(c_ushort(0))
+		stream.write(c_uint(0))
+		stream.write("", length_type=c_uint)
+		stream.write("", length_type=c_uint)
+		stream.write(self.owner.name, length_type=c_uint)
+		stream.write(c_int64(self.owner.object_id))
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint64(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint64(0))
+		stream.write("", length_type=c_uint)
+		stream.write("", length_type=c_uint)
+		stream.write("", length_type=c_uint)
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_ubyte(0))
+		stream.write(c_uint64(0))
+		stream.write(c_uint(0))
+		stream.write("", length_type=c_uint)
+		stream.write(c_uint64(0))
+		stream.write(c_uint(0))
+		stream.write(c_uint(0))
+		stream.write(c_float(0))
+		stream.write(c_float(0))
+		stream.write(c_float(0))
+		stream.write(c_float(1000))
+		stream.write(c_uint64(0))
+		stream.write(c_ubyte(0))
+		stream.write(c_uint(len(self.path)))
 		for coord in self.path:
-			out.write(c_float(coord[0]))
-			out.write(c_float(coord[1]))
-			out.write(c_float(coord[2]))
+			stream.write(c_float(coord[0]))
+			stream.write(c_float(coord[1]))
+			stream.write(c_float(coord[2]))
 
-	def deserialize(self, data):
-		data.read(c_int64)
-		data.read(c_int)
-		data.read(c_ushort)
-		data.read(c_ushort)
-		data.read(c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(c_int64)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_uint64)
-		data.read(c_uint)
-		data.read(c_uint64)
-		data.read(str, length_type=c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_ubyte)
-		data.read(c_uint64)
-		data.read(c_uint)
-		data.read(str, length_type=c_uint)
-		data.read(c_uint64)
-		data.read(c_uint)
-		data.read(c_uint)
-		data.read(c_float)
-		data.read(c_float)
-		data.read(c_float)
-		data.read(c_float)
-		data.read(c_uint64)
-		data.read(c_ubyte)
-		for _ in range(data.read(c_uint)):
-			data.read(c_float)
-			data.read(c_float)
-			data.read(c_float)
+	def deserialize(self, stream: ReadStream) -> "PropertyData":
+		stream.read(c_int64)
+		stream.read(c_int)
+		stream.read(c_ushort)
+		stream.read(c_ushort)
+		stream.read(c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(c_int64)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_uint64)
+		stream.read(c_uint)
+		stream.read(c_uint64)
+		stream.read(str, length_type=c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_ubyte)
+		stream.read(c_uint64)
+		stream.read(c_uint)
+		stream.read(str, length_type=c_uint)
+		stream.read(c_uint64)
+		stream.read(c_uint)
+		stream.read(c_uint)
+		stream.read(c_float)
+		stream.read(c_float)
+		stream.read(c_float)
+		stream.read(c_float)
+		stream.read(c_uint64)
+		stream.read(c_ubyte)
+		for _ in range(stream.read(c_uint)):
+			stream.read(c_float)
+			stream.read(c_float)
+			stream.read(c_float)
 
 		return PropertyData()
 
@@ -114,7 +116,7 @@ class PropertySelectQueryProperty(Serializable):
 		self.date_last_published = 0
 		self.performance_cost = 0
 
-	def serialize(self, out):
+	def serialize(self, out: WriteStream) -> None:
 		out.write(c_uint(self.clone_id))
 		out.write(self.owner_name, length_type=c_uint)
 		out.write(self.name, length_type=c_uint)
@@ -130,7 +132,7 @@ class PropertySelectQueryProperty(Serializable):
 		out.write(c_uint64(self.performance_cost))
 
 	@staticmethod
-	def deserialize(data):
+	def deserialize(data: ReadStream) -> "PropertySelectQueryProperty":
 		obj = PropertySelectQueryProperty()
 		obj.clone_id = data.read(c_uint)
 		obj.owner_name = data.read(str, length_type=c_uint)
@@ -148,16 +150,16 @@ class PropertySelectQueryProperty(Serializable):
 		return obj
 
 class PropertyEntranceComponent(Component):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		self.property_entrance_begin(player=player)
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
-	def enter_property1(self, player, index:c_int_=E, return_to_zone:bool=True):
+	def enter_property1(self, player, index:c_int_=E, return_to_zone:bool=True) -> None:
 		clone_id = 0
 		if not return_to_zone and index == -1:
 			clone_id = player.char.clone_id
@@ -167,7 +169,7 @@ class PropertyEntranceComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, player, include_null_address:bool=E, include_null_description:bool=E, players_own:bool=E, update_ui:bool=E, num_results:c_int_=E, reputation_time:c_int_=E, sort_method:c_int_=E, start_index:c_int_=E, filter_text:bytes=E):
+	def property_entrance_sync(self, player, include_null_address:bool=E, include_null_description:bool=E, players_own:bool=E, update_ui:bool=E, num_results:c_int_=E, reputation_time:c_int_=E, sort_method:c_int_=E, start_index:c_int_=E, filter_text:bytes=E) -> None:
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		#my_property.is_owned = True
@@ -175,26 +177,26 @@ class PropertyEntranceComponent(Component):
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
 	@single
-	def property_select_query(self, nav_offset:c_int_=E, there_are_more:bool=E, my_clone_id:c_int_=E, has_featured_property:bool=E, was_friends:bool=E, properties:Sequence[c_uint, PropertySelectQueryProperty]=E):
+	def property_select_query(self, nav_offset:c_int_=E, there_are_more:bool=E, my_clone_id:c_int_=E, has_featured_property:bool=E, was_friends:bool=E, properties:Sequence[c_uint, PropertySelectQueryProperty]=E) -> None:
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=E):
+	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=E) -> None:
 		pass
 
 	@single
-	def property_entrance_begin(self):
+	def property_entrance_begin(self) -> None:
 		pass
 
 class PropertyManagementComponent(Component):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
 	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
-	def download_property_data(self, data:PropertyData=E):
+	def download_property_data(self, data:PropertyData=E) -> None:
 		pass
 
-	def query_property_data(self, player):
+	def query_property_data(self, player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()
@@ -203,7 +205,7 @@ class PropertyManagementComponent(Component):
 
 		self.download_property_data(property, player=player)
 
-	def start_building_with_item(self, player, first_time:bool=True, success:bool=E, source_bag:c_int_=E, source_id:c_int64_=E, source_lot:c_int_=E, source_type:c_int_=E, target_id:c_int64_=E, target_lot:c_int_=E, target_pos:Vector3=E, target_type:c_int_=E):
+	def start_building_with_item(self, player, first_time:bool=True, success:bool=E, source_bag:c_int_=E, source_id:c_int64_=E, source_lot:c_int_=E, source_type:c_int_=E, target_id:c_int64_=E, target_lot:c_int_=E, target_pos:Vector3=E, target_type:c_int_=E) -> None:
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
@@ -212,27 +214,27 @@ class PropertyManagementComponent(Component):
 
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
-	def set_build_mode(self, start:bool=E, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero):
+	def set_build_mode(self, start:bool=E, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero) -> None:
 		server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
 	@broadcast
-	def set_build_mode_confirmed(self, start:bool=E, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero):
+	def set_build_mode_confirmed(self, start:bool=E, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero) -> None:
 		pass
 
 class PropertyVendorComponent(Component):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		self.open_property_vendor(player=player)
 
 	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
-	def download_property_data(self, data:PropertyData=E):
+	def download_property_data(self, data:PropertyData=E) -> None:
 		pass
 
-	def query_property_data(self, player):
+	def query_property_data(self, player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()
@@ -242,15 +244,15 @@ class PropertyVendorComponent(Component):
 		self.download_property_data(property, player=player)
 
 	@single
-	def open_property_vendor(self):
+	def open_property_vendor(self) -> None:
 		pass
 
-	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int_=1, item:c_int_=E):
+	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int_=1, item:c_int_=E) -> None:
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)
 		server.world_control_object.script.on_property_rented(player)
 
 	@single
-	def property_rental_response(self, clone_id:c_uint_=E, code:c_int_=E, property_id:c_int64_=E, rentdue:c_int64_=E):
+	def property_rental_response(self, clone_id:c_uint_=E, code:c_int_=E, property_id:c_int64_=E, rentdue:c_int64_=E) -> None:
 		pass

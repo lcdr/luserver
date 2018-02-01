@@ -13,7 +13,7 @@ class TradeInviteResult:
 	GeneralError = 4
 
 class Trade:
-	def __init__(self):
+	def __init__(self) -> None:
 		self.other_player = None
 		self.accepted = False
 		self.currency_offered = 0
@@ -22,13 +22,13 @@ class Trade:
 class CharTrade:
 	object: Player
 
-	def __init__(self):
+	def __init__(self) -> None:
 		self.trade = None
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		self.trade = None
 
-	def client_trade_request(self, need_invite_pop_up:bool=False, invitee:Player=E):
+	def client_trade_request(self, need_invite_pop_up:bool=False, invitee:Player=E) -> None:
 		# out of range error not implemented
 		if (self.trade is not None and self.trade.other_player != invitee.object_id) \
 		or (invitee.char.trade is not None and invitee.char.trade.other_player != self.object.object_id):
@@ -41,21 +41,21 @@ class CharTrade:
 		self.server_trade_initial_reply(invitee, result, invitee.name)
 
 	@single
-	def server_trade_invite(self, need_invite_pop_up:bool=False, requestor:GameObject=E, name:str=E):
+	def server_trade_invite(self, need_invite_pop_up:bool=False, requestor:GameObject=E, name:str=E) -> None:
 		pass
 
 	@single
-	def server_trade_initial_reply(self, invitee:GameObject=E, result_type:c_uint_=E, name:str=E):
+	def server_trade_initial_reply(self, invitee:GameObject=E, result_type:c_uint_=E, name:str=E) -> None:
 		pass
 
-	def client_trade_update(self, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E):
+	def client_trade_update(self, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E) -> None:
 		self.trade.currency_offered = currency
 		self.trade.items_offered = items
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_update(currency=currency, items=items)
 
 	@single
-	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E):
+	def server_trade_update(self, about_to_perform:bool=False, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E) -> None:
 		if about_to_perform:
 			trade_player = server.game_objects[self.trade.other_player]
 			if self.trade.currency_offered != 0:
@@ -66,24 +66,24 @@ class CharTrade:
 				self.object.inventory.remove_item(InventoryType.Max, object_id=item.object_id, count=item.count)
 			self.trade = None
 
-	def client_trade_cancel(self):
+	def client_trade_cancel(self) -> None:
 		if self.trade is None:
 			return
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_cancel()
 		self.trade = None
 
-	def client_trade_accept(self, first:bool=False):
+	def client_trade_accept(self, first:bool=False) -> None:
 		self.trade.accepted = not first
 		trade_player = server.game_objects[self.trade.other_player]
 		trade_player.char.server_trade_accept(first)
 
 	@single
-	def server_trade_cancel(self):
+	def server_trade_cancel(self) -> None:
 		self.trade = None
 
 	@single
-	def server_trade_accept(self, first:bool=False):
+	def server_trade_accept(self, first:bool=False) -> None:
 		if not first:
 			if self.trade.accepted:
 				trade_player = server.game_objects[self.trade.other_player]

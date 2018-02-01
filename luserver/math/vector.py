@@ -48,7 +48,7 @@ class Vector3(Serializable):
 
 	update = __init__
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return "Vector3(%g, %g, %g)" % (self.x, self.y, self.z)
 
 	def __neg__(self) -> "Vector3":
@@ -115,12 +115,6 @@ class Vector3(Serializable):
 
 	def distance(self, other: "Vector3") -> float:
 		return math.sqrt(self.sq_distance(other))
-
-	def rotated(self, quaternion) -> "Vector3":
-		quatvector = Vector3(quaternion.x, quaternion.y, quaternion.z)
-		scalar = quaternion.w
-
-		return 2 * quatvector.dot(self) * quatvector + (scalar*scalar - quatvector.dot(quatvector)) * self + 2 * scalar * quatvector.cross(self)
 
 	def serialize(self, stream: WriteStream) -> None:
 		stream.write(c_float(self.x))

@@ -35,7 +35,7 @@ class ObtainItemType:
 from persistent import Persistent
 
 class MissionTask(Persistent):
-	def __init__(self, task_type, target, target_value, parameter):
+	def __init__(self, task_type: int, target: int, target_value: int, parameter):
 		self.type = task_type
 		self.target = target
 		self.value = 0
@@ -48,7 +48,7 @@ class MissionProgress(Persistent):
 	def __repr__(self):
 		return "<MissionProgress state=%i>" % self.state
 
-	def __init__(self, id, mission_data):
+	def __init__(self, id: int, mission_data: tuple):
 		self.state = MissionState.Active
 		rewards = mission_data[0]
 		self.rew_currency = rewards[0]
@@ -64,14 +64,16 @@ class MissionProgress(Persistent):
 
 import logging
 import random
+from typing import Dict, Optional
 
+from pyraknet.bitstream import WriteStream
 from ..game_object import c_int, E, GameObject, Player, single
 from ..world import server
 from .component import Component
 
 log = logging.getLogger(__name__)
 
-def check_prereqs(mission_id, player):
+def check_prereqs(mission_id: int, player: Player) -> bool:
 	prereqs = server.db.missions[mission_id][1]
 	for prereq_ors in prereqs:
 		for prereq_mission in prereq_ors:
@@ -88,16 +90,16 @@ def check_prereqs(mission_id, player):
 	return False
 
 class MissionNPCComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.mission = self
 		self.missions = server.db.mission_npc_component[comp_id]
 		self.random_mission_choices = {}
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		offer = None
 		if multi_interact_id is not None:
 			offer = multi_interact_id
@@ -142,10 +144,10 @@ class MissionNPCComponent(Component):
 		return offer is not None
 
 	@single
-	def offer_mission(self, mission_id:c_int=E, offerer:GameObject=E):
+	def offer_mission(self, mission_id:c_int=E, offerer:GameObject=E) -> None:
 		pass
 
-	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:Player=E):
+	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:Player=E) -> None:
 		if mission_state == MissionState.Available:
 			assert not is_complete
 			player.char.add_mission(mission_id)
@@ -154,9 +156,9 @@ class MissionNPCComponent(Component):
 			player.char.complete_mission(mission_id)
 			self.clear_random_missions(player)
 
-	def request_linked_mission(self, player:GameObject=E, mission_id:c_int=E, mission_offered:bool=E):
+	def request_linked_mission(self, player:GameObject=E, mission_id:c_int=E, mission_offered:bool=E) -> None:
 		self.on_use(player, None)
 
-	def clear_random_missions(self, player):
+	def clear_random_missions(self, player: Player) -> None:
 		if player.object_id in self.random_mission_choices:
 			del self.random_mission_choices[player.object_id]

@@ -1,5 +1,7 @@
+from typing import Optional
+
 import luserver.scripts.general.teleport_to_ns_or_nt as script
-from luserver.game_object import c_int, E
+from luserver.game_object import c_int, E, Player
 from luserver.world import server
 from luserver.components.char import TerminateType
 
@@ -7,7 +9,7 @@ from luserver.components.char import TerminateType
 # todo: implement visited worlds so the NS/NT choice UI can work
 
 class ScriptComponent(script.ScriptComponent):
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		# todo: check if player has been to NT, if yes then display choice UI
 		if server.world_id[0] == 1600:

@@ -11,7 +11,7 @@ class ScriptComponent(script.ScriptComponent):
 		self.tutorial = None
 
 	@single
-	def player_ready(self, player):
+	def player_ready(self, player: Player) -> None:
 		if not player.char.get_flag(FLAG_DEFEATED_SPIDER):
 			self.start_maelstrom()
 		else:

@@ -5,11 +5,11 @@ from pyraknet.bitstream import WriteStream
 from ..game_object import GameObject
 
 class Component(ABC):
-	def __setattr__(self, name, value):
+	def __setattr__(self, name: str, value: object) -> None:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, obj: GameObject, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		self.object = obj
 		self._flags: Dict[str, str] = {}
 

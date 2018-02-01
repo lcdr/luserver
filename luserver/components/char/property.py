@@ -22,10 +22,10 @@ class CharProperty:
 	object: Player
 
 	@single
-	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=OBJ_NONE, response:c_int=0, rotation:Quaternion=Quaternion.identity):
+	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=OBJ_NONE, response:c_int=0, rotation:Quaternion=Quaternion.identity) -> None:
 		pass
 
-	def update_model_from_client(self, model_id:c_int64_=E, position:Vector3=E, rotation:Quaternion=Quaternion.identity):
+	def update_model_from_client(self, model_id:c_int64_=E, position:Vector3=E, rotation:Quaternion=Quaternion.identity) -> None:
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = server.new_object_id()
@@ -47,7 +47,7 @@ class CharProperty:
 				self.handle_u_g_c_equip_pre_create_based_on_edit_mode(0, spawner_id)
 				break
 
-	def delete_model_from_client(self, model_id:c_int64_=0, reason:c_uint_=DeleteReason.PickingModelUp):
+	def delete_model_from_client(self, model_id:c_int64_=0, reason:c_uint_=DeleteReason.PickingModelUp) -> None:
 		assert reason in (DeleteReason.PickingModelUp, DeleteReason.ReturningModelToInventory)
 		if reason == DeleteReason.PickingModelUp:
 			server.world_control_object.script.on_model_picked_up(self.object)
@@ -68,7 +68,7 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64_=E, lxfml_data_compressed:bytes=E, time_taken_in_ms:c_uint_=E):
+	def b_b_b_save_request(self, local_id:c_int64_=E, lxfml_data_compressed:bytes=E, time_taken_in_ms:c_uint_=E) -> None:
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
@@ -79,16 +79,16 @@ class CharProperty:
 		server.send(save_response, self.address)
 
 	@single
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=E, items_total:c_int=0):
+	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=E, items_total:c_int=0) -> None:
 		pass
 
 	@single
-	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=E, model_id:c_int64_=E):
+	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=E, model_id:c_int64_=E) -> None:
 		pass
 
-	def property_contents_from_client(self, query_db:bool=False):
+	def property_contents_from_client(self, query_db:bool=False) -> None:
 		self.get_models_on_property(models={model: spawner for spawner, model in server.models})
 
 	@broadcast
-	def get_models_on_property(self, models:Mapping[c_uint, GameObject, GameObject]=E):
+	def get_models_on_property(self, models:Mapping[c_uint, GameObject, GameObject]=E) -> None:
 		pass

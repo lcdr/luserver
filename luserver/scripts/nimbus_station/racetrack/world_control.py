@@ -1,12 +1,12 @@
 import luserver.components.script as script
-from luserver.game_object import broadcast, E, GameObject, single
+from luserver.game_object import broadcast, E, GameObject, Player, single
 from luserver.world import server
 from luserver.math.vector import Vector3
 from luserver.components.racing_control import RacingNotificationType
 
 class ScriptComponent(script.ScriptComponent):
 	@single
-	def player_ready(self, player):
+	def player_ready(self, player: Player) -> None:
 		player.char.teleport(ignore_y=False, pos=Vector3(817.812255859375, 247.02963256835938, -3.9437739849090576), x=0, y=0, z=0)
 		self.object.scripted_activity.add_player(player)
 		# wrong car lot for now

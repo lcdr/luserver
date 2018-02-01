@@ -1,24 +1,31 @@
+from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 
-class GeneralMsg(IntEnum):
+class LUMessage(IntEnum):
 	@staticmethod
-	def header():
+	@abstractmethod
+	def header() -> int:
+		pass
+
+class GeneralMsg(LUMessage):
+	@staticmethod
+	def header() -> int:
 		return 0x00
 
 	Handshake = 0x00
 	DisconnectNotify = 0x01
 	GeneralNotify = 0x02
 
-class AuthServerMsg(IntEnum):
+class AuthServerMsg(LUMessage):
 	@staticmethod
-	def header():
+	def header() -> int:
 		return 0x01
 
 	LoginRequest = 0x00
 
-class SocialMsg(IntEnum):
+class SocialMsg(LUMessage):
 	@staticmethod
-	def header():
+	def header() -> int:
 		return 0x02
 
 	GeneralChatMessage = 0x01
@@ -32,9 +39,9 @@ class SocialMsg(IntEnum):
 	TeamInviteResponse = 0x10
 	TeamGetStatus = 0x15
 
-class WorldServerMsg(IntEnum):
+class WorldServerMsg(LUMessage):
 	@staticmethod
-	def header():
+	def header() -> int:
 		return 0x04
 
 	SessionInfo = 0x01
@@ -50,9 +57,9 @@ class WorldServerMsg(IntEnum):
 	Mail = 0x17
 	StringCheck = 0x19
 
-class WorldClientMsg(IntEnum):
+class WorldClientMsg(LUMessage):
 	@staticmethod
-	def header():
+	def header() -> int:
 		return 0x05
 
 	LoginResponse = 0x00

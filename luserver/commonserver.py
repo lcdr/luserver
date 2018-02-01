@@ -23,11 +23,13 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, List, Tuple
 
+from ZODB.Connection import Connection
+
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from pyraknet.server import Event
 from .bitstream import WriteStream
-from .messages import GeneralMsg, WorldClientMsg, WorldServerMsg
+from .messages import GeneralMsg, LUMessage, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
 
 log = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ class Server(_Server, ABC):
 	_NETWORK_VERSION = 171022
 	_EXPECTED_PEER_TYPE = WorldClientMsg.header()
 
-	def __init__(self, address: Address, max_connections: int, db_conn):
+	def __init__(self, address: Address, max_connections: int, db_conn: Connection):
 		super().__init__(address, max_connections)
 		self.conn = db_conn
 		self.db = self.conn.root
@@ -62,10 +64,9 @@ class Server(_Server, ABC):
 				stream.read_offset = read_offset
 				handler(stream, address)
 
-	def register_handler(self, packet_id, handler: Callable[[ReadStream, Address], None]) -> None:
+	def register_handler(self, packet_id: LUMessage, handler: Callable[[ReadStream, Address], None]) -> None:
 		header = packet_id.header()
 		subheader = packet_id
-		packet_id = header, subheader
 		self._packet_handlers.setdefault((header, subheader), []).append(handler)
 
 	@abstractmethod
@@ -97,7 +98,7 @@ class Server(_Server, ABC):
 		else:
 			self._send_handshake(address)
 
-	def close_connection(self, address: Address, reason=None) -> None:
+	def close_connection(self, address: Address, reason: int=None) -> None:
 		if reason is not None:
 			disconnect_message = WriteStream()
 			disconnect_message.write_header(GeneralMsg.DisconnectNotify)
@@ -106,7 +107,7 @@ class Server(_Server, ABC):
 
 		self._server.close_connection(address)
 
-	async def address_for_world(self, world_id, include_self=False) -> Address:
+	async def address_for_world(self, world_id: Tuple[int, int, int], include_self: bool=False) -> Address:
 		first = True
 		servers = {}
 		while True:

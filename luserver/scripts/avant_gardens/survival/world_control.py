@@ -2,7 +2,7 @@ import asyncio
 import time
 
 import luserver.components.script as script
-from luserver.game_object import c_int, E, single
+from luserver.game_object import c_int, E, Player, single
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server
 from luserver.components.inventory import InventoryType
@@ -119,7 +119,7 @@ class ScriptComponent(script.ScriptComponent):
 			self.set_player_spawn_points()
 
 	@single
-	def player_ready(self, player):
+	def player_ready(self, player: Player) -> None:
 		self.object.scripted_activity.add_player(player)
 		self.set_network_var("Define_Player_To_UI", LDFDataType.BYTES, str(player.object_id).encode())
 		self.set_network_var("Show_ScoreBoard", LDFDataType.BOOLEAN, True)

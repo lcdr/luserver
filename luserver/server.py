@@ -3,7 +3,7 @@ import logging
 import os
 import struct
 import time
-from typing import Set, SupportsBytes, Union
+from typing import cast, Set, SupportsBytes, Union
 
 import pyraknet.server
 from pyraknet.messages import Address
@@ -33,14 +33,14 @@ class Server:
 			header = data[13]
 			subheader = data[15]
 		if (header, subheader) == (WorldServerMsg.header(), WorldServerMsg.GameMessage) or (header, subheader) == (WorldClientMsg.header(), WorldClientMsg.GameMessage):
-			message_id = c_ushort.unpack(data[16:18])[0]
+			message_id = cast(int, c_ushort.unpack(data[16:18])[0])
 			try:
 				message_name = GameMessage(message_id).name
 			except ValueError:
 				message_name = str(message_id)
 			return "GameMessage/" + message_name
 		if (header, subheader) == (WorldServerMsg.header(), WorldServerMsg.Mail) or (header, subheader) == (WorldClientMsg.header(), WorldClientMsg.Mail):
-			mail_id = c_uint.unpack(data[8:12])[0]
+			mail_id = cast(int, c_uint.unpack(data[8:12])[0])
 			try:
 				packetname = MailID(mail_id).name
 			except ValueError:

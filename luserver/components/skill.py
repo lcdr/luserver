@@ -1,15 +1,16 @@
 import enum
 import logging
 import pprint
+from typing import Dict
 
 from pyraknet.bitstream import c_bit, c_uint, c_uint64, ReadStream, WriteStream
-from ..game_object import broadcast, c_int, c_int64, E, single
+from ..game_object import broadcast, c_int, c_int64, E, GameObject, ObjectID, single
 from ..game_object import c_uint as c_uint_
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
-from .inventory import InventoryType, ItemType
+from .inventory import InventoryType, ItemType, Stack
 from .mission import TaskType
 from .behaviors import BasicAttack, TacArc, And, ProjectileAttack, Heal, MovementSwitch, AreaOfEffect, OverTime, Imagination, TargetCaster, Stun, Duration, Knockback, AttackDelay, RepairArmor, SpawnObject, Switch, Buff, Jetpack, SkillEvent, SkillCastFailed, Chain, ForceMovement, Interrupt, ChargeUp, SwitchMultiple, Start, NPCCombatSkill, Verify, AirMovement, SpawnQuickbuild, ClearTarget
 
@@ -132,7 +133,7 @@ class CastType:
 PASSIVE_BEHAVIORS = BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.Jetpack, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.ApplyBuff
 
 class SkillComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.skill = self
 		self.delayed_behaviors = {}
@@ -144,15 +145,15 @@ class SkillComponent(Component):
 		self.everlasting = False
 		self.skills = [skill_id for skill_id, _ in server.db.object_skills.get(self.object.lot, [])]
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		self.delayed_behaviors.clear()
 		self.projectile_behaviors.clear()
 
-	def cast_skill(self, skill_id, target=None, cast_type=CastType.Two):
+	def cast_skill(self, skill_id: int, target: GameObject=None, cast_type: int=CastType.Two) -> None:
 		if target is None:
 			target = self.object
 		self.original_target_id = target.object_id
@@ -165,7 +166,7 @@ class SkillComponent(Component):
 		self.serialize_behavior(behavior, bitstream, target)
 		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bytes(bitstream))
 
-	def cast_sync_skill(self, delay, behavior, target):
+	def cast_sync_skill(self, delay: float, behavior, target: GameObject) -> int:
 		ui_behavior_handle = self.last_ui_handle
 		self.last_ui_handle += 1
 		self.delayed_behaviors[ui_behavior_handle] = behavior
@@ -176,7 +177,7 @@ class SkillComponent(Component):
 		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bytes(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
-	def cast_projectile(self, proj_behavs, target):
+	def cast_projectile(self, proj_behavs, target: GameObject) -> ObjectID:
 		bitstream = WriteStream()
 		proj_id = server.new_spawned_id()
 		for behav in proj_behavs:
@@ -187,10 +188,10 @@ class SkillComponent(Component):
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0):
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0) -> None:
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0):
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0) -> None:
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -230,22 +231,22 @@ class SkillComponent(Component):
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
 			self.object.inventory.remove_item(InventoryType.Items, object_id=consumable_item_id)
 
-	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=E):
+	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=E) -> None:
 		pass
 
 	@broadcast
-	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint_=E, slot_id:c_int=-1, temporary:bool=True):
+	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint_=E, slot_id:c_int=-1, temporary:bool=True) -> None:
 		pass
 
 	@single
-	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=E):
+	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=E) -> None:
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E):
+	def echo_sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E) -> None:
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E):
+	def sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E) -> None:
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -273,7 +274,7 @@ class SkillComponent(Component):
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=E):
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=E) -> None:
 		stream = ReadStream(bitstream)
 		if target_id == 0:
 			target = self.object
@@ -293,12 +294,12 @@ class SkillComponent(Component):
 		del self.projectile_behaviors[local_id]
 		# todo: do client projectile impact
 
-	def serialize_behavior(self, behavior, bitstream, target, level=0):
+	def serialize_behavior(self, behavior, bitstream: WriteStream, target: GameObject, level=0):
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
 		if behavior.template in TEMPLATES:
 			return TEMPLATES[behavior.template].serialize(self, behavior, bitstream, target, level)
 
-	def deserialize_behavior(self, behavior, bitstream, target, level=0):
+	def deserialize_behavior(self, behavior, bitstream: ReadStream, target: GameObject, level=0) -> None:
 		if behavior is None:
 			return
 		log.debug("  "*level+BehaviorTemplate(behavior.template).name+" %i", behavior.id)
@@ -306,9 +307,9 @@ class SkillComponent(Component):
 			log.debug(pprint.pformat(vars(behavior), indent=level))
 
 		if behavior.template in TEMPLATES:
-			return TEMPLATES[behavior.template].deserialize(self, behavior, bitstream, target, level)
+			TEMPLATES[behavior.template].deserialize(self, behavior, bitstream, target, level)
 
-	def undo_behavior(self, behavior, params=None):
+	def undo_behavior(self, behavior, params=None) -> None:
 		if behavior.template == BehaviorTemplate.SpawnObject:
 			server.replica_manager.destruct(params)
 		elif behavior.template == BehaviorTemplate.Buff:
@@ -321,7 +322,7 @@ class SkillComponent(Component):
 		elif behavior.template == BehaviorTemplate.Jetpack:
 			self.object.char.set_jet_pack_mode(enable=False)
 
-	def add_skill_for_item(self, item, add_buffs=True):
+	def add_skill_for_item(self, item: Stack, add_buffs=True) -> None:
 		if item.lot in server.db.object_skills:
 			for skill_id, cast_on_type in server.db.object_skills[item.lot]:
 				behavior = server.db.skill_behavior[skill_id][0]
@@ -337,10 +338,10 @@ class SkillComponent(Component):
 				elif cast_on_type == CastType.Cast and add_buffs:
 					self.cast_skill(skill_id, cast_type=CastType.Cast)
 
-	def add_skill_server(self, skill_id):
+	def add_skill_server(self, skill_id: int) -> None:
 		self.cast_skill(skill_id, cast_type=CastType.Cast)
 
-	def remove_skill_for_item(self, item):
+	def remove_skill_for_item(self, item: Stack) -> None:
 		if item.lot in server.db.object_skills:
 			for skill_id, cast_on_type in server.db.object_skills[item.lot]:
 				behavior = server.db.skill_behavior[skill_id][0]
@@ -350,7 +351,7 @@ class SkillComponent(Component):
 				elif cast_on_type == CastType.AddSkill:
 					self.remove_skill(skill_id=skill_id)
 
-	def remove_skill_server(self, skill_id):
+	def remove_skill_server(self, skill_id: int) -> None:
 		behavior = server.db.skill_behavior[skill_id][0]
 		if behavior.template in PASSIVE_BEHAVIORS:
 			self.undo_behavior(behavior)

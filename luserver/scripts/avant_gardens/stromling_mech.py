@@ -4,5 +4,5 @@ from luserver.world import server
 QUICKBUILD_TURRET_LOT = 6254
 
 class ScriptComponent(script.ScriptComponent):
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		server.spawn_object(QUICKBUILD_TURRET_LOT, {"position": self.object.physics.position, "rotation": self.object.physics.rotation})

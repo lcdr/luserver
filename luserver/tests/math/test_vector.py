@@ -1,5 +1,4 @@
 import unittest
-from luserver.math.quaternion import Quaternion
 from luserver.math.vector import Vector3
 
 class Vector3Test(unittest.TestCase):
@@ -51,6 +50,3 @@ class Vector3Test(unittest.TestCase):
 
 	def test_distance(self):
 		self.assertEqual(self.vec1.distance(Vector3(1, 6, 6)), 5)
-
-	def test_rotated(self):
-		self.assertEqual(self.vec1.rotated(Quaternion(0, 1, 0, 0)), Vector3(-1, 2, -3))
