@@ -49,7 +49,7 @@ class Quaternion(Serializable):
 	def __repr__(self) -> str:
 		return "Quaternion(%g, %g, %g, %g)" % (self.x, self.y, self.z, self.w)
 
-	def __eq__(self, other) -> bool:
+	def __eq__(self, other: object) -> bool:
 		if isinstance(other, Quaternion):
 			return other.x == self.x and other.y == self.y and other.z == self.z and other.w == self.w
 		return NotImplemented
@@ -74,6 +74,12 @@ class Quaternion(Serializable):
 		axis = axis.unit()
 		s = math.sin(angle / 2)
 		return Quaternion(axis.x*s, axis.y*s, axis.z*s, math.cos(angle / 2))
+
+	def rotate(self, vector: Vector3) -> Vector3:
+		quatvector = Vector3(self.x, self.y, self.z)
+		scalar = self.w
+
+		return 2 * quatvector.dot(vector) * quatvector + (scalar*scalar - quatvector.dot(quatvector)) * vector + 2 * scalar * quatvector.cross(vector)
 
 	def serialize(self, stream: WriteStream) -> None:
 		stream.write(c_float(self.x))

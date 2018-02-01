@@ -4,17 +4,18 @@ For world server packet handling that is general enough not to be grouped in a s
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
-from typing import Tuple
+from typing import Dict, Tuple
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
-from ..game_object import Player
+from ..game_object import GameObject, Player
 from ..ldf import LDF, LDFDataType
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server, World
 from ..components.mission import TaskType
+from ..components.physics import Collider
 
 log = logging.getLogger(__name__)
 
@@ -55,8 +56,8 @@ _CHECKSUMS = {
 	World.BattleAgainstFrakjaw: 0x9eb00ef}
 
 class GeneralHandling:
-	def __init__(self):
-		self.tracked_objects = {}
+	def __init__(self) -> None:
+		self.tracked_objects: Dict[GameObject, Collider] = {}
 
 		server.register_handler(WorldServerMsg.LoadComplete, self._on_client_load_complete)
 		server.register_handler(WorldServerMsg.PositionUpdate, self._on_position_update)

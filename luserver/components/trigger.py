@@ -1,7 +1,9 @@
 import functools
 import logging
+from typing import Dict, Sequence, Tuple
 
-from pyraknet.bitstream import c_bit
+from pyraknet.bitstream import c_bit, WriteStream
+from ..game_object import GameObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -11,17 +13,17 @@ from .physics import PhysicsEffect
 log = logging.getLogger(__name__)
 
 class TriggerComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.trigger = self
 		if "trigger_events" in set_vars:
 			for event_name, commands in set_vars["trigger_events"].items():
 				setattr(self, event_name, functools.partial(self.on_event_process_commands, commands))
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(False))
 
-	def on_event_process_commands(self, commands, *eventargs):
+	def on_event_process_commands(self, commands: Sequence[Tuple[str, str, Sequence[str]]], *eventargs) -> None:
 		for command_name, target, args in commands:
 			if command_name == "CastSkill":
 				assert target == "target"

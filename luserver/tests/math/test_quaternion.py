@@ -19,3 +19,6 @@ class QuaternionTest(unittest.TestCase):
 		self.assertAlmostEqual(result.y, Quaternion.identity.y)
 		self.assertAlmostEqual(result.z, Quaternion.identity.z)
 		self.assertAlmostEqual(result.w, Quaternion.identity.w)
+
+	def test_rotate(self):
+		self.assertEqual(Quaternion(0, 1, 0, 0).rotate(Vector3(1, 2, 3)), Vector3(-1, 2, -3))

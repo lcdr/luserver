@@ -7,4 +7,4 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.physics.physics_effect_active = True
 		self.object.physics.physics_effect_type = PhysicsEffect.Push
 		self.object.physics.physics_effect_amount = 115
-		self.object.physics.physics_effect_direction = Vector3(-1, 0, 0).rotated(self.object.physics.rotation)*self.object.physics.physics_effect_amount
+		self.object.physics.physics_effect_direction = self.object.physics.rotation.rotate(Vector3(-1, 0, 0))*self.object.physics.physics_effect_amount

@@ -1,4 +1,7 @@
+from typing import Optional
+
 import luserver.components.script as script
+from luserver.game_object import Player
 from luserver.components.mission import TaskType
 
 IMAGINATION_POWERUP_LOT = 935
@@ -12,7 +15,7 @@ class ScriptComponent(script.ScriptComponent):
 		self.is_burning = True
 		self.object.render.play_f_x_effect(name=b"tikitorch", effect_type="fire", effect_id=611)
 
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		self.object.render.play_animation("interact")
 		for _ in range(3):

@@ -1,13 +1,15 @@
 import logging
+from typing import Dict
 
-from pyraknet.bitstream import c_bit, c_float, c_int
-from ..game_object import broadcast, c_uint, E, GameObject, OBJ_NONE, Player
+from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
+from ..game_object import broadcast, E, GameObject, OBJ_NONE, Player
+from ..game_object import c_uint as c_uint_
 from .component import Component
 
 log = logging.getLogger(__name__)
 
 class StatsSubcomponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.stats = self
 		self._flags["_max_life"] = "stats_flag"
@@ -30,11 +32,11 @@ class StatsSubcomponent(Component):
 			self.object.destructible.init(set_vars)
 
 	@property
-	def max_life(self):
+	def max_life(self) -> int:
 		return self._max_life
 
 	@max_life.setter
-	def max_life(self, value):
+	def max_life(self, value: int) -> None:
 		if value < 0:
 			log.warning("Max life attempted to set to %i", value)
 
@@ -43,22 +45,22 @@ class StatsSubcomponent(Component):
 			self.life = self.max_life
 
 	@property
-	def life(self):
+	def life(self) -> int:
 		return self._life
 
 	@life.setter
-	def life(self, value):
+	def life(self, value: int) -> None:
 		if value < 0:
 			log.warning("Life attempted to set to %i", value)
 
 		self._life = max(0, min(value, self.max_life))
 
 	@property
-	def max_armor(self):
+	def max_armor(self) -> int:
 		return self._max_armor
 
 	@max_armor.setter
-	def max_armor(self, value):
+	def max_armor(self, value: int) -> None:
 		if value < 0:
 			log.warning("Max armor attempted to set to %i", value)
 
@@ -67,22 +69,22 @@ class StatsSubcomponent(Component):
 			self.armor = self.max_armor
 
 	@property
-	def armor(self):
+	def armor(self) -> int:
 		return self._armor
 
 	@armor.setter
-	def armor(self, value):
+	def armor(self, value: int) -> None:
 		if value < 0:
 			log.warning("Armor attempted to set to %i", value)
 
 		self._armor = max(0, min(value, self.max_armor))
 
 	@property
-	def max_imagination(self):
+	def max_imagination(self) -> int:
 		return self._max_imagination
 
 	@max_imagination.setter
-	def max_imagination(self, value):
+	def max_imagination(self, value: int) -> None:
 		if value < 0:
 			log.warning("Max imagination attempted to set to %i", value)
 
@@ -91,17 +93,17 @@ class StatsSubcomponent(Component):
 			self.imagination = self.max_imagination
 
 	@property
-	def imagination(self):
+	def imagination(self) -> int:
 		return self._imagination
 
 	@imagination.setter
-	def imagination(self, value):
+	def imagination(self, value: int) -> None:
 		if value < 0:
 			log.warning("Imagination attempted to set to %i", value)
 
 		self._imagination = max(0, min(value, self.max_imagination))
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
 
@@ -134,7 +136,7 @@ class StatsSubcomponent(Component):
 
 		out.write(c_bit(False))
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		if self.object.spawner_object is not None:
 			self.object.spawner_object.handle("on_spawned_destruction")
 
@@ -144,5 +146,5 @@ class StatsSubcomponent(Component):
 		self.imagination = self.max_imagination
 
 	@broadcast
-	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_uint=0, killer:GameObject=E, loot_owner:Player=OBJ_NONE):
+	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_uint_=0, killer:GameObject=E, loot_owner:Player=OBJ_NONE) -> None:
 		self.object.handle("on_death", killer, silent=True)

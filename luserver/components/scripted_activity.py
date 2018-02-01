@@ -1,13 +1,14 @@
 import asyncio
+from typing import Dict
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint
-from ..game_object import broadcast, c_int, E, GameObject, single
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, WriteStream
+from ..game_object import broadcast, c_int, E, GameObject, Player, single
 from ..world import server
 from ..ldf import LDF
 from .component import Component
 
 class ScriptedActivityComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.scripted_activity = self
 		self._flags["activity_values"] = "activity_flag"
@@ -21,7 +22,7 @@ class ScriptedActivityComponent(Component):
 		else:
 			self.transfer_world_id = None
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.activity_flag))
 		if self.activity_flag:
 			out.write(c_uint(len(self.activity_values)))
@@ -31,26 +32,26 @@ class ScriptedActivityComponent(Component):
 					out.write(c_float(value))
 			self.activity_flag = False
 
-	def add_player(self, player):
+	def add_player(self, player: Player) -> None:
 		self.activity_values[player.object_id] = [0]*10
 		self.attr_changed("activity_values")
 
-	def remove_player(self, player):
+	def remove_player(self, player: Player) -> None:
 		del self.activity_values[player.object_id]
 		self.attr_changed("activity_values")
 
 	@broadcast
-	def activity_start(self):
+	def activity_start(self) -> None:
 		pass
 
-	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
+	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E) -> None:
 		if id == "LobbyReady" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 
 	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int=E, info_type:c_int=E, leaderboard_data:LDF=E, throttled:bool=E, weekly:bool=E):
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=E, info_type:c_int=E, leaderboard_data:LDF=E, throttled:bool=E, weekly:bool=E) -> None:
 		pass
 
 	@broadcast
-	def notify_client_zone_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E):
+	def notify_client_zone_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E) -> None:
 		pass

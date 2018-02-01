@@ -1,8 +1,11 @@
+from typing import Optional
+
 import luserver.components.script as script
+from luserver.game_object import Player
 from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		for obj in server.world_data.objects.values():
 			if obj.lot == 4945:

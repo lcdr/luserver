@@ -1,6 +1,6 @@
-from typing import Union
+from typing import Dict
 
-from pyraknet.bitstream import c_bit
+from pyraknet.bitstream import c_bit, WriteStream
 from ..game_object import broadcast, c_int, E, GameObject, OBJ_NONE, PhysicsObject, Player, StatsObject
 from ..world import server
 from ..math.vector import Vector3
@@ -17,12 +17,12 @@ class PS(PhysicsObject, StatsObject):
 class DestructibleComponent(Component):
 	object: PS # safe to assume that a destructible object is also a physics object - only 2 entries (6622, 6908) in the database didn't match, and those were test objects
 
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.comp_id = comp_id
 		self.object.destructible = self
 
-	def init(self, set_vars):
+	def init(self, set_vars: Dict[str, object]) -> None:
 		comp = server.db.destructible_component[self.comp_id]
 		self.object.stats.faction = comp[0]
 		self.death_rewards = comp[1]
@@ -38,12 +38,12 @@ class DestructibleComponent(Component):
 			self.object.stats.is_smashable = comp[5]
 		del self.comp_id
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
 			out.write(c_bit(False))
 
-	def deal_damage(self, damage, dealer):
+	def deal_damage(self, damage: int, dealer: GameObject) -> None:
 		self.object.handle("on_hit", damage, dealer, silent=True)
 
 		if damage > self.object.stats.armor:
@@ -56,11 +56,11 @@ class DestructibleComponent(Component):
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
-	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=OBJ_NONE, loot_owner:Player=OBJ_NONE):
+	def simply_die(self, death_type:str="", kill_type:c_int=KillType.Violent, killer:GameObject=OBJ_NONE, loot_owner:Player=OBJ_NONE) -> None:
 		"""Shorthand for request_die with default values."""
 		self.request_die(False, death_type, 0, 0, 10, kill_type, killer, loot_owner)
 
-	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=KillType.Violent, killer:GameObject=E, loot_owner:Player=E):
+	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=KillType.Violent, killer:GameObject=E, loot_owner:Player=E) -> None:
 		if self.object.stats.life == 0:
 			# already dead
 			return
@@ -95,5 +95,5 @@ class DestructibleComponent(Component):
 					server.replica_manager.destruct(self.object)
 
 	@broadcast
-	def resurrect(self, resurrect_immediately=False):
+	def resurrect(self, resurrect_immediately: bool=False) -> None:
 		pass

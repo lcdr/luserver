@@ -1,6 +1,7 @@
 import time
+from typing import Dict, Optional
 
-from pyraknet.bitstream import c_bit, c_float, c_uint
+from pyraknet.bitstream import c_bit, c_float, c_uint, WriteStream
 from ..game_object import broadcast, E, GameObject, Player
 from ..game_object import c_int as c_int_
 from ..game_object import c_uint as c_uint_
@@ -26,7 +27,7 @@ class FailReason:
 ACTIVATOR_LOT = 6604
 
 class RebuildComponent(ScriptedActivityComponent):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.rebuild = self
 		db_entry = server.db.rebuild_component[comp_id]
@@ -56,16 +57,16 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.object.handle("rebuild_init", silent=True)
 
 	@property
-	def rebuild_state(self):
+	def rebuild_state(self) -> int:
 		return self._rebuild_state
 
 	@rebuild_state.setter
-	def rebuild_state(self, value):
+	def rebuild_state(self, value: int) -> None:
 		player = server.get_object(list(self.activity_values)[0])
 		self.rebuild_notify_state(self.rebuild_state, value, player)
 		self._rebuild_state = value
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		super().serialize(out, is_creation)
 		out.write(c_bit(self.rebuild_flag or is_creation))
 		if self.rebuild_flag or is_creation:
@@ -83,7 +84,7 @@ class RebuildComponent(ScriptedActivityComponent):
 				out.write(c_bit(True))
 			self.rebuild_flag = False
 
-	def on_use(self, player, multi_interact_id):
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		if self.rebuild_state not in (RebuildState.Open, RebuildState.Incomplete):
 			return
@@ -103,12 +104,12 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.append(self.object.call_later(self.complete_time-self.last_progress, handler, player))
 		return True
 
-	def _drain_imagination(self, player) -> None:
+	def _drain_imagination(self, player: Player) -> None:
 		if player.stats.imagination == 0:
 			self.rebuild_cancel(early_release=False, user=player)
 		player.stats.imagination -= 1
 
-	def complete_rebuild(self, player):
+	def complete_rebuild(self, player: Player) -> None:
 		self.rebuild_state = RebuildState.Completed
 		self.success = True
 		self.enabled = False
@@ -129,11 +130,11 @@ class RebuildComponent(ScriptedActivityComponent):
 		# drop rewards
 		self.object.physics.drop_rewards(*self.completion_rewards, player)
 
-	def smash_rebuild(self):
+	def smash_rebuild(self) -> None:
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)
 		server.replica_manager.destruct(self.object)
 
-	def rebuild_cancel(self, early_release:bool=E, user:Player=E):
+	def rebuild_cancel(self, early_release:bool=E, user:Player=E) -> None:
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
 				self.object.cancel_callback(handle)
@@ -151,9 +152,9 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
 
 	@broadcast
-	def enable_rebuild(self, enable:bool=E, fail:bool=E, success:bool=E, fail_reason:c_uint_=FailReason.NotGiven, duration:float=E, user:GameObject=E):
+	def enable_rebuild(self, enable:bool=E, fail:bool=E, success:bool=E, fail_reason:c_uint_=FailReason.NotGiven, duration:float=E, user:GameObject=E) -> None:
 		pass
 
 	@broadcast
-	def rebuild_notify_state(self, prev_state:c_int_=E, state:c_int_=E, player:GameObject=E):
+	def rebuild_notify_state(self, prev_state:c_int_=E, state:c_int_=E, player:GameObject=E) -> None:
 		pass

@@ -5,7 +5,7 @@ class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
 		self.enable_fx(True)
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		self.enable_fx(False)
 
 	def fire_event(self, event):

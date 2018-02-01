@@ -4,16 +4,16 @@ from enum import Enum
 # can't just use a variable because it can't be updated when using from world import server
 _server = None
 class _Instance:
-	def __getattribute__(self, name):
+	def __getattribute__(self, name: str) -> object:
 		return getattr(_server, name)
 
-	def __setattr__(self, name, value):
-		return setattr(_server, name, value)
+	def __setattr__(self, name: str, value: object) -> None:
+		setattr(_server, name, value)
 
-	def __delattr__(self, name):
-		return delattr(_server, name)
+	def __delattr__(self, name: str) -> None:
+		delattr(_server, name)
 
-server = _Instance()
+server: "WorldServer" = _Instance()
 
 class World(Enum):
 	VentureExplorer = 1000
@@ -68,7 +68,7 @@ import importlib.util
 import logging
 import os.path
 from contextlib import AbstractContextManager as ACM
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 import BTrees
 import ZODB
@@ -78,6 +78,7 @@ from pyraknet.bitstream import ReadStream
 from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
 from pyraknet.server import Event
+from .auth import Account
 from .commonserver import DisconnectReason, Server
 from .game_object import GameObject, ObjectID
 from .messages import WorldServerMsg
@@ -101,14 +102,14 @@ class MultiInstanceAccess(ACM):
 	Internally this means committing before and after, so that edits are immediately committed and the DB doesn't have conflicts.
 	"""
 
-	def __enter__(self):
+	def __enter__(self) -> None:
 		server.commit()
 
-	def __exit__(self, exc_type, exc_value, traceback):
+	def __exit__(self, exc_type, exc_value, traceback) -> None:
 		server.commit()
 
 class WorldServer(Server):
-	def __init__(self, address, external_host, world_id, max_connections, db_conn):
+	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn):
 		super().__init__(address, max_connections, db_conn)
 		self.replica_manager = ReplicaManager(self._server)
 		global _server
@@ -140,7 +141,7 @@ class WorldServer(Server):
 		self.models = []
 		self.last_callback_id = 0
 		self.callback_handles = {}
-		self.accounts = {}
+		self.accounts: Dict[Address, Account] = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
 		self.register_handler(WorldServerMsg.SessionInfo, self._on_session_info)
@@ -172,7 +173,7 @@ class WorldServer(Server):
 		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
 
-	def set_world_id(self, world_id) -> None:
+	def set_world_id(self, world_id: Tuple[int, int]) -> None:
 		self.world_id = world_id[0], 0, world_id[1]
 		if self.world_id[0] != 0: # char
 			custom_script, world_control_lot = self.db.world_info[self.world_id[0]]
@@ -222,7 +223,7 @@ class WorldServer(Server):
 					module = importlib.util.module_from_spec(spec)
 					spec.loader.exec_module(module)
 
-	def spawn_model(self, spawner_id, lot, position: Vector3, rotation: Quaternion) -> None:
+	def spawn_model(self, spawner_id: ObjectID, lot: int, position: Vector3, rotation: Quaternion) -> None:
 		spawned_vars = {"position": position, "rotation": rotation}
 		spawner_vars = {"spawntemplate": lot, "spawner_waypoints": spawned_vars}
 		spawner = GameObject(176, spawner_id, set_vars=spawner_vars)

@@ -2,15 +2,19 @@ import asyncio
 import logging
 import random
 from collections import Counter
+from typing import Dict, Tuple
 
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from pyraknet.bitstream import c_bit, c_bool, c_ubyte, c_uint64, c_ushort
+from pyraknet.bitstream import c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
 from ...amf3 import AMF3
 from ...auth import GMLevel
-from ...bitstream import WriteStream
-from ...game_object import broadcast, c_int, c_int64, c_uint, E, GameObject, OBJ_NONE, Player, single
+from ...bitstream import WriteStream as WriteStream_
+from ...game_object import broadcast, E, GameObject, OBJ_NONE, Player, single
+from ...game_object import c_int as c_int_
+from ...game_object import c_int64 as c_int64_
+from ...game_object import c_uint as c_uint_
 from ...messages import WorldClientMsg
 from ...world import server, World
 from ...math.quaternion import Quaternion
@@ -59,7 +63,7 @@ class RewardType:
 class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharPet, CharProperty, CharTrade, CharUI):
 	object: Player
 
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.char = self
 
@@ -149,7 +153,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		self._flags["tags"] = "guild_flag"
 		self.tags = PersistentList()
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		# First index
 		creation = is_creation and self.vehicle_id != 0
 		out.write(c_bit(creation or self.vehicle_flag))
@@ -266,11 +270,11 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				self.guild_flag = False
 
 	@property
-	def online(self):
+	def online(self) -> bool:
 		return self._online
 
 	@online.setter
-	def online(self, value):
+	def online(self, value: bool) -> None:
 		self._online = value
 		if value:
 			self.send_friend_update_notify(FriendUpdateType.Login)
@@ -278,16 +282,16 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			self.send_friend_update_notify(FriendUpdateType.Logout)
 
 	@property
-	def world(self):
+	def world(self) -> Tuple[int, int, int]:
 		return self._world
 
 	@world.setter
-	def world(self, value):
+	def world(self, value: Tuple[int, int, int]) -> None:
 		self._world = value
 		self.send_friend_update_notify(FriendUpdateType.WorldChange)
 
-	def send_friend_update_notify(self, update_type):
-		update_notify = WriteStream()
+	def send_friend_update_notify(self, update_type: int) -> None:
+		update_notify = WriteStream_()
 		update_notify.write_header(WorldClientMsg.FriendUpdateNotify)
 		update_notify.write(c_ubyte(update_type))
 		update_notify.write(self.object.name, allocated_length=33)
@@ -308,7 +312,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		for index in outdated_refs:
 			del self.friends[index]
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		self.object._handlers.clear()
 		self.vehicle_id = 0
 		self.online = False
@@ -317,7 +321,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		CharTrade.on_destruction(self)
 		self.check_for_leaks()
 
-	def check_for_leaks(self, fullcheck=False):
+	def check_for_leaks(self, fullcheck=False) -> None:
 		if len(self.object.inventory.equipped) > 1:
 			log.warning("Multiple equipped states")
 			for _ in range(len(self.object.inventory.equipped)-1):
@@ -354,7 +358,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			log.warning("Temp Models not empty")
 			log.warning(self.object.inventory.temp_models)
 
-	def faction_token_lot(self):
+	def faction_token_lot(self) -> int:
 		if self.get_flag(VENTURE_LEAGUE_FLAG):
 			return VENTURE_LEAGUE_TOKEN
 		if self.get_flag(ASSEMBLY_FLAG):
@@ -364,7 +368,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		if self.get_flag(SENTINEL_FLAG):
 			return SENTINEL_TOKEN
 
-	def random_loot(self, loot_matrix):
+	def random_loot(self, loot_matrix) -> Counter:
 		loot = Counter()
 		roll = random.random()
 		for table_index, percent, min_to_drop, max_to_drop in loot_matrix:
@@ -380,7 +384,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 					loot[lot] += 1
 		return loot
 
-	def should_be_dropped(self, lot):
+	def should_be_dropped(self, lot: int) -> bool:
 		for mission in self.missions.values():
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
@@ -409,14 +413,14 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 
 		server_address = await server.address_for_world(world, include_self)
 		log.info("Sending redirect to world %s", server_address)
-		redirect = WriteStream()
+		redirect = WriteStream_()
 		redirect.write_header(WorldClientMsg.Redirect)
 		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
 		server.send(redirect, self.address)
 
-	async def transfer_to_last_non_instance(self, position=None, rotation=None):
+	async def transfer_to_last_non_instance(self, position: Vector3=None, rotation: Quaternion=None) -> None:
 		if position is not None:
 			self.object.physics.position.update(position)
 			self.object.physics.attr_changed("position")
@@ -425,11 +429,11 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			self.object.physics.attr_changed("rotation")
 		await self.transfer_to_world(((self.world[0] // 100)*100, self.world[1], 0))
 
-	def mount(self, vehicle):
+	def mount(self, vehicle: GameObject) -> None:
 		vehicle.comp_108.driver_id = self.object.object_id
 		self.vehicle_id = vehicle.object_id
 
-	def dismount(self):
+	def dismount(self) -> None:
 		if self.vehicle_id != 0:
 			server.game_objects[self.vehicle_id].comp_108.driver_id = 0
 			self.vehicle_id = 0
@@ -437,27 +441,27 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 	# I'm going to put all game messages that are player-only but which i'm not sure of the component here
 
 	@single
-	def teleport(self, ignore_y:bool=True, set_rotation:bool=False, skip_all_checks:bool=False, pos:Vector3=E, use_navmesh:bool=False, w:float=1, x:float=E, y:float=E, z:float=E):
+	def teleport(self, ignore_y:bool=True, set_rotation:bool=False, skip_all_checks:bool=False, pos:Vector3=E, use_navmesh:bool=False, w:float=1, x:float=E, y:float=E, z:float=E) -> None:
 		pass
 
 	@single
-	def drop_client_loot(self, use_position:bool=False, final_position:Vector3=Vector3.zero, currency:c_int=E, item_template:c_int=E, loot_id:c_int64=E, owner:GameObject=E, source_obj:GameObject=E, spawn_position:Vector3=Vector3.zero):
+	def drop_client_loot(self, use_position:bool=False, final_position:Vector3=Vector3.zero, currency:c_int_=E, item_template:c_int_=E, loot_id:c_int64_=E, owner:GameObject=E, source_obj:GameObject=E, spawn_position:Vector3=Vector3.zero) -> None:
 		pass
 
-	def play_emote(self, emote_id:c_int, target:GameObject):
+	def play_emote(self, emote_id:c_int_, target:GameObject) -> None:
 		self.emote_played(emote_id, target)
 		if target is not None:
 			target.handle("on_emote_received", self.object, emote_id, silent=True)
 			self.update_mission_task(TaskType.UseEmote, target.lot, emote_id)
 
 	@single
-	def set_currency(self, currency:c_int64=E, loot_type:c_int=0, position:Vector3=E, source_lot:c_int=-1, source_object:GameObject=OBJ_NONE, source_trade:GameObject=OBJ_NONE, source_type:c_int=0):
+	def set_currency(self, currency:c_int64_=E, loot_type:c_int_=0, position:Vector3=E, source_lot:c_int_=-1, source_object:GameObject=OBJ_NONE, source_trade:GameObject=OBJ_NONE, source_type:c_int_=0) -> None:
 		self.currency = currency
 
-	def pickup_currency(self, currency:c_uint=E, position:Vector3=E):
+	def pickup_currency(self, currency:c_uint_=E, position:Vector3=E) -> None:
 		self.set_currency(currency=self.currency + currency, position=Vector3.zero)
 
-	def pickup_item(self, loot_object_id:c_int64=E, player_id:c_int64=E):
+	def pickup_item(self, loot_object_id:c_int64_=E, player_id:c_int64_=E) -> None:
 		assert player_id == self.object.object_id
 		if loot_object_id not in self.dropped_loot:
 			return
@@ -470,20 +474,20 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 			self.object.inventory.add_item(lot)
 		del self.dropped_loot[loot_object_id]
 
-	def request_resurrect(self):
+	def request_resurrect(self) -> None:
 		self.object.destructible.resurrect()
 		self.object.stats.life = 4
 		self.object.stats.imagination = 6
 
 	@broadcast
-	def knockback(self, caster:GameObject=OBJ_NONE, originator:GameObject=OBJ_NONE, knock_back_time_ms:c_int=0, vector:Vector3=E):
+	def knockback(self, caster:GameObject=OBJ_NONE, originator:GameObject=OBJ_NONE, knock_back_time_ms:c_int_=0, vector:Vector3=E):
 		pass
 
 	@single
-	def terminate_interaction(self, terminator:GameObject=E, type:c_int=E):
+	def terminate_interaction(self, terminator:GameObject=E, type:c_int_=E) -> None:
 		pass
 
-	def request_use(self, is_multi_interact_use:bool=E, multi_interact_id:c_uint=E, multi_interact_type:c_int=E, obj:GameObject=E, secondary:bool=False):
+	def request_use(self, is_multi_interact_use:bool=E, multi_interact_id:c_uint_=E, multi_interact_type:c_int_=E, obj:GameObject=E, secondary:bool=False) -> None:
 		if not is_multi_interact_use:
 			assert multi_interact_id == 0
 			multi_interact_id = None
@@ -496,22 +500,22 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		self.update_mission_task(TaskType.Interact, obj.lot)
 
 	@broadcast
-	def emote_played(self, emote_id:c_int, target:GameObject):
+	def emote_played(self, emote_id:c_int_, target:GameObject) -> None:
 		pass
 
-	def client_item_consumed(self, item_id:c_int64=E):
+	def client_item_consumed(self, item_id:c_int64_=E) -> None:
 		item = self.object.inventory.get_stack(InventoryType.Items, item_id)
 		self.update_mission_task(TaskType.UseConsumable, item.lot)
 
 	@single
-	def set_user_ctrl_comp_pause(self, paused:bool=E):
+	def set_user_ctrl_comp_pause(self, paused:bool=E) -> None:
 		pass
 
-	def get_flag(self, flag_id):
+	def get_flag(self, flag_id: int) -> bool:
 		return bool(self.flags & (1 << flag_id))
 
 	@single
-	def set_flag(self, flag:bool=E, flag_id:c_int=E):
+	def set_flag(self, flag:bool=E, flag_id:c_int_=E) -> None:
 		if self.get_flag(flag_id) == flag:
 			return
 
@@ -519,7 +523,7 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		if flag:
 			self.update_mission_task(TaskType.Flag, flag_id)
 
-	def player_loaded(self, player_id:c_int64=E):
+	def player_loaded(self, player_id:c_int64_=E) -> None:
 		assert player_id == self.object.object_id
 		self.player_ready()
 		if self.world == (0, 0, 0):
@@ -533,18 +537,18 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 		server.world_control_object.handle("player_ready", player=self.object)
 
 	@single
-	def player_ready(self):
+	def player_ready(self) -> None:
 		pass
 
 	@single
-	def set_gravity_scale(self, scale:float=E):
+	def set_gravity_scale(self, scale:float=E) -> None:
 		pass
 
 	@broadcast
-	def set_jet_pack_mode(self, bypass_checks:bool=True, hover:bool=False, enable:bool=False, effect_id:c_uint=-1, air_speed:float=10, max_air_speed:float=15, vertical_velocity:float=1, warning_effect_id:c_uint=-1):
+	def set_jet_pack_mode(self, bypass_checks:bool=True, hover:bool=False, enable:bool=False, effect_id:c_uint_=-1, air_speed:float=10, max_air_speed:float=15, vertical_velocity:float=1, warning_effect_id:c_uint_=-1) -> None:
 		pass
 
-	def use_non_equipment_item(self, item_to_use:c_int64=E):
+	def use_non_equipment_item(self, item_to_use:c_int64_=E) -> None:
 		item = self.object.inventory.get_stack(InventoryType.Items, item_to_use)
 		for component_type, component_id in server.db.components_registry[item.lot]:
 			if component_type == 53: # PackageComponent, make an enum for this somewhen
@@ -554,37 +558,37 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				return
 
 	@single
-	def set_emote_lock_state(self, lock:bool=E, emote_id:c_int=E):
+	def set_emote_lock_state(self, lock:bool=E, emote_id:c_int_=E) -> None:
 		if not lock:
 			self.unlocked_emotes.append(emote_id)
 
-	def parse_chat_message(self, client_state:c_int, text:str):
+	def parse_chat_message(self, client_state:c_int_, text:str) -> None:
 		if text.startswith("/"):
 			server.chat.parse_command(text[1:], self.object)
 
-	def ready_for_updates(self, object_id:c_int64=E):
+	def ready_for_updates(self, object_id:c_int64_=E) -> None:
 		pass
 
-	def bounce_notification(self, object_id_bounced:c_int64=E, object_id_bouncer:c_int64=E, success:bool=E):
+	def bounce_notification(self, object_id_bounced:c_int64_=E, object_id_bouncer:c_int64_=E, success:bool=E) -> None:
 		pass
 
 	@single
-	def display_zone_summary(self, is_property_map:bool=False, is_zone_start:bool=False, sender:GameObject=E):
+	def display_zone_summary(self, is_property_map:bool=False, is_zone_start:bool=False, sender:GameObject=E) -> None:
 		pass
 
 	@broadcast
-	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=OBJ_NONE, build_start_pos:Vector3=E, source_bag:c_int=E, source_id:c_int64=E, source_lot:c_int=E, source_type:c_int=E, target_id:c_int64=E, target_lot:c_int=E, target_pos:Vector3=E, target_type:c_int=E):
+	def start_arranging_with_item(self, first_time:bool=True, build_area:GameObject=OBJ_NONE, build_start_pos:Vector3=E, source_bag:c_int_=E, source_id:c_int64_=E, source_lot:c_int_=E, source_type:c_int_=E, target_id:c_int64_=E, target_lot:c_int_=E, target_pos:Vector3=E, target_type:c_int_=E) -> None:
 		self.object.inventory.push_equipped_items_state()
 
 	@broadcast
-	def finish_arranging_with_item(self, build_area_id:c_int64=0, new_source_bag:c_int=E, new_source_id:c_int64=E, new_source_lot:c_int=E, new_source_type:c_int=E, new_target_id:c_int64=E, new_target_lot:c_int=E, new_target_type:c_int=E, new_target_pos:Vector3=E, old_item_bag:c_int=E, old_item_id:c_int64=E, old_item_lot:c_int=E, old_item_type:c_int=E):
+	def finish_arranging_with_item(self, build_area_id:c_int64_=0, new_source_bag:c_int_=E, new_source_id:c_int64_=E, new_source_lot:c_int_=E, new_source_type:c_int_=E, new_target_id:c_int64_=E, new_target_lot:c_int_=E, new_target_type:c_int_=E, new_target_pos:Vector3=E, old_item_bag:c_int_=E, old_item_id:c_int64_=E, old_item_lot:c_int_=E, old_item_type:c_int_=E) -> None:
 		pass
 
 	@single
-	def u_i_message_server_to_single_client(self, args:AMF3=E, message_name:bytes=E):
+	def u_i_message_server_to_single_client(self, args:AMF3=E, message_name:bytes=E) -> None:
 		pass
 
-	def report_bug(self, body:str=E, client_version:bytes=E, other_player_id:bytes=E, selection:bytes=E):
+	def report_bug(self, body:str=E, client_version:bytes=E, other_player_id:bytes=E, selection:bytes=E) -> None:
 		# The chat text input has limited length, this one doesn't
 		# So this makes use of that to allow longer chat commands
 		if selection == b"%[UI_HELP_IN_GAME]" and body.startswith("/"):
@@ -595,26 +599,26 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				for char in account.characters.values():
 					server.mail.send_mail(self.object.name, "Bug Report: "+selection.decode(), body, char)
 
-	def request_smash_player(self):
+	def request_smash_player(self) -> None:
 		self.object.destructible.simply_die(killer=self.object)
 
 	@broadcast
-	def toggle_g_m_invis(self, state_out:bool=False):
+	def toggle_g_m_invis(self, state_out:bool=False) -> None:
 		pass
 
 	@broadcast
-	def player_reached_respawn_checkpoint(self, pos:Vector3=E, rot:Quaternion=Quaternion.identity):
+	def player_reached_respawn_checkpoint(self, pos:Vector3=E, rot:Quaternion=Quaternion.identity) -> None:
 		pass
 
-	def used_information_plaque(self, plaque_object_id:c_int64=E):
-		pass
-
-	@single
-	def activate_brick_mode(self, build_object_id:c_int64=0, build_type:c_int=BuildType.BuildOnProperty, enter_build_from_world:bool=True, enter_flag:bool=True):
+	def used_information_plaque(self, plaque_object_id:c_int64_=E) -> None:
 		pass
 
 	@single
-	def modify_lego_score(self, score:c_int64=E, source_type:c_int=0):
+	def activate_brick_mode(self, build_object_id:c_int64_=0, build_type:c_int_=BuildType.BuildOnProperty, enter_build_from_world:bool=True, enter_flag:bool=True) -> None:
+		pass
+
+	@single
+	def modify_lego_score(self, score:c_int64_=E, source_type:c_int_=0) -> None:
 		self.universe_score += score
 		if self.level < len(server.db.level_scores) and self.universe_score > server.db.level_scores[self.level]:
 			self.level += 1
@@ -630,28 +634,28 @@ class CharacterComponent(Component, CharActivity, CharCamera, CharMission, CharP
 				self.notify_level_rewards(self.level, sending_rewards=False)
 
 	@single
-	def restore_to_post_load_stats(self):
+	def restore_to_post_load_stats(self) -> None:
 		pass
 
 	@single
-	def set_rail_movement(self, path_go_forward:bool=E, path_name:str=E, path_start:c_uint=E, rail_activator_component_id:c_int=-1, rail_activator_obj_id:c_int64=0):
+	def set_rail_movement(self, path_go_forward:bool=E, path_name:str=E, path_start:c_uint_=E, rail_activator_component_id:c_int_=-1, rail_activator_obj_id:c_int64_=0) -> None:
 		pass
 
 	@single
-	def start_rail_movement(self, damage_immune:bool=True, no_aggro:bool=True, notify_activator:bool=False, show_name_billboard:bool=True, camera_locked:bool=True, collision_enabled:bool=True, loop_sound:str=E, path_go_forward:bool=True, path_name:str=E, path_start:c_uint=0, rail_activator_component_id:c_int=-1, rail_activator:GameObject=OBJ_NONE, start_sound:str=E, stop_sound:str=E, use_db:bool=True):
+	def start_rail_movement(self, damage_immune:bool=True, no_aggro:bool=True, notify_activator:bool=False, show_name_billboard:bool=True, camera_locked:bool=True, collision_enabled:bool=True, loop_sound:str=E, path_go_forward:bool=True, path_name:str=E, path_start:c_uint_=0, rail_activator_component_id:c_int_=-1, rail_activator:GameObject=OBJ_NONE, start_sound:str=E, stop_sound:str=E, use_db:bool=True) -> None:
 		pass
 
 	@single
-	def start_celebration_effect(self, animation:str=E, background_object:c_int=11164, camera_path_lot:c_int=12458, cele_lead_in:float=1, cele_lead_out:float=0.8, celebration_id:c_int=-1, duration:float=E, icon_id:c_uint=E, main_text:str=E, mixer_program:bytes=E, music_cue:bytes=E, path_node_name:bytes=E, sound_guid:bytes=E, sub_text:str=E):
+	def start_celebration_effect(self, animation:str=E, background_object:c_int_=11164, camera_path_lot:c_int_=12458, cele_lead_in:float=1, cele_lead_out:float=0.8, celebration_id:c_int_=-1, duration:float=E, icon_id:c_uint_=E, main_text:str=E, mixer_program:bytes=E, music_cue:bytes=E, path_node_name:bytes=E, sound_guid:bytes=E, sub_text:str=E) -> None:
 		pass
 
 	@single
-	def server_done_loading_all_objects(self):
+	def server_done_loading_all_objects(self) -> None:
 		pass
 
-	def notify_server_level_processing_complete(self):
+	def notify_server_level_processing_complete(self) -> None:
 		self.object.render.play_f_x_effect(name=b"7074", effect_type="create", effect_id=7074)
 
 	@single
-	def notify_level_rewards(self, level:c_int=E, sending_rewards:bool=False):
+	def notify_level_rewards(self, level:c_int_=E, sending_rewards:bool=False) -> None:
 		pass

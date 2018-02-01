@@ -6,6 +6,6 @@ class ScriptComponent(script.ScriptComponent):
 		sensor = server.get_objects_in_group(self.script_vars["volume_group"])[0]
 		sensor.script.active = True
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		sensor = server.get_objects_in_group(self.script_vars["volume_group"])[0]
 		sensor.script.active = False

@@ -1,4 +1,6 @@
-from pyraknet.bitstream import c_double, c_ubyte, Serializable
+from typing import Dict, List, Union
+
+from pyraknet.bitstream import c_double, c_ubyte, ReadStream, Serializable, WriteStream
 
 UNDEFINED_MARKER = 0
 FALSE_MARKER = 2
@@ -7,13 +9,17 @@ DOUBLE_MARKER = 5
 STRING_MARKER = 6
 ARRAY_MARKER = 9
 
-class AMF3Reader:
-	def read(self, data):
-		self.str_ref_table = []
+_AMF3Type = Union[None, bool, float, str, dict]
+
+class _AMF3Reader:
+	def __init__(self, data: ReadStream):
+		self.str_ref_table: List[str] = []
 		self.data = data
+
+	def read(self) -> _AMF3Type:
 		return self.read_type()
 
-	def read_u29(self):
+	def read_u29(self) -> int:
 		# variable-length unsigned integer
 		value = 0
 		for i in range(4):
@@ -26,7 +32,7 @@ class AMF3Reader:
 				value = (value << 8) | byte
 		return value
 
-	def read_type(self):
+	def read_type(self) -> _AMF3Type:
 		marker = self.data.read(c_ubyte)
 		if marker == UNDEFINED_MARKER:
 			return None
@@ -42,7 +48,7 @@ class AMF3Reader:
 			return self.read_array()
 		raise NotImplementedError(marker)
 
-	def read_str(self):
+	def read_str(self) -> str:
 		value = self.read_u29()
 		is_literal = value & 0x01
 		value >>= 1
@@ -53,34 +59,36 @@ class AMF3Reader:
 			self.str_ref_table.append(str_)
 		return str_
 
-	def read_array(self):
+	def read_array(self) -> Dict[Union[str, int], _AMF3Type]:
 		value = self.read_u29()
 		is_literal = value & 0x01
 		value >>= 1
 		if not is_literal:
 			raise NotImplementedError
 		size = value
-		array = {}
+		array: Dict[Union[str, int], _AMF3Type] = {}
 		while True:
 			key = self.read_str()
 			if key == "":
 				break
-			value = self.read_type()
-			array[key] = value
+			val = self.read_type()
+			array[key] = val
 
 		for i in range(size):
-			value = self.read_type()
-			array[i] = value
+			val = self.read_type()
+			array[i] = val
 
 		return array
 
-class AMF3Writer:
-	def write(self, data, out):
+class _AMF3Writer:
+	def __init__(self, out: WriteStream):
 		self.out = out
+
+	def write(self, data: dict) -> None:
 		# todo: references (optional)
 		self.write_type(data)
 
-	def write_u29(self, value):
+	def write_u29(self, value: int) -> None:
 		if value < 0x80:
 			self.out.write(c_ubyte(value))
 		elif value < 0x4000:
@@ -96,7 +104,7 @@ class AMF3Writer:
 			self.out.write(c_ubyte((value >> 7) | 0x80))
 			self.out.write(c_ubyte(value & 0xff))
 
-	def write_type(self, value):
+	def write_type(self, value: _AMF3Type) -> None:
 		if value is None:
 			self.out.write(c_ubyte(UNDEFINED_MARKER))
 		elif value is False:
@@ -115,12 +123,12 @@ class AMF3Writer:
 		else:
 			raise NotImplementedError(value)
 
-	def write_str(self, str_):
+	def write_str(self, str_: str) -> None:
 		encoded = str_.encode()
 		self.write_u29((len(encoded) << 1) | 0x01)
 		self.out.write(encoded)
 
-	def write_array(self, array):
+	def write_array(self, array: Dict[Union[str, int], _AMF3Type]) -> None:
 		self.write_u29(0x01) # literal, 0 dense items
 		for key, value in array.items():
 			assert isinstance(key, str)
@@ -128,19 +136,18 @@ class AMF3Writer:
 			self.write_type(value)
 		self.write_str("")
 
-read = AMF3Reader().read
-write = AMF3Writer().write
-
 class AMF3(Serializable):
-	def __init__(self, data):
+	def __init__(self, data: dict):
 		self.data = data
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return str(self.data)
 
-	def serialize(self, stream):
-		write(self.data, stream)
+	def serialize(self, stream: WriteStream) -> None:
+		writer = _AMF3Writer(stream)
+		writer.write(self.data)
 
 	@staticmethod
-	def deserialize(stream):
-		return read(stream)
+	def deserialize(stream: ReadStream) -> _AMF3Type:
+		reader = _AMF3Reader(stream)
+		return reader.read()

@@ -1,5 +1,7 @@
-from pyraknet.bitstream import c_bit, c_int64, c_uint, c_ushort
-from ..game_object import broadcast, c_int, E
+from typing import Dict
+
+from pyraknet.bitstream import c_bit, c_int64, c_uint, c_ushort, WriteStream
+from ..game_object import broadcast, c_int, E, GameObject
 from ..game_object import c_int64 as c_int64_
 from ..game_object import c_uint as c_uint_
 from .scripted_activity import ScriptedActivityComponent
@@ -14,13 +16,13 @@ class RacingNotificationType:
 	LeaderboardUpdated = 6
 
 class RacingControlComponent(ScriptedActivityComponent):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.racing_control = self
 		self._flags["player_data"] = "player_data_flag"
 		self.player_data = {}
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		super().serialize(out, is_creation)
 		out.write(c_bit(True))
 		out.write(c_ushort(2))

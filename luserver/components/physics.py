@@ -1,15 +1,17 @@
 import enum
 import random
+from abc import ABC, abstractmethod
+from typing import Dict, Optional
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint
-from ..game_object import broadcast, E, Player
+from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, WriteStream
+from ..game_object import broadcast, E, GameObject, Player
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 
 class PhysicsComponent(Component):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.physics = self
 		self._flags["position"] = "physics_data_flag"
@@ -39,7 +41,7 @@ class PhysicsComponent(Component):
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component
 
-	def drop_rewards(self, loot_matrix, currency_min, currency_max, owner: Player) -> None:
+	def drop_rewards(self, loot_matrix, currency_min: Optional[int], currency_max: Optional[int], owner: Player) -> None:
 		if currency_min is not None and currency_max is not None:
 			currency = random.randint(currency_min, currency_max)
 			owner.char.drop_client_loot(currency=currency, item_template=-1, loot_id=0, owner=owner, source_obj=self.object)
@@ -49,14 +51,14 @@ class PhysicsComponent(Component):
 			for lot in loot.elements():
 				self.drop_loot(lot, owner)
 
-	def drop_loot(self, lot, owner: Player) -> None:
+	def drop_loot(self, lot: int, owner: Player) -> None:
 		loot_position = Vector3(self.position.x+(random.random()-0.5)*20, self.position.y, self.position.z+(random.random()-0.5)*20)
 		object_id = server.new_spawned_id()
 		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
 class _Controllable(PhysicsComponent):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["on_ground"] = "physics_data_flag"
 		self._flags["unknown_bool"] = "physics_data_flag"
@@ -77,7 +79,7 @@ class _Controllable(PhysicsComponent):
 		self.unknown_float3 = 0, 0, 0
 		self.deeper_unknown_float3 = 0, 0, 0
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
 			out.write(self.position)
@@ -118,11 +120,11 @@ class _Controllable(PhysicsComponent):
 				out.write(c_bit(False))
 			self.physics_data_flag = False
 
-	def write_vehicle_stuff(self, out, is_creation):
+	def write_vehicle_stuff(self, out: WriteStream, is_creation: bool) -> None:
 		pass # hook for vehiclephysics
 
 class ControllablePhysicsComponent(_Controllable):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
 			out.write(c_bit(False))
@@ -134,11 +136,11 @@ class ControllablePhysicsComponent(_Controllable):
 
 	# not sure which component this belongs to, putting it here for now
 	@broadcast
-	def lock_node_rotation(self, node_name:bytes=E):
+	def lock_node_rotation(self, node_name:bytes=E) -> None:
 		pass
 
 class SimplePhysicsComponent(PhysicsComponent):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
 			out.write(c_float(0))
@@ -151,7 +153,7 @@ class SimplePhysicsComponent(PhysicsComponent):
 			self.physics_data_flag = False
 
 class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
 			out.write(self.position)
@@ -159,14 +161,14 @@ class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
 			self.physics_data_flag = False
 
 class VehiclePhysicsComponent(_Controllable):
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		super().serialize(out, is_creation)
 		if is_creation:
 			out.write(c_ubyte(0))
 			out.write(c_bit(False))
 		out.write(c_bit(False))
 
-	def write_vehicle_stuff(self, out, is_creation):
+	def write_vehicle_stuff(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(False))
 		out.write(c_float(0))
 
@@ -191,9 +193,14 @@ _PRIMITIVE_DIMENSIONS = {
 	PrimitiveModelType.Cuboid: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5)),
 	PrimitiveModelType.Cylinder: (Vector3(-0.5, 0, -0.5), Vector3(0.5, 1, 0.5))}
 
+class Collider(ABC):
+	@abstractmethod
+	def is_point_within(self, point: Vector3) -> bool:
+		pass
+
 # currently for static objects only, does not handle position/rotation updates
-class AABB: # axis aligned bounding box
-	def __init__(self, obj):
+class AABB(Collider): # axis aligned bounding box
+	def __init__(self, obj: GameObject):
 		if hasattr(obj, "primitive_model_type"):
 			rel_min = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0].hadamard(obj.primitive_model_scale)
 			rel_max = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1].hadamard(obj.primitive_model_scale)
@@ -213,7 +220,7 @@ class AABB: # axis aligned bounding box
 
 		rotated_vertices = []
 		for vertex in vertices:
-			rotated_vertices.append(vertex.rotated(obj.physics.rotation))
+			rotated_vertices.append(obj.physics.rotation.rotate(vertex))
 
 		rot_min = Vector3()
 		rot_max = Vector3()
@@ -229,18 +236,18 @@ class AABB: # axis aligned bounding box
 		self.min = obj.physics.position + rot_min
 		self.max = obj.physics.position + rot_max
 
-	def is_point_within(self, point):
+	def is_point_within(self, point: Vector3) -> bool:
 		return self.min.x < point.x < self.max.x and \
 		       self.min.y < point.y < self.max.y and \
 		       self.min.z < point.z < self.max.z
 
 # for dynamic objects
-class CollisionSphere:
-	def __init__(self, obj, radius):
+class CollisionSphere(Collider):
+	def __init__(self, obj: GameObject, radius: int):
 		self.position = obj.physics.position
 		self.sq_radius = radius**2
 
-	def is_point_within(self, point):
+	def is_point_within(self, point: Vector3) -> bool:
 		return self.position.sq_distance(point) < self.sq_radius
 
 class PhysicsEffect(enum.IntEnum):
@@ -251,7 +258,7 @@ class PhysicsEffect(enum.IntEnum):
 	Friction = 4
 
 class PhantomPhysicsComponent(PhysicsComponent):
-	def __init__(self, obj, set_vars, comp_id):
+	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["physics_effect_active"] = "physics_effect_flag"
 		self._flags["physics_effect_type"] = "physics_effect_flag"
@@ -264,7 +271,7 @@ class PhantomPhysicsComponent(PhysicsComponent):
 		if "respawn_data" in set_vars:
 			self.respawn_data = set_vars["respawn_data"]
 
-	def serialize(self, out, is_creation):
+	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.physics_data_flag or is_creation))
 		if self.physics_data_flag or is_creation:
 			out.write(self.position)
@@ -282,7 +289,7 @@ class PhantomPhysicsComponent(PhysicsComponent):
 				out.write(self.physics_effect_direction)
 			self.physics_effect_flag = False
 
-	def on_startup(self):
+	def on_startup(self) -> None:
 		if self.object.lot in _MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):
 			for comp in self.object.components:
 				if comp is self:
@@ -292,6 +299,6 @@ class PhantomPhysicsComponent(PhysicsComponent):
 					server.general.tracked_objects[self.object] = AABB(self.object)
 					break
 
-	def on_enter(self, player):
+	def on_enter(self, player: Player) -> None:
 		if hasattr(self, "respawn_data"):
 			player.char.player_reached_respawn_checkpoint(self.respawn_data[0], self.respawn_data[1])

@@ -75,7 +75,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
 				super()._check_value(action, value)
 
 class ChatHandling:
-	def __init__(self):
+	def __init__(self) -> None:
 		self._chat_parser = CustomArgumentParser(prog="server command line")
 		self.commands = self._chat_parser.add_subparsers(title="Available commands", parser_class=lambda *args, **kwargs: CustomArgumentParser(*args, **kwargs))
 

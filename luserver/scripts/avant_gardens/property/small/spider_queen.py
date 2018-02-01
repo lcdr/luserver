@@ -6,7 +6,7 @@ class ScriptComponent(script.ScriptComponent):
 	def on_startup(self):
 		self.spiderlings_defeated = 0
 
-	def on_destruction(self):
+	def on_destruction(self) -> None:
 		server.world_control_object.script.on_spider_defeated()
 
 	def on_hit(self, damage, attacker):

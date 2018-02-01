@@ -52,11 +52,11 @@ class Mapping(Generic[T, U, V], Mapping_[U, V]):
 	pass
 
 class GameObject(Replica):
-	def __setattr__(self, name, value):
+	def __setattr__(self, name: str, value: object) -> None:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, lot, object_id: ObjectID, set_vars=None):
+	def __init__(self, lot: int, object_id: ObjectID, set_vars: Dict[str, object]=None):
 		if set_vars is None:
 			set_vars = {}
 		self._handlers: Dict[str, List[Callable[..., None]]] = {}
@@ -196,7 +196,7 @@ class GameObject(Replica):
 
 		self._serialize_scheduled = False
 
-	def serialize(self, stream: WriteStream, is_creation=False) -> None:
+	def serialize(self, stream: WriteStream, is_creation: bool=False) -> None:
 		stream.write(c_bit(self.related_objects_flag or (is_creation and (self.parent is not None or self.children))))
 		if self.related_objects_flag or (is_creation and (self.parent is not None or self.children)):
 			stream.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
@@ -247,7 +247,7 @@ class GameObject(Replica):
 		if handler in self._handlers[event_name]:
 			self._handlers[event_name].remove(handler)
 
-	def handlers(self, event_name: str, silent=False) -> List[Callable]:
+	def handlers(self, event_name: str, silent: bool=False) -> List[Callable]:
 		"""
 		Return matching handlers for an event.
 		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
@@ -327,7 +327,7 @@ class GameObject(Replica):
 		signature = inspect.signature(handlers[0])
 		kwargs = {}
 		params = list(signature.parameters.values())
-		if params and params[0].name == "player" and params[0].annotation == inspect.Parameter.empty and params[0].default == inspect.Parameter.empty:
+		if params and params[0].name == "player" and params[0].default == inspect.Parameter.empty:
 			params.pop(0)
 		for param in params:
 			if param.annotation == bool:
@@ -360,7 +360,7 @@ class GameObject(Replica):
 				playerarg = next(it) == "player"
 				if playerarg:
 					arg = signature.parameters["player"]
-					playerarg = arg.annotation == inspect.Parameter.empty and arg.default == inspect.Parameter.empty
+					playerarg = arg.default == inspect.Parameter.empty
 			if playerarg:
 				handler(player, **kwargs)
 			else:
@@ -374,7 +374,7 @@ class GameObject(Replica):
 			return message.read(bytes, length_type=c_uint_)
 		if type_ == str:
 			return message.read(str, length_type=c_uint_)
-		if type_ in (c_int_, c_uint_, c_int64_, c_uint64_):
+		if type_ in (c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_):
 			return message.read(type_)
 		if type_ == LDF:
 			value = message.read(str, length_type=c_uint_)
@@ -405,7 +405,7 @@ class GameObject(Replica):
 class Player(GameObject, Persistent):
 	char: "CharacterComponent"
 
-	def __init__(self, object_id):
+	def __init__(self, object_id: ObjectID):
 		GameObject.__init__(self, 1, object_id)
 		Persistent.__init__(self)
 
@@ -426,8 +426,9 @@ class PhysicsObject(GameObject):
 class StatsObject(GameObject):
 	stats: "StatsSubcomponent"
 
+W = TypeVar("W")
 
-def _send_game_message(mode):
+def _send_game_message(mode: str) -> Callable[[W], W]:
 	"""
 	Send a game message on calling its function.
 	Modes:
@@ -510,7 +511,7 @@ def _game_message_serialize(out, type_, value):
 		out.write(value, length_type=c_uint_)
 	elif type_ == str:
 		out.write(value, length_type=c_uint_)
-	elif type_ in (c_int_, c_uint_, c_int64_, c_uint64_):
+	elif type_ in (c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_):
 		out.write(type_(value))
 	elif type_ == LDF:
 		ldf_text = value.to_str()
