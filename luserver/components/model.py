@@ -1,12 +1,10 @@
-from typing import Dict
-
 from pyraknet.bitstream import c_bit, c_float, c_int, WriteStream
-from ..game_object import GameObject
+from ..game_object import Config, GameObject
 from ..ldf import LDFDataType
 from .component import Component
 
 class ModelComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		if hasattr(self.object, "pet"):
 			return

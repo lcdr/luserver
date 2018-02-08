@@ -2,7 +2,7 @@ import luserver.components.script as script
 from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.enable_fx(True)
 
 	def on_destruction(self) -> None:

@@ -6,7 +6,7 @@ import logging
 import re
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, cast, Dict, Generic, List, NewType, Tuple, Type, TypeVar, TYPE_CHECKING, Union
+from typing import Callable, cast, Dict, Generic, List, NewType, Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
 from typing import Sequence as Sequence_
 from typing import Mapping as Mapping_
 
@@ -19,10 +19,13 @@ from pyraknet.bitstream import c_uint as c_uint_
 from pyraknet.bitstream import c_uint64 as c_uint64_
 from pyraknet.messages import Address
 from pyraknet.replicamanager import Replica
+from .amf3 import AMF3
 from .bitstream import WriteStream as WriteStream_
 from .ldf import LDF
 from .messages import GameMessage, WorldClientMsg
 from .world import server
+from .math.vector import Vector3
+from .math.quaternion import Quaternion
 
 log = logging.getLogger(__name__)
 
@@ -41,9 +44,19 @@ else:
 	c_uint = c_uint_
 	c_uint64 = c_uint64_
 
+EA = cast(AMF3, E)
+EB = cast(bool, E)
+EBY = cast(bytes, E)
+EF = cast(float, E)
+EI = cast(int, E)
+EL = cast(LDF, E)
+ES = cast(str, E)
+EV = cast(Vector3, E)
+
 T = TypeVar("T", bound=UnsignedIntStruct)
 U = TypeVar("U")
 V = TypeVar("V")
+W = TypeVar("W")
 
 class Sequence(Generic[T, U], Sequence_[U]):
 	pass
@@ -51,12 +64,48 @@ class Sequence(Generic[T, U], Sequence_[U]):
 class Mapping(Generic[T, U, V], Mapping_[U, V]):
 	pass
 
+try:
+	from mypy_extensions import TypedDict
+except ImportError:
+	TypedDict = object
+
+class Config(TypedDict, total=False):
+	active_on_load: bool
+	activity_id: int
+	attached_path: str
+	collectible_id: int
+	config: LDF
+	custom_script: str
+	groups: Sequence_[str]
+	name: str
+	num_to_maintain: int
+	parent: "GameObject"
+	position: Vector3
+	primitive_model_type: int
+	primitive_model_scale: Vector3
+	rail_path: str
+	rail_path_start: int
+	rebuild_activator_position: Vector3
+	rebuild_complete_time: float
+	rebuild_smash_time: float
+	respawn_name: str
+	respawn_point_name: str
+	respawn_time: int
+	rotation: Quaternion
+	scale: float
+	script_vars: Dict[str, object]
+	spawner: "GameObject"
+	spawner_name: str
+	spawner_waypoints: Sequence_["Config"]
+	spawntemplate: int
+	spawn_net_on_smash: str
+
 class GameObject(Replica):
 	def __setattr__(self, name: str, value: object) -> None:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	def __init__(self, lot: int, object_id: ObjectID, set_vars: Dict[str, object]=None):
+	def __init__(self, lot: int, object_id: ObjectID, set_vars: Config=None):
 		if set_vars is None:
 			set_vars = {}
 		self._handlers: Dict[str, List[Callable[..., None]]] = {}
@@ -101,7 +150,7 @@ class GameObject(Replica):
 
 		comps: Dict[Type[Component], int] = OrderedDict()
 
-		comp_ids = list(server.db.components_registry[self.lot])
+		comp_ids: List[Tuple[int, Optional[int]]] = list(server.db.components_registry[self.lot])
 		if "custom_script" in set_vars:
 			# add custom script if no script is already there
 			for comp in comp_ids:
@@ -178,7 +227,7 @@ class GameObject(Replica):
 		stream.write(bytes(4)) # time since created on server?
 		stream.write(c_bit(self.config))
 		if self.config:
-			stream.write(self.config.to_bitstream())
+			stream.write(self.config.to_bytes())
 		stream.write(c_bit(hasattr(self, "trigger")))
 		stream.write(c_bit(self.spawner_object is not None))
 		if self.spawner_object is not None:
@@ -349,7 +398,7 @@ class GameObject(Replica):
 			if kwargs:
 				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
 
-		player = server.accounts[address].characters.selected()
+		player = server.accounts[address].selected_char()
 		for handler in handlers:
 			if hasattr(handler, "__wrapped__"):
 				handler = functools.partial(handler.__wrapped__, handler.__self__)
@@ -366,7 +415,7 @@ class GameObject(Replica):
 			else:
 				handler(**kwargs)
 
-	def _game_message_deserialize(self, message: ReadStream, type_):
+	def _game_message_deserialize(self, message: ReadStream, type_: Type[W]) -> W:
 		value: Union[str, list, dict]
 		if type_ == float:
 			return message.read(c_float)
@@ -402,14 +451,38 @@ class GameObject(Replica):
 			return value
 		raise TypeError(type_)
 
-class Player(GameObject, Persistent):
+EO = cast(GameObject, E)
+
+# these are for static typing and shouldn't actually be used
+class PhysicsObject(GameObject):
+	physics: "PhysicsComponent"
+
+
+class ControllableObject(PhysicsObject):
+	physics: "Controllable"
+
+class RenderObject(GameObject):
+	render: "RenderComponent"
+
+class ScriptObject(GameObject):
+	script: "ScriptComponent"
+
+class StatsObject(PhysicsObject, RenderObject): # safe to assume that a stats object is also a physics object - only 2 entries (6622, 6908) in the database didn't match, and those were test objects
+	stats: "StatsSubcomponent"
+
+class DestructibleObject(StatsObject):
+	destructible: "DestructibleComponent"
+
+class Player(ControllableObject, DestructibleObject, Persistent):
 	char: "CharacterComponent"
+	inventory: "InventoryComponent"
+	skill: "SkillComponent"
 
 	def __init__(self, object_id: ObjectID):
 		GameObject.__init__(self, 1, object_id)
 		Persistent.__init__(self)
 
-	def __setattr__(self, name, value):
+	def __setattr__(self, name: str, value: object) -> None:
 		if not self._p_setattr(name, value):
 			super().__setattr__(name, value)
 			self._p_changed = True
@@ -417,18 +490,12 @@ class Player(GameObject, Persistent):
 # backwards compatibility
 PersistentObject = Player
 
+EP = cast(Player, E)
 OBJ_NONE = cast(Player, None)
 
-# these are for static typing and shouldn't actually be used
-class PhysicsObject(GameObject):
-	physics: "PhysicsComponent"
+X = TypeVar("X", bound=Callable)
 
-class StatsObject(GameObject):
-	stats: "StatsSubcomponent"
-
-W = TypeVar("W")
-
-def _send_game_message(mode: str) -> Callable[[W], W]:
+def _send_game_message(mode: str) -> Callable[[X], X]:
 	"""
 	Send a game message on calling its function.
 	Modes:
@@ -442,7 +509,7 @@ def _send_game_message(mode: str) -> Callable[[W], W]:
 
 	If the function has "player" as the first argument, the player that this message will be sent to will be passed to the function as that argument. Note that this only really makes sense to specify in "single" mode.
 	"""
-	def decorator(func):
+	def decorator(func: X) -> X:
 		from .world import server
 
 		@wraps(func)
@@ -504,7 +571,7 @@ def _send_game_message(mode: str) -> Callable[[W], W]:
 	return decorator
 
 
-def _game_message_serialize(out, type_, value):
+def _game_message_serialize(out, type_: Type[W], value: W) -> None:
 	if type_ == float:
 		out.write(c_float(value))
 	elif type_ == bytes:
@@ -559,7 +626,7 @@ from .components.model import ModelComponent
 from .components.modular_build import ModularBuildComponent
 from .components.moving_platform import MovingPlatformComponent
 from .components.pet import PetComponent
-from .components.physics import ControllablePhysicsComponent, PhantomPhysicsComponent, PhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
+from .components.physics import Controllable, ControllablePhysicsComponent, PhantomPhysicsComponent, PhysicsComponent, RigidBodyPhantomPhysicsComponent, SimplePhysicsComponent, VehiclePhysicsComponent
 from .components.property import PropertyEntranceComponent, PropertyManagementComponent, PropertyVendorComponent
 from .components.racing_control import RacingControlComponent
 from .components.rail import RailActivatorComponent

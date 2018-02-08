@@ -6,7 +6,7 @@ SMOKE_TIME = 5
 # fire going out when sprayed with water not implemented
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.object.render.play_f_x_effect(name=b"candle_light", effect_type="create", effect_id=2108)
 		self.script_vars["am_hit"] = False
 

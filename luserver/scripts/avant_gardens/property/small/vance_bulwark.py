@@ -7,7 +7,7 @@ from luserver.components.mission import MissionState
 TRIAL_GEAR = 14359, 14321, 14353, 14315
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=E, mission_state:c_int=E, mission_id:c_int=E, player:Player=E):
+	def mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP):
 		if mission_id == 320:
 			if mission_state == MissionState.Available:
 				server.world_control_object.script.notify_client_object(name="GuardChat", param1=0, param2=0, param_str=b"", param_obj=self.object)

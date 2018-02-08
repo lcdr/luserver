@@ -1,7 +1,7 @@
 from typing import Dict
 
 from pyraknet.bitstream import c_bit, c_int64, c_uint, c_ushort, WriteStream
-from ..game_object import broadcast, c_int, E, GameObject
+from ..game_object import broadcast, c_int, Config, EI, ES, GameObject, Player
 from ..game_object import c_int64 as c_int64_
 from ..game_object import c_uint as c_uint_
 from .scripted_activity import ScriptedActivityComponent
@@ -16,11 +16,11 @@ class RacingNotificationType:
 	LeaderboardUpdated = 6
 
 class RacingControlComponent(ScriptedActivityComponent):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.racing_control = self
 		self._flags["player_data"] = "player_data_flag"
-		self.player_data = {}
+		self.player_data: Dict[Player, object] = {}
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		super().serialize(out, is_creation)
@@ -44,5 +44,5 @@ class RacingControlComponent(ScriptedActivityComponent):
 		out.write(c_bit(False))
 
 	@broadcast
-	def notify_racing_client(self, event_type:c_uint_=RacingNotificationType.Invalid, param1:c_int=E, param_obj:c_int64_=E, param_str:str=E, single_client:c_int64=E):
+	def notify_racing_client(self, event_type:c_uint_=RacingNotificationType.Invalid, param1:c_int=EI, param_obj:c_int64_=EI, param_str:str=ES, single_client:c_int64_=EI) -> None:
 		pass

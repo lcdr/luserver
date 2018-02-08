@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import cast, List, Optional, Tuple
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, WriteStream
 from ..amf3 import AMF3
-from ..game_object import broadcast, E, GameObject, Player, Sequence, single
+from ..game_object import broadcast, E, EB, EBY, EI, EO, ES, EV, GameObject, Player, Sequence, single
 from ..game_object import c_int as c_int_
 from ..game_object import c_uint as c_uint_
 from ..game_object import c_int64 as c_int64_
@@ -11,9 +11,9 @@ from ..math.vector import Vector3
 from .component import Component
 
 class PropertyData(Serializable):
-	def __init__(self):
-		self.owner = None
-		self.path = []
+	def __init__(self) -> None:
+		self.owner: Player = None
+		self.path: List[Tuple[float, float, float]] = []
 
 	def serialize(self, stream: WriteStream) -> None:
 		stream.write(c_int64(0))
@@ -101,7 +101,7 @@ class PropertyData(Serializable):
 		return PropertyData()
 
 class PropertySelectQueryProperty(Serializable):
-	def __init__(self):
+	def __init__(self) -> None:
 		self.clone_id = 0
 		self.owner_name = "Test owner name"
 		self.name = "Test name"
@@ -159,7 +159,7 @@ class PropertyEntranceComponent(Component):
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
-	def enter_property1(self, player, index:c_int_=E, return_to_zone:bool=True) -> None:
+	def enter_property1(self, player: Player, index:c_int_=EI, return_to_zone:bool=True) -> None:
 		clone_id = 0
 		if not return_to_zone and index == -1:
 			clone_id = player.char.clone_id
@@ -169,7 +169,7 @@ class PropertyEntranceComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, player, include_null_address:bool=E, include_null_description:bool=E, players_own:bool=E, update_ui:bool=E, num_results:c_int_=E, reputation_time:c_int_=E, sort_method:c_int_=E, start_index:c_int_=E, filter_text:bytes=E) -> None:
+	def property_entrance_sync(self, player: Player, include_null_address:bool=EB, include_null_description:bool=EB, players_own:bool=EB, update_ui:bool=EB, num_results:c_int_=EI, reputation_time:c_int_=EI, sort_method:c_int_=EI, start_index:c_int_=EI, filter_text:bytes=EBY) -> None:
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		#my_property.is_owned = True
@@ -177,26 +177,28 @@ class PropertyEntranceComponent(Component):
 		self.property_select_query(nav_offset=0, there_are_more=False, my_clone_id=0, has_featured_property=False, was_friends=False, properties=[my_property], player=player)
 
 	@single
-	def property_select_query(self, nav_offset:c_int_=E, there_are_more:bool=E, my_clone_id:c_int_=E, has_featured_property:bool=E, was_friends:bool=E, properties:Sequence[c_uint, PropertySelectQueryProperty]=E) -> None:
+	def property_select_query(self, nav_offset:c_int_=EI, there_are_more:bool=EB, my_clone_id:c_int_=EI, has_featured_property:bool=EB, was_friends:bool=EB, properties:Sequence[c_uint, PropertySelectQueryProperty]=E) -> None:
 		pass
 
 	@broadcast
-	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=E) -> None:
+	def fire_event_client_side(self, args:str=ES, obj:GameObject=EO, param1:c_int64_=0, param2:c_int_=-1, sender:GameObject=EO) -> None:
 		pass
 
 	@single
 	def property_entrance_begin(self) -> None:
 		pass
 
+EPD = cast(PropertyData, E)
+
 class PropertyManagementComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
 	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
-	def download_property_data(self, data:PropertyData=E) -> None:
+	def download_property_data(self, data:PropertyData=EPD) -> None:
 		pass
 
-	def query_property_data(self, player) -> None:
+	def query_property_data(self, player: Player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()
@@ -205,7 +207,7 @@ class PropertyManagementComponent(Component):
 
 		self.download_property_data(property, player=player)
 
-	def start_building_with_item(self, player, first_time:bool=True, success:bool=E, source_bag:c_int_=E, source_id:c_int64_=E, source_lot:c_int_=E, source_type:c_int_=E, target_id:c_int64_=E, target_lot:c_int_=E, target_pos:Vector3=E, target_type:c_int_=E) -> None:
+	def start_building_with_item(self, player: Player, first_time:bool=True, success:bool=EB, source_bag:c_int_=EI, source_id:c_int64_=EI, source_lot:c_int_=EI, source_type:c_int_=EI, target_id:c_int64_=EI, target_lot:c_int_=EI, target_pos:Vector3=EV, target_type:c_int_=EI) -> None:
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
@@ -214,12 +216,12 @@ class PropertyManagementComponent(Component):
 
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
-	def set_build_mode(self, start:bool=E, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero) -> None:
+	def set_build_mode(self, start:bool=EB, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=EI, start_pos:Vector3=Vector3.zero) -> None:
 		server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
 	@broadcast
-	def set_build_mode_confirmed(self, start:bool=E, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=E, start_pos:Vector3=Vector3.zero) -> None:
+	def set_build_mode_confirmed(self, start:bool=EB, warn_visitors:bool=True, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=EI, start_pos:Vector3=Vector3.zero) -> None:
 		pass
 
 class PropertyVendorComponent(Component):
@@ -231,10 +233,10 @@ class PropertyVendorComponent(Component):
 		self.open_property_vendor(player=player)
 
 	@single # this is actually @broadcast but it's not needed and this packet is particularly large so i'm setting this to single
-	def download_property_data(self, data:PropertyData=E) -> None:
+	def download_property_data(self, data:PropertyData=EPD) -> None:
 		pass
 
-	def query_property_data(self, player) -> None:
+	def query_property_data(self, player: Player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()
@@ -247,12 +249,12 @@ class PropertyVendorComponent(Component):
 	def open_property_vendor(self) -> None:
 		pass
 
-	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int_=1, item:c_int_=E) -> None:
+	def buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int_=1, item:c_int_=EI) -> None:
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)
 		server.world_control_object.script.on_property_rented(player)
 
 	@single
-	def property_rental_response(self, clone_id:c_uint_=E, code:c_int_=E, property_id:c_int64_=E, rentdue:c_int64_=E) -> None:
+	def property_rental_response(self, clone_id:c_uint_=EI, code:c_int_=EI, property_id:c_int64_=EI, rentdue:c_int64_=EI) -> None:
 		pass

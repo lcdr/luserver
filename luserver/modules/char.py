@@ -101,10 +101,13 @@ class CharHandling:
 		server.register_handler(WorldServerMsg.EnterWorld, self._on_enter_world)
 
 	def _on_character_list_request(self, data: ReadStream, address: Address) -> None:
-		selected = server.accounts[address].characters.selected()
+		try:
+			selected_char = server.accounts[address].selected_char()
 
-		if server.world_id[0] != 0:
-			server.replica_manager.destruct(selected)
+			if server.world_id[0] != 0:
+				server.replica_manager.destruct(selected_char)
+		except KeyError:
+			pass
 
 		server.conn.sync()
 		characters = server.accounts[address].characters
@@ -114,10 +117,9 @@ class CharHandling:
 		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterList)
 		response.write(c_ubyte(len(characters)))
-		ref = characters.selected()
 		try:
-			selected = character_list.index(ref)
-		except ValueError:
+			selected = character_list.index(server.accounts[address].selected_char())
+		except KeyError:
 			selected = 0
 		response.write(c_ubyte(selected))
 
@@ -201,7 +203,7 @@ class CharHandling:
 
 				characters = account.characters
 				characters[char_name] = new_char
-				characters.selected = persistent.wref.WeakRef(new_char)
+				characters.selected_char_name = char_name
 				server.conn.transaction_manager.commit()
 				log.info("Creating new character %s", char_name)
 		except Exception:
@@ -241,7 +243,7 @@ class CharHandling:
 
 		characters = server.accounts[address].characters
 		selected_char = [i for i in characters.values() if i.object_id == char_id][0]
-		characters.selected = persistent.wref.WeakRef(selected_char)
+		server.accounts[address].selected_char_name = selected_char.name
 		selected_char.char.address = address
 		selected_char.char.online = True
 

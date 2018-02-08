@@ -3,7 +3,7 @@ from luserver.world import server
 from luserver.math.quaternion import Quaternion
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.spiderlings_defeated = 0
 
 	def on_destruction(self) -> None:

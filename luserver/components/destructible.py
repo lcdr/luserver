@@ -1,7 +1,7 @@
 from typing import Dict
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import broadcast, c_int, E, GameObject, OBJ_NONE, PhysicsObject, Player, StatsObject
+from ..game_object import broadcast, c_int, Config, EB, EF, EO, EP, ES, GameObject, OBJ_NONE, Player, StatsObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -11,13 +11,10 @@ class KillType:
 	Violent = 0
 	Silent = 1
 
-class PS(PhysicsObject, StatsObject):
-	pass
-
 class DestructibleComponent(Component):
-	object: PS # safe to assume that a destructible object is also a physics object - only 2 entries (6622, 6908) in the database didn't match, and those were test objects
+	object: StatsObject
 
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.comp_id = comp_id
 		self.object.destructible = self
@@ -60,7 +57,7 @@ class DestructibleComponent(Component):
 		"""Shorthand for request_die with default values."""
 		self.request_die(False, death_type, 0, 0, 10, kill_type, killer, loot_owner)
 
-	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=KillType.Violent, killer:GameObject=E, loot_owner:Player=E) -> None:
+	def request_die(self, unknown_bool:bool=EB, death_type:str=ES, direction_relative_angle_xz:float=EF, direction_relative_angle_y:float=EF, direction_relative_force:float=EF, kill_type:c_int=KillType.Violent, killer:GameObject=EO, loot_owner:Player=EP) -> None:
 		if self.object.stats.life == 0:
 			# already dead
 			return

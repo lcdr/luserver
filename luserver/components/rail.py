@@ -1,11 +1,11 @@
-from typing import Dict, Optional
+from typing import Optional
 
 from pyraknet.bitstream import WriteStream
-from ..game_object import GameObject, Player
+from ..game_object import Config, GameObject, Player
 from .component import Component
 
 class RailActivatorComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._rail_path = set_vars.get("rail_path", "")
 		self._rail_path_start = set_vars.get("rail_path_start", 0)

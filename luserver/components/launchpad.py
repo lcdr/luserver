@@ -1,16 +1,17 @@
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from pyraknet.bitstream import WriteStream
-from ..game_object import broadcast, c_int, c_int64, E, GameObject, Player
+from ..game_object import broadcast, c_int, c_int64, Config, EO, ES, GameObject, Player
 from ..world import server
 from .component import Component
+from .inventory import Stack
 
 log = logging.getLogger(__name__)
 
 class LaunchpadComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.launchpad = self
 		self._target_world = server.db.launchpad_component[comp_id][0]
@@ -36,16 +37,16 @@ class LaunchpadComponent(Component):
 		else:
 			player.char.disp_tooltip("You don't have a rocket!")
 
-	def launch(self, player: Player, rocket) -> None:
+	def launch(self, player: Player, rocket: Stack) -> None:
 		player.char.traveling_rocket = rocket.module_lots
 		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 
-	def fire_event_server_side(self, player, args:str=E, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=E) -> None:
+	def fire_event_server_side(self, player: Player, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=EO) -> None:
 		if args == "ZonePlayer":
 			if param2:
 				param3 = self._default_world_id
 			asyncio.ensure_future(player.char.transfer_to_world((param3, 0, param1), self._respawn_point_name))
 
 	@broadcast
-	def fire_event_client_side(self, args:str=E, obj:GameObject=E, param1:c_int64=0, param2:c_int=-1, sender:GameObject=E) -> None:
+	def fire_event_client_side(self, args:str=ES, obj:GameObject=EO, param1:c_int64=0, param2:c_int=-1, sender:GameObject=EO) -> None:
 		pass

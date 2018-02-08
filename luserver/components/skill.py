@@ -1,10 +1,9 @@
 import enum
 import logging
 import pprint
-from typing import Dict
 
 from pyraknet.bitstream import c_bit, c_uint, c_uint64, ReadStream, WriteStream
-from ..game_object import broadcast, c_int, c_int64, E, GameObject, ObjectID, single
+from ..game_object import broadcast, c_int, c_int64, Config, EBY, EI, GameObject, ObjectID, single
 from ..game_object import c_uint as c_uint_
 from ..world import server
 from ..math.quaternion import Quaternion
@@ -133,7 +132,7 @@ class CastType:
 PASSIVE_BEHAVIORS = BehaviorTemplate.TargetCaster, BehaviorTemplate.Buff, BehaviorTemplate.Jetpack, BehaviorTemplate.SkillCastFailed, BehaviorTemplate.ApplyBuff
 
 class SkillComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.skill = self
 		self.delayed_behaviors = {}
@@ -188,10 +187,10 @@ class SkillComponent(Component):
 		return proj_id
 
 	@broadcast
-	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0) -> None:
+	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=EI, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=EBY, skill_id:c_uint_=EI, ui_skill_handle:c_uint_=0) -> None:
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=E, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=E, skill_id:c_uint_=E, ui_skill_handle:c_uint_=0) -> None:
+	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=EI, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=EBY, skill_id:c_uint_=EI, ui_skill_handle:c_uint_=0) -> None:
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -231,22 +230,22 @@ class SkillComponent(Component):
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
 			self.object.inventory.remove_item(InventoryType.Items, object_id=consumable_item_id)
 
-	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=E) -> None:
+	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=EI) -> None:
 		pass
 
 	@broadcast
-	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint_=E, slot_id:c_int=-1, temporary:bool=True) -> None:
+	def add_skill(self, ai_combat_weight:c_int=0, from_skill_set:bool=False, cast_type:c_int=0, time_secs:float=-1, times_can_cast:c_int=-1, skill_id:c_uint_=EI, slot_id:c_int=-1, temporary:bool=True) -> None:
 		pass
 
 	@single
-	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=E) -> None:
+	def remove_skill(self, from_skill_set:bool=False, skill_id:c_uint_=EI) -> None:
 		pass
 
 	@broadcast
-	def echo_sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E) -> None:
+	def echo_sync_skill(self, done:bool=False, bitstream:bytes=EBY, ui_behavior_handle:c_uint_=EI, ui_skill_handle:c_uint_=EI) -> None:
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:bytes=E, ui_behavior_handle:c_uint_=E, ui_skill_handle:c_uint_=E) -> None:
+	def sync_skill(self, done:bool=False, bitstream:bytes=EBY, ui_behavior_handle:c_uint_=EI, ui_skill_handle:c_uint_=EI) -> None:
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -274,7 +273,7 @@ class SkillComponent(Component):
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=E) -> None:
+	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=EBY) -> None:
 		stream = ReadStream(bitstream)
 		if target_id == 0:
 			target = self.object

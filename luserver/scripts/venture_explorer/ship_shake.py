@@ -10,7 +10,7 @@ SHAKE_EFFECT_NAME = "camshake-bridge"
 SHAKE_RADIUS = 500
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.ship_fx_obj = server.get_objects_in_group("ShipFX")[0]
 		self.ship_fx2_obj = server.get_objects_in_group("ShipFX2")[0]
 		self.object.call_later(BASE_SHAKE_TIME, self.shake)

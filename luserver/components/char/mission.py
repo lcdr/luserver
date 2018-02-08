@@ -1,8 +1,9 @@
+from typing import Dict
+
 from persistent.mapping import PersistentMapping
 
 from pyraknet.bitstream import c_ubyte
-
-from ...game_object import c_int, c_int64, E, GameObject, Player, Sequence, single
+from ...game_object import c_int, c_int64, E, EI, EO, GameObject, Player, Sequence, single
 from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
@@ -12,7 +13,7 @@ class CharMission:
 	object: Player
 
 	def __init__(self) -> None:
-		self.missions = PersistentMapping()
+		self.missions: Dict[int, MissionProgress] = PersistentMapping()
 		# add achievements
 		for mission_id, data in server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
@@ -145,10 +146,10 @@ class CharMission:
 				server.mail.send_mail("%[MissionEmail_{id}_senderName]".format(id=id), "%[MissionEmail_{id}_subjectText]".format(id=id), "%[MissionEmail_{id}_bodyText]".format(id=id), self.object, attachment)
 
 	@single
-	def offer_mission(self, mission_id:c_int=E, offerer:GameObject=E) -> None:
+	def offer_mission(self, mission_id:c_int=EI, offerer:GameObject=EO) -> None:
 		pass
 
-	def respond_to_mission(self, mission_id:c_int=E, player_id:c_int64=E, receiver:GameObject=E, reward_item:c_int=-1) -> None:
+	def respond_to_mission(self, mission_id:c_int=EI, player_id:c_int64=EI, receiver:GameObject=EO, reward_item:c_int=-1) -> None:
 		assert player_id == self.object.object_id
 		if reward_item != -1:
 			mission = self.missions[mission_id]
@@ -159,9 +160,9 @@ class CharMission:
 		receiver.handle("respond_to_mission", mission_id, self.object, reward_item, silent=True)
 
 	@single
-	def notify_mission(self, mission_id:c_int=E, mission_state:c_int=E, sending_rewards:bool=False) -> None:
+	def notify_mission(self, mission_id:c_int=EI, mission_state:c_int=EI, sending_rewards:bool=False) -> None:
 		pass
 
 	@single
-	def notify_mission_task(self, mission_id:c_int=E, task_mask:c_int=E, updates:Sequence[c_ubyte, float]=E) -> None:
+	def notify_mission_task(self, mission_id:c_int=EI, task_mask:c_int=EI, updates:Sequence[c_ubyte, float]=E) -> None:
 		pass

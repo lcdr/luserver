@@ -8,7 +8,7 @@ IMAGINATION_POWERUP_LOT = 935
 WATER_MISSION = 472
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.light_torch()
 
 	def light_torch(self):

@@ -1,12 +1,14 @@
-from typing import Dict, Optional
+from typing import cast, Optional
 
 from pyraknet.bitstream import c_bit, c_int64, WriteStream
-from ..game_object import c_int, E, GameObject, Player
+from ..game_object import c_int, Config, DestructibleObject, EB, EF, ES, EO, EP, GameObject, Player
 from ..world import server
 from .component import Component
 
 class Comp108Component(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	object: DestructibleObject
+
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.comp_108 = self
 		self._flags["driver_id"] = "driver_id_flag"
@@ -31,8 +33,8 @@ class Comp108Component(Component):
 
 	def on_destruction(self) -> None:
 		if self.driver_id != 0:
-			server.game_objects[self.driver_id].char.dismount()
+			cast(Player, server.game_objects[self.driver_id]).char.dismount()
 
-	def request_die(self, unknown_bool:bool=E, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_int=0, killer:GameObject=E, loot_owner:Player=E) -> None:
+	def request_die(self, unknown_bool:bool=EB, death_type:str=ES, direction_relative_angle_xz:float=EF, direction_relative_angle_y:float=EF, direction_relative_force:float=EF, kill_type:c_int=0, killer:GameObject=EO, loot_owner:Player=EP) -> None:
 		#self.object.destructible.deal_damage(10000, self) # die permanently on crash
 		self.object.call_later(3, self.object.destructible.resurrect)

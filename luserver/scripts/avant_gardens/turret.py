@@ -2,7 +2,7 @@ import luserver.components.script as script
 from luserver.components.rebuild import RebuildState
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.die_callback = self.object.call_later(20, self.die_if_not_building)
 
 	def complete_rebuild(self, player):

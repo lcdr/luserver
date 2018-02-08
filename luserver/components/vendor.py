@@ -1,8 +1,8 @@
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 from pyraknet.bitstream import c_bit, c_uint, WriteStream
-from ..game_object import c_int, c_int64, E, GameObject, Mapping, Player, single
+from ..game_object import c_int, c_int64, Config, E, EB, EI, GameObject, Mapping, Player, single
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -10,7 +10,7 @@ from .inventory import InventoryType
 log = logging.getLogger(__name__)
 
 class VendorComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.vendor = self
 		self.items_for_sale = []
@@ -29,11 +29,11 @@ class VendorComponent(Component):
 	def vendor_open_window(self) -> None:
 		pass
 
-	def buy_from_vendor(self, player, confirmed:bool=False, count:c_int=1, item:c_int=E) -> None:
+	def buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int=1, item:c_int=EI) -> None:
 		new_item = player.inventory.add_item(item, count)
 		player.char.set_currency(currency=player.char.currency - new_item.base_value*count, position=Vector3.zero)
 
-	def sell_to_vendor(self, player, count:c_int=1, item_obj_id:c_int64=E) -> None:
+	def sell_to_vendor(self, player: Player, count:c_int=1, item_obj_id:c_int64=EI) -> None:
 		found = False
 		for inv_type in (InventoryType.Items, InventoryType.Models, InventoryType.Bricks):
 			inv = player.inventory.inventory_type_to_inventory(inv_type)
@@ -47,5 +47,5 @@ class VendorComponent(Component):
 			log.warning("Item not found")
 
 	@single
-	def vendor_status_update(self, update_only:bool=E, inv:Mapping[c_uint, c_int, c_int]=E) -> None:
+	def vendor_status_update(self, update_only:bool=EB, inv:Mapping[c_uint, c_int, c_int]=E) -> None:
 		pass

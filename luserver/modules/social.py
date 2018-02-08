@@ -21,7 +21,7 @@ class FriendUpdateType:
 	WorldChange = 2
 
 class SocialHandling:
-	def __init__(self):
+	def __init__(self) -> None:
 		server.register_handler(SocialMsg.GetFriendsList, self._on_get_friends_list)
 		server.register_handler(SocialMsg.AddFriendRequest, self._on_add_friend_request)
 		server.register_handler(SocialMsg.AddFriendResponse, self._on_add_friend_response)
@@ -32,7 +32,7 @@ class SocialHandling:
 	def _on_get_friends_list(self, data: ReadStream, address: Address) -> None:
 		assert data.read(c_uint64) == 0 # seems to always be 0?
 
-		friends = server.accounts[address].characters.selected().char.friends
+		friends = server.accounts[address].selected_char().char.friends
 
 		friends_list = WriteStream()
 		friends_list.write_header(WorldClientMsg.FriendsList)
@@ -63,7 +63,7 @@ class SocialHandling:
 			# relay request to friend
 			relayed_request = WriteStream()
 			relayed_request.write_header(WorldClientMsg.AddFriendRequest)
-			relayed_request.write(server.accounts[address].characters.selected().name, allocated_length=33)
+			relayed_request.write(server.accounts[address].selected_char().name, allocated_length=33)
 			relayed_request.write(c_bool(is_best_friend_request))
 			server.send(relayed_request, requested_friend.char.address)
 		except KeyError:
@@ -97,7 +97,7 @@ class SocialHandling:
 
 		# should anything be sent if the responder declines?
 		if not request_declined:
-			responder = server.accounts[address].characters.selected()
+			responder = server.accounts[address].selected_char()
 			try:
 				requester = server.find_player_by_name(requester_name)
 				players = requester, responder
@@ -111,7 +111,7 @@ class SocialHandling:
 		assert request.read(c_int64) == 0
 		requested_friend_name = request.read(str, allocated_length=33)
 
-		requester = server.accounts[address].characters.selected()
+		requester = server.accounts[address].selected_char()
 		requested_friend_ref = [i for i in requester.char.friends if i().name == requested_friend_name][0]
 		requester_ref = [i for i in requested_friend_ref().char.friends if i().name == requester.name][0]
 
@@ -130,7 +130,7 @@ class SocialHandling:
 		assert invite.read(c_int64) == 0
 		invitee_name = invite.read(str, allocated_length=33)
 
-		sender = server.accounts[address].characters.selected()
+		sender = server.accounts[address].selected_char()
 		invitee = server.find_player_by_name(invitee_name)
 
 		relayed_invite = WriteStream()

@@ -7,7 +7,7 @@ from luserver.components.mission import MissionState, TaskType
 FLAG_DEFEATED_SPIDER = 71
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.tutorial = None
 
 	@single

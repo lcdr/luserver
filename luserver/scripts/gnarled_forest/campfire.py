@@ -7,7 +7,7 @@ PROX_RADIUS = 3
 SKILL_ID = 43
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		if hasattr(self.object, "render"): # some objects have render disabled for some reason
 			self.light_fire()
 			self.object.physics.proximity_radius(PROX_RADIUS)

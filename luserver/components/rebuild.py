@@ -1,8 +1,8 @@
 import time
-from typing import Dict, Optional
+from typing import List, Optional
 
 from pyraknet.bitstream import c_bit, c_float, c_uint, WriteStream
-from ..game_object import broadcast, E, GameObject, Player
+from ..game_object import broadcast, CallbackID, Config, EB, EF, EI, EO, EP, GameObject, Player, StatsObject
 from ..game_object import c_int as c_int_
 from ..game_object import c_uint as c_uint_
 from ..world import server
@@ -27,7 +27,9 @@ class FailReason:
 ACTIVATOR_LOT = 6604
 
 class RebuildComponent(ScriptedActivityComponent):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	object: StatsObject
+
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.rebuild = self
 		db_entry = server.db.rebuild_component[comp_id]
@@ -35,9 +37,9 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.smash_time = set_vars.get("rebuild_smash_time", db_entry[1])
 		self.reset_time = db_entry[2]
 		self.imagination_cost = db_entry[3]
-		self.callback_handles = []
-		self.rebuild_start_time = 0
-		self.last_progress = 0
+		self.callback_handles: List[CallbackID] = []
+		self.rebuild_start_time: float = 0
+		self.last_progress: float = 0
 		self._flags["rebuild_state"] = "rebuild_flag"
 		self._flags["success"] = "rebuild_flag"
 		self._flags["enabled"] = "rebuild_flag"
@@ -52,7 +54,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		else:
 			self.rebuild_activator_position = Vector3(self.object.physics.position)
 
-	def on_startup(self):
+	def on_startup(self) -> None:
 		server.spawn_object(ACTIVATOR_LOT, {"parent": self.object, "position": self.rebuild_activator_position})
 		self.object.handle("rebuild_init", silent=True)
 
@@ -134,7 +136,7 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.object.stats.die(death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=None)
 		server.replica_manager.destruct(self.object)
 
-	def rebuild_cancel(self, early_release:bool=E, user:Player=E) -> None:
+	def rebuild_cancel(self, early_release:bool=EB, user:Player=EP) -> None:
 		if self.rebuild_state == RebuildState.Building:
 			for handle in self.callback_handles:
 				self.object.cancel_callback(handle)
@@ -152,9 +154,9 @@ class RebuildComponent(ScriptedActivityComponent):
 			self.callback_handles.append(self.object.call_later(self.reset_time, self.smash_rebuild))
 
 	@broadcast
-	def enable_rebuild(self, enable:bool=E, fail:bool=E, success:bool=E, fail_reason:c_uint_=FailReason.NotGiven, duration:float=E, user:GameObject=E) -> None:
+	def enable_rebuild(self, enable:bool=EB, fail:bool=EB, success:bool=EB, fail_reason:c_uint_=FailReason.NotGiven, duration:float=EF, user:GameObject=EO) -> None:
 		pass
 
 	@broadcast
-	def rebuild_notify_state(self, prev_state:c_int_=E, state:c_int_=E, player:GameObject=E) -> None:
+	def rebuild_notify_state(self, prev_state:c_int_=EI, state:c_int_=EI, player:GameObject=EO) -> None:
 		pass

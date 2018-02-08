@@ -103,7 +103,7 @@ class ChatHandling:
 		server.send(response, address)
 
 	def _on_general_chat_message(self, message: ReadStream, address: Address) -> None:
-		sender = server.accounts[address].characters.selected()
+		sender = server.accounts[address].selected_char()
 		if sender.char.account.gm_level != GMLevel.Admin and sender.char.account.muted_until > time.time():
 			self.system_message("Your account is muted until %s" % datetime.datetime.fromtimestamp(sender.char.account.muted_until), address, broadcast=False)
 			return
@@ -202,7 +202,7 @@ class ChatHandling:
 		text = message.read(str, allocated_length=text_length)
 		assert message.all_read()
 
-		sender = server.accounts[address].characters.selected()
+		sender = server.accounts[address].selected_char()
 
 		if recipient_name.startswith("!"):
 			recipients = object_selector(recipient_name)
