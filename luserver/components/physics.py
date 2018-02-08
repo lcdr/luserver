@@ -1,17 +1,17 @@
 import enum
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Optional
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, WriteStream
-from ..game_object import broadcast, E, GameObject, Player
+from ..game_object import Config, broadcast, EBY, GameObject, PhysicsObject, Player
 from ..world import server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
 
 class PhysicsComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.physics = self
 		self._flags["position"] = "physics_data_flag"
@@ -57,8 +57,8 @@ class PhysicsComponent(Component):
 		owner.char.dropped_loot[object_id] = lot
 		owner.char.drop_client_loot(spawn_position=self.position, final_position=loot_position, currency=0, item_template=lot, loot_id=object_id, owner=owner, source_obj=self.object)
 
-class _Controllable(PhysicsComponent):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+class Controllable(PhysicsComponent):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["on_ground"] = "physics_data_flag"
 		self._flags["unknown_bool"] = "physics_data_flag"
@@ -123,7 +123,7 @@ class _Controllable(PhysicsComponent):
 	def write_vehicle_stuff(self, out: WriteStream, is_creation: bool) -> None:
 		pass # hook for vehiclephysics
 
-class ControllablePhysicsComponent(_Controllable):
+class ControllablePhysicsComponent(Controllable):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		if is_creation:
 			out.write(c_bit(False))
@@ -136,7 +136,7 @@ class ControllablePhysicsComponent(_Controllable):
 
 	# not sure which component this belongs to, putting it here for now
 	@broadcast
-	def lock_node_rotation(self, node_name:bytes=E) -> None:
+	def lock_node_rotation(self, node_name:bytes=EBY) -> None:
 		pass
 
 class SimplePhysicsComponent(PhysicsComponent):
@@ -160,7 +160,7 @@ class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
 			out.write(self.rotation)
 			self.physics_data_flag = False
 
-class VehiclePhysicsComponent(_Controllable):
+class VehiclePhysicsComponent(Controllable):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		super().serialize(out, is_creation)
 		if is_creation:
@@ -200,7 +200,7 @@ class Collider(ABC):
 
 # currently for static objects only, does not handle position/rotation updates
 class AABB(Collider): # axis aligned bounding box
-	def __init__(self, obj: GameObject):
+	def __init__(self, obj: PhysicsObject):
 		if hasattr(obj, "primitive_model_type"):
 			rel_min = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][0].hadamard(obj.primitive_model_scale)
 			rel_max = _PRIMITIVE_DIMENSIONS[obj.primitive_model_type][1].hadamard(obj.primitive_model_scale)
@@ -243,7 +243,7 @@ class AABB(Collider): # axis aligned bounding box
 
 # for dynamic objects
 class CollisionSphere(Collider):
-	def __init__(self, obj: GameObject, radius: int):
+	def __init__(self, obj: PhysicsObject, radius: int):
 		self.position = obj.physics.position
 		self.sq_radius = radius**2
 
@@ -258,7 +258,7 @@ class PhysicsEffect(enum.IntEnum):
 	Friction = 4
 
 class PhantomPhysicsComponent(PhysicsComponent):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["physics_effect_active"] = "physics_effect_flag"
 		self._flags["physics_effect_type"] = "physics_effect_flag"

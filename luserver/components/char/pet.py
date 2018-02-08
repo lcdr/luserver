@@ -1,5 +1,5 @@
 from pyraknet.bitstream import c_uint
-from ...game_object import broadcast, c_int, c_uint64, E, GameObject, OBJ_NONE, Player, Sequence, single
+from ...game_object import broadcast, c_int, c_uint64, E, EB, EI, EO, EV, GameObject, OBJ_NONE, Player, Sequence, single
 from ...game_object import c_uint as c_uint_
 from ...math.vector import Vector3
 from ...math.quaternion import Quaternion
@@ -9,7 +9,7 @@ class CharPet:
 	object: Player
 
 	@single
-	def notify_pet_taming_minigame(self, pet:GameObject=E, player_taming:GameObject=E, force_teleport:bool=E, notify_type:c_uint_=E, pets_dest_pos:Vector3=E, tele_pos:Vector3=E, tele_rot:Quaternion=Quaternion.identity) -> None:
+	def notify_pet_taming_minigame(self, pet:GameObject=EO, player_taming:GameObject=EO, force_teleport:bool=EB, notify_type:c_uint_=EI, pets_dest_pos:Vector3=EV, tele_pos:Vector3=EV, tele_rot:Quaternion=Quaternion.identity) -> None:
 		pass
 
 	def client_exit_taming_minigame(self, voluntary_exit:bool=True) -> None:

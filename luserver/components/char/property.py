@@ -2,7 +2,7 @@ import logging
 
 from pyraknet.bitstream import c_int64, c_uint
 from ...bitstream import WriteStream
-from ...game_object import broadcast, c_int, E, GameObject, Mapping, OBJ_NONE, Player, single
+from ...game_object import broadcast, c_int, E, EBY, EI, EV, GameObject, Mapping, OBJ_NONE, Player, single
 from ...game_object import c_int64 as c_int64_
 from ...game_object import c_uint as c_uint_
 from ...messages import WorldClientMsg
@@ -25,7 +25,7 @@ class CharProperty:
 	def place_model_response(self, position:Vector3=Vector3.zero, property_plaque:GameObject=OBJ_NONE, response:c_int=0, rotation:Quaternion=Quaternion.identity) -> None:
 		pass
 
-	def update_model_from_client(self, model_id:c_int64_=E, position:Vector3=E, rotation:Quaternion=Quaternion.identity) -> None:
+	def update_model_from_client(self, model_id:c_int64_=EI, position:Vector3=EV, rotation:Quaternion=Quaternion.identity) -> None:
 		for model in self.object.inventory.models:
 			if model is not None and model.object_id == model_id:
 				spawner_id = server.new_object_id()
@@ -68,7 +68,7 @@ class CharProperty:
 				self.place_model_response(response=16)
 				break
 
-	def b_b_b_save_request(self, local_id:c_int64_=E, lxfml_data_compressed:bytes=E, time_taken_in_ms:c_uint_=E) -> None:
+	def b_b_b_save_request(self, local_id:c_int64_=EI, lxfml_data_compressed:bytes=EBY, time_taken_in_ms:c_uint_=EI) -> None:
 		save_response = WriteStream()
 		save_response.write_header(WorldClientMsg.BlueprintSaveResponse)
 		save_response.write(c_int64(local_id))
@@ -79,11 +79,11 @@ class CharProperty:
 		server.send(save_response, self.address)
 
 	@single
-	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=E, items_total:c_int=0) -> None:
+	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=EI, items_total:c_int=0) -> None:
 		pass
 
 	@single
-	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=E, model_id:c_int64_=E) -> None:
+	def handle_u_g_c_equip_pre_create_based_on_edit_mode(self, model_count:c_int=EI, model_id:c_int64_=EI) -> None:
 		pass
 
 	def property_contents_from_client(self, query_db:bool=False) -> None:

@@ -4,13 +4,13 @@ For world server packet handling that is general enough not to be grouped in a s
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
-from typing import Dict, Tuple
+from typing import cast, Dict, Tuple
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from ..auth import GMLevel
 from ..bitstream import WriteStream
-from ..game_object import GameObject, Player
+from ..game_object import ControllableObject, GameObject, Player
 from ..ldf import LDF, LDFDataType
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server, World
@@ -64,8 +64,8 @@ class GeneralHandling:
 		server.register_handler(WorldServerMsg.GameMessage, self._on_game_message)
 
 	def on_validated(self, address: Address) -> None:
-		player = server.accounts[address].characters.selected()
 		if server.world_id[0] != 0:
+			player = server.accounts[address].selected_char()
 			player.char.address = address
 			server.game_objects[player.object_id] = player
 			player.parent = None
@@ -83,7 +83,7 @@ class GeneralHandling:
 
 	def _send_load_world(self, destination: Tuple[int, int, int], address: Address) -> None:
 		world_id, world_instance, world_clone = destination
-		player = server.accounts[address].characters.selected()
+		player = server.accounts[address].selected_char()
 
 		load_world = WriteStream()
 		load_world.write_header(WorldClientMsg.LoadWorld)
@@ -97,7 +97,7 @@ class GeneralHandling:
 		server.send(load_world, address)
 
 	def _on_client_load_complete(self, data: ReadStream, address: Address) -> None:
-		player = server.accounts[address].characters.selected()
+		player = server.accounts[address].selected_char()
 
 		chardata = WriteStream()
 		chardata.write_header(WorldClientMsg.CharacterData)
@@ -177,8 +177,8 @@ class GeneralHandling:
 			elif mission.state == 8:
 				ET.SubElement(done, "m", id=str(mission_id))
 
-		import xml.dom.minidom
-		xml = xml.dom.minidom.parseString((ET.tostring(root, encoding="unicode")))
+		#import xml.dom.minidom
+		#xml = xml.dom.minidom.parseString((ET.tostring(root, encoding="unicode")))
 		#log.debug(xml.toprettyxml(indent="  "))
 
 		chd_ldf = LDF()
@@ -187,7 +187,7 @@ class GeneralHandling:
 		chd_ldf.ldf_set("name", LDFDataType.STRING, player.name)
 		chd_ldf.ldf_set("xmlData", LDFDataType.BYTES, ET.tostring(root))
 
-		encoded_ldf = chd_ldf.to_bitstream()
+		encoded_ldf = chd_ldf.to_bytes()
 		chardata.write(encoded_ldf)
 		server.send(chardata, address)
 
@@ -196,10 +196,10 @@ class GeneralHandling:
 		player.char.server_done_loading_all_objects()
 
 	def _on_position_update(self, message: ReadStream, address: Address) -> None:
-		player = server.accounts[address].characters.selected()
+		player = server.accounts[address].selected_char()
 		vehicle = None
 		if player.char.vehicle_id != 0:
-			vehicle = server.game_objects[player.char.vehicle_id]
+			vehicle = cast(ControllableObject, server.game_objects[player.char.vehicle_id])
 			serialized = player._serialize_scheduled
 			player._serialize_scheduled = True
 		player.physics.position.update(message.read(c_float), message.read(c_float), message.read(c_float))

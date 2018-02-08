@@ -2,13 +2,13 @@ import asyncio
 from typing import Optional
 
 import luserver.components.script as script
-from luserver.game_object import c_int, E, Player
+from luserver.game_object import c_int, EI, ES, Player
 
 class ScriptComponent(script.ScriptComponent):
 	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
-		player.char.display_message_box(show=True, callback_client=self.object, id="instance_exit", image_id=0, text=self.script_vars.get("transfer_text", "DRAGON_EXIT_QUESTION"), user_data="")
+		player.char.disp_message_box(self.script_vars.get("transfer_text", "DRAGON_EXIT_QUESTION"), id="instance_exit", callback=self.object)
 
-	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
+	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "instance_exit" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_last_non_instance())

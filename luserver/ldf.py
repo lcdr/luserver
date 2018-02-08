@@ -26,6 +26,9 @@ class LDF:
 			elif isinstance(source, ReadStream):
 				self.from_bitstream(source)
 
+	def __contains__(self, item: str) -> bool:
+		return item in self._dict
+
 	def __getitem__(self, key: str) -> _LDFValue:
 		return self.ldf_get(key)[1]
 
@@ -134,7 +137,7 @@ class LDF:
 				raise ValueError(data_type)
 			self.ldf_set(key, data_type, value)
 
-	def to_bitstream(self) -> WriteStream:
+	def to_bytes(self) -> bytes:
 		uncompressed = WriteStream()
 		uncompressed.write(c_uint(len(self._dict)))
 		for key, val in self._dict.items():
@@ -172,4 +175,4 @@ class LDF:
 			raise NotImplementedError
 		output.write(c_bool(is_compressed))
 		output.write(uncompressed_)
-		return output
+		return bytes(output)

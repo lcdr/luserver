@@ -1,12 +1,10 @@
-from typing import Dict
-
 from pyraknet.bitstream import WriteStream
-from ..game_object import GameObject
+from ..game_object import Config, GameObject
 from ..world import server
 from .component import Component
 
 class SpawnerComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.spawner = self
 		self._active = set_vars.get("active_on_load", True)

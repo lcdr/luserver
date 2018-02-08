@@ -1,15 +1,14 @@
 import logging
-from typing import Dict
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
-from ..game_object import broadcast, E, GameObject, OBJ_NONE, Player
+from ..game_object import broadcast, Config, EF, ES, EO, GameObject, OBJ_NONE, Player
 from ..game_object import c_uint as c_uint_
 from .component import Component
 
 log = logging.getLogger(__name__)
 
 class StatsSubcomponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.stats = self
 		self._flags["_max_life"] = "stats_flag"
@@ -146,5 +145,5 @@ class StatsSubcomponent(Component):
 		self.imagination = self.max_imagination
 
 	@broadcast
-	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=E, direction_relative_angle_xz:float=E, direction_relative_angle_y:float=E, direction_relative_force:float=E, kill_type:c_uint_=0, killer:GameObject=E, loot_owner:Player=OBJ_NONE) -> None:
+	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=ES, direction_relative_angle_xz:float=EF, direction_relative_angle_y:float=EF, direction_relative_force:float=EF, kill_type:c_uint_=0, killer:GameObject=EO, loot_owner:Player=OBJ_NONE) -> None:
 		self.object.handle("on_death", killer, silent=True)

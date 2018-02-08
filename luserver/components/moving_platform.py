@@ -1,7 +1,7 @@
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
-from ..game_object import CallbackID, GameObject, Player
+from ..game_object import CallbackID, Config, GameObject, Player
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -24,7 +24,7 @@ class MovementState:
 	Stopped = 28
 
 class MovingPlatformComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.moving_platform = self
 		self._flags["movement_state"] = "moving_platform_flag"

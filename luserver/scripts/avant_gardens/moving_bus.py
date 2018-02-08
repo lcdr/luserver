@@ -3,7 +3,7 @@ import luserver.components.script as script
 SOUND_NAME = b"{9a24f1fa-3177-4745-a2df-fbd996d6e1e3}"
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.object.moving_platform.stop_pathing()
 		self.players_in_radius = 0
 		self.object.physics.proximity_radius(40)

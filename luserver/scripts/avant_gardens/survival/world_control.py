@@ -2,7 +2,7 @@ import asyncio
 import time
 
 import luserver.components.script as script
-from luserver.game_object import c_int, E, Player, single
+from luserver.game_object import c_int, EI, ES, Player, single
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server
 from luserver.components.inventory import InventoryType
@@ -32,7 +32,7 @@ SURVIVAL_MISSIONS = [
 	(1865, 180)]
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.first_time = True
 		self.set_network_var("NumberOfPlayers", LDFDataType.INT32, 1)
 
@@ -127,7 +127,7 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.set_player_spawn_points()
 
-	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E):
+	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "RePlay":
 			self.start()
 

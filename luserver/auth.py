@@ -1,16 +1,40 @@
-import asyncio
-import datetime
-import logging
-import random
-import time
+from typing import Dict, TYPE_CHECKING
 
 try:
 	import bcrypt
 	from passlib.hash import bcrypt as encryption
 except ImportError:
 	from passlib.hash import pbkdf2_sha256 as encryption
+
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
+if TYPE_CHECKING:
+	from .game_object import Player
+
+class Account(Persistent):
+	def __init__(self, username: str, password: str):
+		self.username = username
+		self.password = encryption.encrypt(password)
+		self.password_state = PasswordState.Set
+		self.session_key = ""
+		#self.address = address
+		self.muted_until = 0
+		self.banned_until = 0
+		self.gm_level = GMLevel.Nothing
+		self.characters: Dict[str, "Player"] = PersistentMapping()
+		self.selected_char_name = ""
+
+	def selected_char(self) -> "Player":
+		return self.characters[self.selected_char_name]
+
+	def set_password(self, password: str) -> None:
+		self.password = encryption.encrypt(password)
+
+import asyncio
+import datetime
+import logging
+import random
+import time
 
 from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
@@ -45,10 +69,10 @@ class AuthServer(commonserver.Server):
 		self.conn.transaction_manager.commit()
 		self.register_handler(AuthServerMsg.LoginRequest, lambda request, address: asyncio.ensure_future(self._on_login_request(request, address)))
 
-	def peer_type(self):
+	def peer_type(self) -> int:
 		return AuthServerMsg.header()
 
-	async def _on_login_request(self, request: ReadStream, address: Address):
+	async def _on_login_request(self, request: ReadStream, address: Address) -> None:
 		return_code = _LoginReturnCode.InsufficientAccountPermissions # needed to display error message
 		message = ""
 		redirect_host, redirect_port = "", 0
@@ -155,22 +179,3 @@ class PasswordState:
 	Temp = 0
 	AcceptNew = 1
 	Set = 2
-
-class Account(Persistent):
-	def __init__(self, username: str, password: str):
-		self.username = username
-		self.password = encryption.encrypt(password)
-		self.password_state = PasswordState.Set
-		#self.address = address
-		self.muted_until = 0
-		self.banned_until = 0
-		self.gm_level = GMLevel.Nothing
-		self.characters = PersistentMapping()
-		self.characters.selected = nothing
-
-	def set_password(self, password: str) -> None:
-		self.password = encryption.encrypt(password)
-
-# I'd use a lambda but that isn't well handled by the db
-def nothing():
-	return None

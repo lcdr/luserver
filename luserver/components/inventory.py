@@ -41,13 +41,17 @@ class LootType:
 	# 21 occurs with modular build temp models
 
 import logging
-from typing import Dict, List, Optional
+from typing import List, Optional, Tuple
 
 from persistent import Persistent
 from persistent.list import PersistentList
 
-from pyraknet.bitstream import c_bit, c_ushort, ReadStream, Serializable, WriteStream
-from ..game_object import broadcast, c_int, c_int64, c_uint, E, GameObject, ObjectID, single
+from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort, ReadStream, Serializable, WriteStream
+from ..commonserver import ServerDB
+from ..game_object import broadcast, Config, EI, EL, EV, GameObject, ObjectID, single
+from ..game_object import c_int as c_int_
+from ..game_object import c_int64 as c_int64_
+from ..game_object import c_uint as c_uint_
 from ..ldf import LDF, LDFDataType
 from ..world import server
 from ..math.vector import Vector3
@@ -57,7 +61,7 @@ from .mission import TaskType
 log = logging.getLogger(__name__)
 
 class Stack(Persistent, Serializable):
-	def __init__(self, db, object_id, lot, count=1):
+	def __init__(self, db: ServerDB, object_id: ObjectID, lot: int, count: int=1):
 		self.object_id = object_id
 		self.lot = lot
 		self.count = count
@@ -119,20 +123,20 @@ class ItemComponent(Component):
 		out.write(c_bit(False))
 
 class InventoryComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.inventory = self
 		self._flags["equipped"] = "equipped_items_flag"
-		self.equipped = PersistentList()
+		self.equipped: List[List[Stack]] = PersistentList()
 		self.equipped.append(PersistentList()) # current equip state
 		self.attr_changed("equipped")
-		self.items = PersistentList([None]*20)
-		self.bricks = PersistentList()
-		self.temp_items = PersistentList()
-		self.models = PersistentList([None]*200)
-		self.behaviors = PersistentList([None]*200)
-		self.temp_models = PersistentList()
-		self.mission_objects = PersistentList()
+		self.items: List[Optional[Stack]] = PersistentList([None]*20)
+		self.bricks: List[Stack] = PersistentList()
+		self.temp_items: List[Stack] = PersistentList()
+		self.models: List[Optional[Stack]] = PersistentList([None]*200)
+		self.behaviors: List[Optional[Stack]] = PersistentList([None]*200)
+		self.temp_models: List[Stack] = PersistentList()
+		self.mission_objects: List[Stack] = PersistentList()
 
 		if comp_id in server.db.inventory_component:
 			for item_lot, equip in server.db.inventory_component[comp_id]:
@@ -150,7 +154,7 @@ class InventoryComponent(Component):
 				self.equipped_items_flag = False
 		out.write(c_bit(False))
 
-	def inventory_type_to_inventory(self, inventory_type: int) -> List[Stack]:
+	def inventory_type_to_inventory(self, inventory_type: int) -> List[Optional[Stack]]:
 		if inventory_type == InventoryType.Items:
 			return self.items
 		if inventory_type == InventoryType.Bricks:
@@ -205,7 +209,7 @@ class InventoryComponent(Component):
 		del self.equipped[-2]
 		self.attr_changed("equipped")
 
-	def move_item_in_inventory(self, dest_inventory_type:c_int=0, object_id:c_int64=E, inventory_type:c_int=E, response_code:c_int=E, slot:c_int=E) -> None:
+	def move_item_in_inventory(self, dest_inventory_type:c_int_=0, object_id:c_int64_=EI, inventory_type:c_int_=EI, response_code:c_int_=EI, slot:c_int_=EI) -> None:
 		assert dest_inventory_type == 0
 		assert object_id != 0
 		assert response_code == 0
@@ -217,7 +221,7 @@ class InventoryComponent(Component):
 				inventory[slot] = item
 				break
 
-	def add_item(self, lot, count: int=1, module_lots=None, inventory_type: int=None, source_type=0, show_flying_loot=True, persistent: bool=True, notify_client: bool=True) -> Stack:
+	def add_item(self, lot: int, count: int=1, module_lots: Tuple[int, int, int]=None, inventory_type: int=None, source_type: int=0, show_flying_loot: bool=True, persistent: bool=True, notify_client: bool=True) -> Stack:
 		for component_type, component_id in server.db.components_registry[lot]:
 			if component_type == 11: # ItemComponent, make an enum for this somewhen
 				item_type, stack_size = server.db.item_component[component_id][1:3]
@@ -301,10 +305,10 @@ class InventoryComponent(Component):
 		return stack
 
 	@single
-	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False, bound_on_pickup:bool=False, loot_type_source:c_int=0, extra_info:LDF=E, object_template:c_int=E, subkey:c_int64=0, inv_type:c_int=0, count:c_uint=1, item_total:c_uint=0, new_obj_id:c_int64=E, flying_loot_pos:Vector3=E, show_flying_loot:bool=True, slot_id:c_int=E) -> None:
+	def add_item_to_inventory_client_sync(self, bound:bool=False, bound_on_equip:bool=False, bound_on_pickup:bool=False, loot_type_source:c_int_=0, extra_info:LDF=EL, object_template:c_int_=EI, subkey:c_int64_=0, inv_type:c_int_=0, count:c_uint_=1, item_total:c_uint_=0, new_obj_id:c_int64_=EI, flying_loot_pos:Vector3=EV, show_flying_loot:bool=True, slot_id:c_int_=EI) -> None:
 		pass
 
-	def remove_item(self, inventory_type, item=None, object_id=0, lot=0, count: int=1) -> None:
+	def remove_item(self, inventory_type: int, item: Stack=None, object_id: ObjectID=ObjectID(0), lot: int=0, count: int=1) -> Optional[Stack]:
 		if item is not None:
 			object_id = item.object_id
 
@@ -312,7 +316,7 @@ class InventoryComponent(Component):
 			return self.remove_item_from_inventory(inventory_type=inventory_type, extra_info=LDF(), force_deletion=True, object_id=object_id, object_template=lot, stack_count=count)
 
 	@single
-	def remove_item_from_inventory(self, confirmed:bool=True, delete_item:bool=True, out_success:bool=False, inventory_type:c_int=InventoryType.Max, loot_type_source:c_int=0, extra_info:LDF=E, force_deletion:bool=False, loot_type_source_id:c_int64=0, object_id:c_int64=0, object_template:c_int=0, requesting_object_id:c_int64=0, stack_count:c_uint=1, stack_remaining:c_uint=0, subkey:c_int64=0, trade_id:c_int64=0) -> Optional[Stack]:
+	def remove_item_from_inventory(self, confirmed:bool=True, delete_item:bool=True, out_success:bool=False, inventory_type:c_int_=InventoryType.Max, loot_type_source:c_int_=0, extra_info:LDF=EL, force_deletion:bool=False, loot_type_source_id:c_int64_=0, object_id:c_int64_=0, object_template:c_int_=0, requesting_object_id:c_int64_=0, stack_count:c_uint_=1, stack_remaining:c_uint_=0, subkey:c_int64_=0, trade_id:c_int64_=0) -> Optional[Stack]:
 		if not confirmed:
 			return
 		if object_id == 0 and object_template == 0:
@@ -363,7 +367,7 @@ class InventoryComponent(Component):
 						self.add_item(module_lot)
 			return last_affected_item
 
-	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64=E) -> None:
+	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64_=EI) -> None:
 		assert not out_success
 		for inv in (self.items, self.temp_items, self.models):
 			for item in inv:
@@ -414,7 +418,7 @@ class InventoryComponent(Component):
 									break
 					return
 
-	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64=E, replacement_object_id:c_int64=0) -> None:
+	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64_=EI, replacement_object_id:c_int64_=0) -> None:
 		assert not out_success
 		assert replacement_object_id == 0
 		for item in self.equipped[-1]:
@@ -455,11 +459,11 @@ class InventoryComponent(Component):
 				break
 
 	@broadcast
-	def set_inventory_size(self, inventory_type:c_int=E, size:c_int=E) -> None:
+	def set_inventory_size(self, inventory_type:c_int_=EI, size:c_int_=EI) -> None:
 		inv = self.inventory_type_to_inventory(inventory_type)
 		inv.extend([None] * (size - len(inv)))
 
-	def move_item_between_inventory_types(self, inventory_type_a:c_int=E, inventory_type_b:c_int=E, object_id:c_int64=E, show_flying_loot:bool=True, stack_count:c_uint=1, template_id:c_int=-1) -> Stack:
+	def move_item_between_inventory_types(self, inventory_type_a:c_int_=EI, inventory_type_b:c_int_=EI, object_id:c_int64_=EI, show_flying_loot:bool=True, stack_count:c_uint_=1, template_id:c_int_=-1) -> Stack:
 		source = self.inventory_type_to_inventory(inventory_type_a)
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):

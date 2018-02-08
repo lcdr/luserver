@@ -1,5 +1,5 @@
 from pyraknet.bitstream import c_uint
-from ...game_object import c_int64, c_uint64, E, GameObject, Mapping, Player, single
+from ...game_object import c_int64, c_uint64, E, EI, ES, EO, EP, GameObject, Mapping, Player, single
 from ...game_object import c_uint as c_uint_
 from ...world import server
 from ...math.vector import Vector3
@@ -28,7 +28,7 @@ class CharTrade:
 	def on_destruction(self) -> None:
 		self.trade = None
 
-	def client_trade_request(self, need_invite_pop_up:bool=False, invitee:Player=E) -> None:
+	def client_trade_request(self, need_invite_pop_up:bool=False, invitee:Player=EP) -> None:
 		# out of range error not implemented
 		if (self.trade is not None and self.trade.other_player != invitee.object_id) \
 		or (invitee.char.trade is not None and invitee.char.trade.other_player != self.object.object_id):
@@ -41,11 +41,11 @@ class CharTrade:
 		self.server_trade_initial_reply(invitee, result, invitee.name)
 
 	@single
-	def server_trade_invite(self, need_invite_pop_up:bool=False, requestor:GameObject=E, name:str=E) -> None:
+	def server_trade_invite(self, need_invite_pop_up:bool=False, requestor:GameObject=EO, name:str=ES) -> None:
 		pass
 
 	@single
-	def server_trade_initial_reply(self, invitee:GameObject=E, result_type:c_uint_=E, name:str=E) -> None:
+	def server_trade_initial_reply(self, invitee:GameObject=EO, result_type:c_uint_=EI, name:str=ES) -> None:
 		pass
 
 	def client_trade_update(self, currency:c_uint64=E, items:Mapping[c_uint, c_int64, Stack]=E) -> None:

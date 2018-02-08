@@ -73,6 +73,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 import BTrees
 import ZODB
 from persistent.mapping import PersistentMapping
+from ZODB.Connection import Connection
 
 from pyraknet.bitstream import ReadStream
 from pyraknet.messages import Address
@@ -80,7 +81,7 @@ from pyraknet.replicamanager import ReplicaManager
 from pyraknet.server import Event
 from .auth import Account
 from .commonserver import DisconnectReason, Server
-from .game_object import GameObject, ObjectID
+from .game_object import CallbackID, Config, GameObject, ObjectID, Player
 from .messages import WorldServerMsg
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
@@ -109,7 +110,7 @@ class MultiInstanceAccess(ACM):
 		server.commit()
 
 class WorldServer(Server):
-	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn):
+	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection):
 		super().__init__(address, max_connections, db_conn)
 		self.replica_manager = ReplicaManager(self._server)
 		global _server
@@ -124,7 +125,7 @@ class WorldServer(Server):
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.multi = MultiInstanceAccess()
-		self._handlers = {}
+		self._handlers: Dict[str, Callable[..., None]] = {}
 		self.char = CharHandling()
 		self.chat = ChatHandling()
 		self.general = GeneralHandling()
@@ -137,10 +138,10 @@ class WorldServer(Server):
 		self.current_object_id = 0
 		self.current_spawned_id = BITS_SPAWNED
 		self.world_data = None
-		self.game_objects = {}
+		self.game_objects: Dict[ObjectID, GameObject] = {}
 		self.models = []
-		self.last_callback_id = 0
-		self.callback_handles = {}
+		self.last_callback_id = CallbackID(0)
+		self.callback_handles: Dict[ObjectID, asyncio.Handle] = {}
 		self.accounts: Dict[Address, Account] = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
@@ -181,7 +182,7 @@ class WorldServer(Server):
 				world_control_lot = 2365
 			self.world_control_object = self.spawn_object(world_control_lot, set_vars={"custom_script": custom_script}, is_world_control=True)
 
-			self.spawners = {}
+			self.spawners: Dict[str, GameObject] = {}
 			self.world_data = self.db.world_data[self.world_id[0]]
 			for obj in self.world_data.objects.values():
 				obj.handle("on_startup", silent=True)
@@ -231,7 +232,7 @@ class WorldServer(Server):
 
 	def _on_disconnect_or_connection_lost(self, address: Address) -> None:
 		if self.world_id[0] != 0:
-			player = self.accounts[address].characters.selected()
+			player = self.accounts[address].selected_char()
 			if player in self.replica_manager._network_ids: # might already be destructed if "switch character" is selected:
 				self.replica_manager.destruct(player)
 		#self.accounts[address].address = None
@@ -299,7 +300,7 @@ class WorldServer(Server):
 
 			self.conn.transaction_manager.abort()
 
-	def spawn_object(self, lot, set_vars=None, is_world_control=False) -> GameObject:
+	def spawn_object(self, lot: int, set_vars: Config=None, is_world_control: bool=False) -> GameObject:
 		if set_vars is None:
 			set_vars = {}
 
@@ -314,7 +315,7 @@ class WorldServer(Server):
 		self.handle("spawn", obj)
 		return obj
 
-	def get_object(self, object_id) -> Optional[GameObject]:
+	def get_object(self, object_id: ObjectID) -> Optional[GameObject]:
 		if object_id == 0:
 			return
 		if object_id in self.game_objects:
@@ -334,7 +335,7 @@ class WorldServer(Server):
 					matches.append(obj)
 		return matches
 
-	def find_player_by_name(self, name: str) -> GameObject:
+	def find_player_by_name(self, name: str) -> Player:
 		for acc in self.db.accounts.values():
 			for char in acc.characters.values():
 				if char.name == name:

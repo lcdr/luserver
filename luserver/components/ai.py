@@ -1,7 +1,7 @@
-from typing import Dict
+from typing import Optional
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import GameObject, Player
+from ..game_object import CallbackID, Config, GameObject, Player
 from ..world import server
 from ..math.quaternion import Quaternion
 from .component import Component
@@ -10,14 +10,14 @@ from .skill import BehaviorTemplate
 UPDATE_INTERVAL = 1 # todo: make interval skill-dependent
 
 class BaseCombatAIComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.ai = self
 		self._flags["target"] = "ai_flag"
 		self.skill_range = 7
 		self.target = None
 		self._enabled = False
-		self.update_handle = None
+		self.update_handle: Optional[CallbackID] = None
 		self.object.add_handler("rebuild_init", self._on_rebuild_init)
 		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 

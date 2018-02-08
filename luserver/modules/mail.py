@@ -37,12 +37,12 @@ class _MailSendReturnCode:
 	UnknownFailure = 7
 
 class MailHandling:
-	def __init__(self):
+	def __init__(self) -> None:
 		server.register_handler(WorldServerMsg.Mail, self._on_mail)
 
 	def _on_mail(self, message: ReadStream, address: Address) -> None:
 		mail_id = message.read(c_uint)
-		player = server.accounts[address].characters.selected()
+		player = server.accounts[address].selected_char()
 		if mail_id == MailID.MailSend:
 			self._on_mail_send(message, player)
 		elif mail_id == MailID.MailDataRequest:
@@ -191,7 +191,7 @@ class MailHandling:
 		server.send(notification, player.char.address)
 
 class Mail(persistent.Persistent):
-	def __init__(self, id: int, sender: str, subject: str, body: str, attachment=None):
+	def __init__(self, id: int, sender: str, subject: str, body: str, attachment: Stack=None):
 		self.id = id
 		self.send_time = int(time.time())
 		self.is_read = False

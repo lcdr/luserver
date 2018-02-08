@@ -1,9 +1,9 @@
 import functools
 import logging
-from typing import Dict, Sequence, Tuple
+from typing import Sequence, Tuple
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import GameObject
+from ..game_object import Config, GameObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -13,7 +13,7 @@ from .physics import PhysicsEffect
 log = logging.getLogger(__name__)
 
 class TriggerComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.trigger = self
 		if "trigger_events" in set_vars:

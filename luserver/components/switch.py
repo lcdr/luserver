@@ -1,13 +1,11 @@
-from typing import Dict
-
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import GameObject, Player
+from ..game_object import Config, GameObject, Player
 from .component import Component
 
 DEACTIVATE_INTERVAL = 5
 
 class SwitchComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self._flags["_activated"] = "placeholder_flag" # needed to register changes for serialization
 		self._enabled = True

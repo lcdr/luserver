@@ -1,18 +1,18 @@
 import asyncio
-from typing import Dict
+from typing import Dict, List
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, WriteStream
-from ..game_object import broadcast, c_int, E, GameObject, Player, single
+from ..game_object import broadcast, c_int, Config, EB, EBY, EI, EL, ES, EO, GameObject, ObjectID, Player, single
 from ..world import server
 from ..ldf import LDF
 from .component import Component
 
 class ScriptedActivityComponent(Component):
-	def __init__(self, obj: GameObject, set_vars: Dict[str, object], comp_id: int):
+	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.scripted_activity = self
 		self._flags["activity_values"] = "activity_flag"
-		self.activity_values = {}
+		self.activity_values: Dict[ObjectID, List[float]] = {}
 		self.activity_id = comp_id
 		if "transfer_world_id" in set_vars:
 			self.transfer_world_id = set_vars["transfer_world_id"]
@@ -44,14 +44,14 @@ class ScriptedActivityComponent(Component):
 	def activity_start(self) -> None:
 		pass
 
-	def message_box_respond(self, player, button:c_int=E, id:str=E, user_data:str=E) -> None:
+	def message_box_respond(self, player: Player, button:c_int=EI, id:str=ES, user_data:str=ES) -> None:
 		if id == "LobbyReady" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 
 	@single
-	def send_activity_summary_leaderboard_data(self, game_id:c_int=E, info_type:c_int=E, leaderboard_data:LDF=E, throttled:bool=E, weekly:bool=E) -> None:
+	def send_activity_summary_leaderboard_data(self, game_id:c_int=EI, info_type:c_int=EI, leaderboard_data:LDF=EL, throttled:bool=EB, weekly:bool=EB) -> None:
 		pass
 
 	@broadcast
-	def notify_client_zone_object(self, name:str=E, param1:c_int=E, param2:c_int=E, param_obj:GameObject=E, param_str:bytes=E) -> None:
+	def notify_client_zone_object(self, name:str=ES, param1:c_int=EI, param2:c_int=EI, param_obj:GameObject=EO, param_str:bytes=EBY) -> None:
 		pass

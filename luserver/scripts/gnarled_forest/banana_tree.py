@@ -4,7 +4,7 @@ from luserver.components.destructible import KillType
 from luserver.math.vector import Vector3
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.banana = None
 		self.spawn_banana()
 

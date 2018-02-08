@@ -4,7 +4,7 @@ from luserver.components.mission import TaskType
 MISSIONS = 333, 430, 431, 432, 454, 455, 456, 457, 458, 1427, 1525, 1562, 1599, 1627, 1637, 1647, 1657
 
 class ScriptComponent(script.ScriptComponent):
-	def on_startup(self):
+	def on_startup(self) -> None:
 		self.object.physics.proximity_radius(20)
 		self.players_near = 0
 

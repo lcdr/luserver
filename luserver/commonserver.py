@@ -21,16 +21,50 @@ import logging
 import os
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from ZODB.Connection import Connection
 
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from pyraknet.server import Event
+from .auth import Account
 from .bitstream import WriteStream
 from .messages import GeneralMsg, LUMessage, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
+from .math.vector import Vector3
+from .math.quaternion import Quaternion
+
+MissionData = Tuple[Tuple[int, int, bool, Sequence[Sequence[Sequence[int]]], Optional[int], int, int, int], Tuple[Tuple[Tuple[int, ...], ...], ...], Sequence[Tuple[int, int, int, str]], bool, bool, Sequence[int]]
+
+class ServerDB:
+	accounts: Dict[str, Account]
+	activities: Dict[int, Tuple[int]]
+	activity_rewards: Dict[int, Tuple[Optional[int], Optional[int], Optional[int]]]
+	config: Dict[str, object]
+	colors: Dict[int, bool]
+	components_registry: Dict[int, Sequence[Tuple[int, int]]]
+	current_clone_id: int
+	current_instance_id: int
+	destructible_component: Dict[int, Tuple[int, Tuple[Optional[int], Optional[int], Optional[int]], int, Optional[int], int, bool]]
+	inventory_component: Dict[int, Sequence[Tuple[int, bool]]]
+	item_component: Dict[int, Tuple[int, int, int, Sequence[int]]]
+	item_sets: List[Tuple[Sequence[int], Sequence[int], Sequence[int], Sequence[int], Sequence[int], Sequence[int]]]
+	factions: Dict[int, Sequence[int]]
+	launchpad_component: Dict[int, Tuple[int, int, str]]
+	level_rewards: Dict[int, Sequence[Tuple[int, int]]]
+	level_scores: Sequence[int]
+	mission_mail: Dict[int, Sequence[Tuple[int, Optional[int]]]]
+	mission_npc_component: Dict[int, Sequence[Tuple[int, bool, bool]]]
+	missions: Dict[int, MissionData]
+	predef_names: Tuple[Sequence[str], Sequence[str], Sequence[str]]
+	object_skills: Dict[int, Sequence[Tuple[int, int]]]
+	property_template: Sequence[Tuple[float, float, float]]
+	properties: Dict[int, Dict[int, Dict[int, Tuple[int, Vector3, Quaternion]]]]
+	rebuild_component: Dict[int, Tuple[float, float, float, int, int]]
+	script_component: Dict[int, str]
+	servers: Dict[Address, Tuple[int, int, int]]
+	world_info: Dict[int, Tuple[str, int]]
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +75,7 @@ class Server(_Server, ABC):
 	def __init__(self, address: Address, max_connections: int, db_conn: Connection):
 		super().__init__(address, max_connections)
 		self.conn = db_conn
-		self.db = self.conn.root
+		self.db: "ServerDB" = self.conn.root
 		self._packet_handlers: Dict[Tuple[int, int], List[Callable[..., None]]] = {}
 		self._server.add_handler(Event.UserPacket, self._on_lu_packet)
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
