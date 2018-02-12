@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from luserver.amf3 import AMF3
+from luserver.game_object import Player
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server, World
 from luserver.interfaces.plugin import ChatCommand, instance_obj, instance_player, normal_bool, toggle_bool
@@ -93,18 +94,18 @@ class Freeze(ChatCommand):
 		for obj in server.game_objects.values():
 			if hasattr(obj, "render") and (not self.enabled or obj != sender):
 					obj.render.freeze_animation(do_freeze=self.enabled)
-			if hasattr(obj, "char"):
+			if isinstance(obj, Player):
 				#obj.render.play_f_x_effect(name=b"", effect_type="on-anim", effect_id=4747)
 				if self.enabled and obj != sender:
 					self.velocity[obj] = Vector3(obj.physics.velocity)
 					obj.char.set_gravity_scale(0)
 					obj.char.teleport(ignore_y=False, pos=obj.physics.position-Vector3.up*2, x=0, y=0, z=0)
-					obj.char.force_camera_target_cycle(optional_target=sender)
+					obj.char.camera.force_camera_target_cycle(optional_target=sender)
 				else:
 					obj.char.set_gravity_scale(1)
 					if obj in self.velocity and self.velocity[obj].sq_magnitude() > 0.01:
 						obj.char.knockback(vector=self.velocity[obj])
-					obj.char.force_camera_target_cycle(optional_target=obj)
+					obj.char.camera.force_camera_target_cycle(optional_target=obj)
 
 				if not self.enabled or obj != sender:
 					obj.char.set_user_ctrl_comp_pause(paused=self.enabled)
@@ -248,7 +249,7 @@ class Speak(ChatCommand):
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
 			if obj.name == args.object:
-				obj.add_handler("on_private_chat_message", Speak.speak)
+				obj.add_handler("private_chat_message", Speak.speak)
 				server.chat.send_private_chat_message("!"+args.object, "Everything you type will be spoken by the selected object.", sender)
 				return
 		server.chat.sys_msg_sender("Object not found")
@@ -263,7 +264,7 @@ class Spectate(ChatCommand):
 		self.command.add_argument("obj", type=instance_obj)
 
 	def run(self, args, sender):
-		sender.char.force_camera_target_cycle(optional_target=args.obj)
+		sender.char.camera.force_camera_target_cycle(optional_target=args.obj)
 
 class Tags(ChatCommand):
 	def __init__(self):

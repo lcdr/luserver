@@ -163,7 +163,7 @@ class GeneralHandling:
 		mis = ET.SubElement(root, "mis")
 		done = ET.SubElement(mis, "done")
 		cur = ET.SubElement(mis, "cur")
-		for mission_id, mission in player.char.missions.items():
+		for mission_id, mission in player.char.mission.missions.items():
 			if mission.state == 2:
 				m = ET.SubElement(cur, "m", id=str(mission_id))
 				for task in mission.tasks:
@@ -254,18 +254,18 @@ class GeneralHandling:
 
 		for object_id in collisions:
 			if object_id not in player.char.last_collisions:
-				server.get_object(object_id).handle("on_enter", player)
+				server.get_object(object_id).handle("enter", player)
 		for object_id in player.char.last_collisions:
-			if object_id not in collisions:
+			if object_id in server.game_objects and object_id not in collisions:
 				obj = server.get_object(object_id)
-				if obj is not None:
-					obj.handle("on_exit", player, silent=True)
+				obj.handle("exit", player, silent=True)
 
 		player.char.last_collisions = collisions
 
 	def _on_game_message(self, message: ReadStream, address: Address) -> None:
 		object_id = message.read(c_int64)
-		obj = server.get_object(object_id)
-		if obj is None:
+		try:
+			obj = server.get_object(object_id)
+		except KeyError:
 			return
 		obj.on_game_message(message, address)

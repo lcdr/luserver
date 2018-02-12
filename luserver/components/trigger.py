@@ -48,7 +48,7 @@ class TriggerComponent(Component):
 				assert target == "target", target
 				assert args[0:4] == ["exploretask","1","1","1"], args[0:4]
 				player = eventargs[0]
-				player.char.update_mission_task(TaskType.Discover, args[4])
+				player.char.mission.update_mission_task(TaskType.Discover, args[4])
 
 			else:
 				log.error("command %s not implemented", command_name)

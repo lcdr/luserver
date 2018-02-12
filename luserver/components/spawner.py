@@ -27,7 +27,7 @@ class SpawnerComponent(Component):
 			server.spawners[self.name] = self.object
 		if self._active:
 			if self.spawn_net_on_smash is not None:
-				server.spawners[self.spawn_net_on_smash].add_handler("on_spawned_destruction", self.spawn_on_smash)
+				server.spawners[self.spawn_net_on_smash].add_handler("spawned_destruction", self.spawn_on_smash)
 				return
 			self.spawn_all()
 
@@ -69,7 +69,7 @@ class SpawnerComponent(Component):
 		if self.spawn_net_on_smash:
 			self._active = True
 
-	def spawn_on_smash(self, spawner: GameObject) -> None:
+	def spawn_on_smash(self) -> None:
 		if self._active:
 			self.spawn()
 			self._active = False

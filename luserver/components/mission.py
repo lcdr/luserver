@@ -33,7 +33,7 @@ class ObtainItemType:
 	RemoveOnComplete = 2
 
 from persistent import Persistent
-from .commonserver import MissionData
+from ..commonserver import MissionData
 
 class MissionTask(Persistent):
 	def __init__(self, task_type: int, target: int, target_value: int, parameter):
@@ -82,7 +82,7 @@ def check_prereqs(mission_id: int, player: Player) -> bool:
 				prereq_mission, prereq_mission_state = prereq_mission
 			else:
 				prereq_mission_state = MissionState.Completed
-			if prereq_mission in player.char.missions and player.char.missions[prereq_mission].state == prereq_mission_state:
+			if prereq_mission in player.char.mission.missions and player.char.mission.missions[prereq_mission].state == prereq_mission_state:
 				break # an element was found, this prereq_ors is satisfied
 		else:
 			break # no elements found, not satisfied, checking further prereq_ors unnecessary
@@ -106,8 +106,8 @@ class MissionNPCComponent(Component):
 			offer = multi_interact_id
 		else:
 			for mission_id, offers_mission, accepts_mission in self.missions:
-				if mission_id in player.char.missions:
-					if accepts_mission and player.char.missions[mission_id].state == MissionState.Active:
+				if mission_id in player.char.mission.missions:
+					if accepts_mission and player.char.mission.missions[mission_id].state == MissionState.Active:
 						log.debug("mission %i in progress, offering", mission_id)
 						offer = mission_id
 						break
@@ -120,7 +120,7 @@ class MissionNPCComponent(Component):
 							if player.object_id not in self.random_mission_choices:
 								eligible_missions = []
 								for random_mission_id in random_pool:
-									if random_mission_id not in player.char.missions:
+									if random_mission_id not in player.char.mission.missions:
 										eligible_missions.append(random_mission_id)
 								if not eligible_missions:
 									continue
@@ -130,7 +130,7 @@ class MissionNPCComponent(Component):
 								self.random_mission_choices[player.object_id] = offer
 								# todo: fix this
 								# disabling for now because handlers accidentally get saved to DB
-								#player.add_handler("on_destruction", self.clear_random_missions)
+								#player.add_handler("destruction", self.clear_random_missions)
 							else:
 								offer = self.random_mission_choices[player.object_id]
 								log.debug("choosing saved random mission %i", offer)
@@ -140,7 +140,7 @@ class MissionNPCComponent(Component):
 		if offer is not None:
 			log.debug("offering %i", offer)
 			self.offer_mission(offer, offerer=self.object, player=player)
-			player.char.offer_mission(offer, offerer=self.object)
+			player.char.mission.offer_mission(offer, offerer=self.object)
 
 		return offer is not None
 
@@ -148,16 +148,16 @@ class MissionNPCComponent(Component):
 	def offer_mission(self, mission_id:c_int=EI, offerer:GameObject=EO) -> None:
 		pass
 
-	def mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP) -> None:
+	def on_mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP) -> None:
 		if mission_state == MissionState.Available:
 			assert not is_complete
-			player.char.add_mission(mission_id)
+			player.char.mission.add_mission(mission_id)
 		elif mission_state == MissionState.ReadyToComplete:
 			assert is_complete
-			player.char.complete_mission(mission_id)
+			player.char.mission.complete_mission(mission_id)
 			self.clear_random_missions(player)
 
-	def request_linked_mission(self, player:Player=EP, mission_id:c_int=EI, mission_offered:bool=EB) -> None:
+	def on_request_linked_mission(self, player:Player=EP, mission_id:c_int=EI, mission_offered:bool=EB) -> None:
 		self.on_use(player, None)
 
 	def clear_random_missions(self, player: Player) -> None:

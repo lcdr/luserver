@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
 from enum import Enum, IntEnum
 
 class LUMessage(IntEnum):
 	@staticmethod
-	@abstractmethod
 	def header() -> int:
 		pass
 

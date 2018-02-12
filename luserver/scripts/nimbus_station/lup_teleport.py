@@ -16,9 +16,9 @@ class ScriptComponent(script.ScriptComponent):
 			text = "UI_TRAVEL_TO_NS"
 		else:
 			text = "UI_TRAVEL_TO_LUP_STATION"
-		player.char.disp_message_box(id="TransferBox", text=text, callback=self.object)
+		player.char.ui.disp_message_box(id="TransferBox", text=text, callback=self.object)
 
-	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
+	def on_message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "TransferBox":
 			if button == 1:
 				# todo: display zone summary (callback not working right now for some reason)

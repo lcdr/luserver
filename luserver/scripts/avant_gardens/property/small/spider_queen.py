@@ -1,4 +1,7 @@
+from typing import cast
+
 import luserver.components.script as script
+from luserver.game_object import ScriptObject
 from luserver.world import server
 from luserver.math.quaternion import Quaternion
 
@@ -20,7 +23,7 @@ class ScriptComponent(script.ScriptComponent):
 			self.object.call_later(3, self.object.render.play_animation, "idle-withdrawn")
 
 			for egg in server.get_objects_in_group("SpiderEggs")[:2]:
-				egg.script.spawn_spider()
+				cast(ScriptObject, egg).script.spawn_spider()
 
 	def spiderling_defeated(self):
 		self.spiderlings_defeated += 1

@@ -27,7 +27,7 @@ class LaunchpadComponent(Component):
 		assert multi_interact_id is None
 
 		if server.db.config["enabled_worlds"] and self._target_world not in server.db.config["enabled_worlds"]:
-			player.char.disp_tooltip("This world is currently disabled.")
+			player.char.ui.disp_tooltip("This world is currently disabled.")
 			return
 
 		for model in player.inventory.models:
@@ -35,13 +35,13 @@ class LaunchpadComponent(Component):
 				self.launch(player, model)
 				break
 		else:
-			player.char.disp_tooltip("You don't have a rocket!")
+			player.char.ui.disp_tooltip("You don't have a rocket!")
 
 	def launch(self, player: Player, rocket: Stack) -> None:
 		player.char.traveling_rocket = rocket.module_lots
 		self.fire_event_client_side(args="RocketEquipped", obj=rocket, sender=player)
 
-	def fire_event_server_side(self, player: Player, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=EO) -> None:
+	def on_fire_event_server_side(self, player: Player, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=EO) -> None:
 		if args == "ZonePlayer":
 			if param2:
 				param3 = self._default_world_id

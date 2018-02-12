@@ -8,11 +8,12 @@ from ...world import server
 from ...math.vector import Vector3
 from ..inventory import InventoryType, LootType, Stack
 from ..mission import check_prereqs, MissionProgress, MissionState, ObtainItemType, TaskType
+from .subcomponent import CharSubcomponent
 
-class CharMission:
-	object: Player
-
-	def __init__(self) -> None:
+class CharMission(CharSubcomponent):
+	def __init__(self, player: Player) -> None:
+		super().__init__(player)
+		self.object = player
 		self.missions: Dict[int, MissionProgress] = PersistentMapping()
 		# add achievements
 		for mission_id, data in server.db.missions.items():
@@ -99,8 +100,8 @@ class CharMission:
 			source_type = LootType.Achievement
 
 		self.notify_mission(mission_id, mission_state=MissionState.Unavailable, sending_rewards=True)
-		self.set_currency(currency=self.currency + mission.rew_currency, position=Vector3.zero, source_type=source_type)
-		self.modify_lego_score(mission.rew_universe_score, source_type=source_type)
+		self.object.char.set_currency(currency=self.object.char.currency + mission.rew_currency, position=Vector3.zero, source_type=source_type)
+		self.object.char.modify_lego_score(mission.rew_universe_score, source_type=source_type)
 
 		for task in mission.tasks:
 			if task.type == TaskType.ObtainItem and task.parameter == ObtainItemType.RemoveOnComplete:
@@ -114,7 +115,7 @@ class CharMission:
 				self.object.inventory.add_item(lot, count, source_type=source_type)
 
 		if mission.rew_emote is not None:
-			self.set_emote_lock_state(lock=False, emote_id=mission.rew_emote)
+			self.object.char.set_emote_lock_state(lock=False, emote_id=mission.rew_emote)
 
 		self.object.stats.max_life += mission.rew_max_life
 		self.object.stats.max_imagination += mission.rew_max_imagination
@@ -149,7 +150,7 @@ class CharMission:
 	def offer_mission(self, mission_id:c_int=EI, offerer:GameObject=EO) -> None:
 		pass
 
-	def respond_to_mission(self, mission_id:c_int=EI, player_id:c_int64=EI, receiver:GameObject=EO, reward_item:c_int=-1) -> None:
+	def on_respond_to_mission(self, mission_id:c_int=EI, player_id:c_int64=EI, receiver:GameObject=EO, reward_item:c_int=-1) -> None:
 		assert player_id == self.object.object_id
 		if reward_item != -1:
 			mission = self.missions[mission_id]

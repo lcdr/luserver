@@ -26,8 +26,7 @@ class RacingControlComponent(ScriptedActivityComponent):
 		super().serialize(out, is_creation)
 		out.write(c_bit(True))
 		out.write(c_ushort(2))
-		out.write(c_bit(self.player_data_flag))
-		if self.player_data_flag:
+		if self.flag("player_data_flag", out):
 			index = 0
 			for player, data in self.player_data.items():
 				out.write(c_bit(True))
@@ -37,7 +36,6 @@ class RacingControlComponent(ScriptedActivityComponent):
 				out.write(c_bit(False))
 				index += 1
 			out.write(c_bit(False))
-			self.player_data_flag = False
 
 		out.write(c_bit(True))
 		out.write("MainPath", length_type=c_ushort)

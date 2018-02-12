@@ -1,6 +1,8 @@
 import random
+from typing import cast
 
 import luserver.components.script as script
+from luserver.game_object import RenderObject
 from luserver.world import server
 
 BASE_SHAKE_TIME = 2
@@ -11,8 +13,8 @@ SHAKE_RADIUS = 500
 
 class ScriptComponent(script.ScriptComponent):
 	def on_startup(self) -> None:
-		self.ship_fx_obj = server.get_objects_in_group("ShipFX")[0]
-		self.ship_fx2_obj = server.get_objects_in_group("ShipFX2")[0]
+		self.ship_fx_obj = cast(RenderObject, server.get_objects_in_group("ShipFX")[0])
+		self.ship_fx2_obj = cast(RenderObject, server.get_objects_in_group("ShipFX2")[0])
 		self.object.call_later(BASE_SHAKE_TIME, self.shake)
 
 	def shake(self):

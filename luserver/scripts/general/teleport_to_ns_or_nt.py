@@ -10,9 +10,9 @@ class ScriptComponent(script.ScriptComponent):
 	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
 		# todo: check if player has been to NT, if yes then display choice UI
-		player.char.disp_message_box(id="TransferBox", text="UI_TRAVEL_TO_LUP_STATION", callback=self.object)
+		player.char.ui.disp_message_box(id="TransferBox", text="UI_TRAVEL_TO_LUP_STATION", callback=self.object)
 
-	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
+	def on_message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "TransferBox":
 			if button == 1:
 				# todo: display zone summary (callback not working right now for some reason)

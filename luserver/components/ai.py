@@ -1,7 +1,7 @@
 from typing import Optional
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import CallbackID, Config, GameObject, Player
+from ..game_object import CallbackID, Config, GameObject, Player, StatsObject
 from ..world import server
 from ..math.quaternion import Quaternion
 from .component import Component
@@ -18,8 +18,6 @@ class BaseCombatAIComponent(Component):
 		self.target = None
 		self._enabled = False
 		self.update_handle: Optional[CallbackID] = None
-		self.object.add_handler("rebuild_init", self._on_rebuild_init)
-		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
 	def on_startup(self) -> None:
 		if not hasattr(self.object, "skill"):
@@ -35,10 +33,10 @@ class BaseCombatAIComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(False))
 
-	def _on_rebuild_init(self, _obj: GameObject) -> None:
+	def on_rebuild_init(self) -> None:
 		self._enabled = False
 
-	def _on_rebuild_complete(self, _obj: GameObject, player: Player) -> None:
+	def on_complete_rebuild(self, player: Player) -> None:
 		self._enabled = True
 
 	def _disable(self) -> None:
@@ -62,7 +60,7 @@ class BaseCombatAIComponent(Component):
 		# todo: make distance skill-dependent
 		nearest_dist = self.skill_range**2 # starting distance is maximum distance
 		for obj in server.game_objects.values():
-			if hasattr(obj, "stats") and obj.stats.faction in enemy_factions:
+			if isinstance(obj, StatsObject) and obj.stats.faction in enemy_factions:
 				dist = self.object.physics.position.sq_distance(obj.physics.position)
 				if dist < nearest_dist:
 					self.target = obj

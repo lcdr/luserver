@@ -1,3 +1,6 @@
+from typing import cast
+
+from luserver.game_object import PhysicsObject
 from luserver.world import server
 from luserver.components.physics import PhysicsEffect
 from luserver.interfaces.plugin import ChatCommand
@@ -58,7 +61,7 @@ class SpawnPhantom(ChatCommand):
 			"scale": args.scale,
 			"parent": sender,
 			"position": sender.physics.position+displacement}
-		obj = server.spawn_object(lot, set_vars)
+		obj = cast(PhysicsObject, server.spawn_object(lot, set_vars))
 		obj.physics.physics_effect_active = True
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
 		obj.physics.physics_effect_amount = args.amount

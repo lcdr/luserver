@@ -1,8 +1,9 @@
 import asyncio
 import time
+from typing import cast
 
 import luserver.components.script as script
-from luserver.game_object import c_int, EI, ES, Player, single
+from luserver.game_object import c_int, EI, ES, PhysicsObject, Player, single
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server
 from luserver.components.inventory import InventoryType
@@ -38,8 +39,8 @@ class ScriptComponent(script.ScriptComponent):
 
 	def set_player_spawn_points(self):
 		for index, player_id in enumerate(self.object.scripted_activity.activity_values):
-			player = server.get_object(player_id)
-			spawn = server.get_objects_in_group("P%i_Spawn" % (index+1))[0]
+			player = cast(Player, server.get_object(player_id))
+			spawn = cast(PhysicsObject, server.get_objects_in_group("P%i_Spawn" % (index+1))[0])
 			player.char.teleport(ignore_y=False, pos=spawn.physics.position, set_rotation=True, x=spawn.physics.rotation.x, y=spawn.physics.rotation.y, z=spawn.physics.rotation.z, w=spawn.physics.rotation.w)
 
 	def start(self):
@@ -63,7 +64,7 @@ class ScriptComponent(script.ScriptComponent):
 		leaderboard.ldf_set("Result[0].RowCount", LDFDataType.INT32, 0)
 
 		for player_id in self.object.scripted_activity.activity_values:
-			player = server.get_object(player_id)
+			player = cast(Player, server.get_object(player_id))
 			if self.first_time:
 				player.inventory.remove_item(InventoryType.Items, lot=GREEN_IMAGINITE) # todo: don't hardcode this and generalize it across activities
 				self.first_time = False
@@ -81,8 +82,8 @@ class ScriptComponent(script.ScriptComponent):
 			server.spawners[spawner].spawner.destroy()
 
 		for player_id, values in self.object.scripted_activity.activity_values.items():
-			player = server.get_object(player_id)
-			player.char.request_resurrect()
+			player = cast(Player, server.get_object(player_id))
+			player.char.on_request_resurrect()
 
 			player_time = values[1]
 			player_score = values[0]
@@ -91,8 +92,8 @@ class ScriptComponent(script.ScriptComponent):
 
 			for mission_id, time in SURVIVAL_MISSIONS:
 				if player_time > time:
-					player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
-			player.char.update_mission_task(TaskType.MinigameAchievement, self.object.scripted_activity.activity_id, ("survival_time_"+self.game_type, 400))
+					player.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
+			player.char.mission.update_mission_task(TaskType.MinigameAchievement, self.object.scripted_activity.activity_id, ("survival_time_"+self.game_type, 400))
 
 	def tick(self):
 		self.set_network_var("Update_Timer", LDFDataType.DOUBLE, time.perf_counter()-self.start_time)
@@ -100,7 +101,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def are_all_players_dead(self):
 		for player_id in self.object.scripted_activity.activity_values:
-			player = server.get_object(player_id)
+			player = cast(Player, server.get_object(player_id))
 			if player.stats.life > 0:
 				return False
 		return True
@@ -115,10 +116,9 @@ class ScriptComponent(script.ScriptComponent):
 			self.object.scripted_activity.notify_client_zone_object(name="Player_Died", param1=int(time.perf_counter()-self.start_time), param2=0, param_str=all_dead, param_obj=player)
 			self.game_over(player)
 		else:
-			player.char.request_resurrect()
+			player.char.on_request_resurrect()
 			self.set_player_spawn_points()
 
-	@single
 	def player_ready(self, player: Player) -> None:
 		self.object.scripted_activity.add_player(player)
 		self.set_network_var("Define_Player_To_UI", LDFDataType.BYTES, str(player.object_id).encode())
@@ -127,7 +127,10 @@ class ScriptComponent(script.ScriptComponent):
 
 		self.set_player_spawn_points()
 
-	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
+	player_ready = single(player_ready)
+	on_player_ready = player_ready
+
+	def on_message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "RePlay":
 			self.start()
 

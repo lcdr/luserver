@@ -1,4 +1,7 @@
+from typing import cast
+
 import luserver.components.script as script
+from luserver.game_object import PhysicsObject, RenderObject
 from luserver.world import server
 
 class ScriptComponent(script.ScriptComponent):
@@ -15,10 +18,11 @@ class ScriptComponent(script.ScriptComponent):
 			self.enable_fx(False)
 
 	def enable_fx(self, enable=None):
-		fx_obj = server.get_objects_in_group(self.object.groups[0]+"fx")[0]
+		fx_obj = cast(RenderObject, server.get_objects_in_group(self.object.groups[0]+"fx")[0])
 		objs = server.get_objects_in_group(self.object.groups[0])
 		for obj in objs:
 			if obj.lot == 5958:
+				obj = cast(PhysicsObject, obj)
 				if enable is None:
 					enable = not obj.physics.physics_effect_active
 				obj.physics.physics_effect_active = enable

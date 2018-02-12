@@ -4,12 +4,12 @@ from luserver.components.inventory import InventoryType
 from luserver.components.mission import MissionState
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP):
+	def on_mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP):
 		if mission_id == 1728:
 			if mission_state == MissionState.Available:
 				# needed to send the mission mail
-				player.char.add_mission(1729)
-				player.char.complete_mission(1729)
+				player.char.mission.add_mission(1729)
+				player.char.mission.complete_mission(1729)
 			elif mission_state == MissionState.ReadyToComplete:
 				player.inventory.remove_item(InventoryType.Items, lot=14397)
 				self.notify_client_object(name="switch", param1=0, param2=0, param_str=b"", param_obj=None, player=player)

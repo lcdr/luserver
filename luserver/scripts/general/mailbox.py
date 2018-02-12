@@ -8,6 +8,6 @@ class ScriptComponent(script.ScriptComponent):
 	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "Mail"}))
 
-	def fire_event_server_side(self, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:Player=EP):
+	def on_fire_event_server_side(self, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:Player=EP):
 		if args == "toggleMail":
 			sender.char.u_i_message_server_to_single_client(message_name=b"ToggleMail", args=AMF3({"visible": False}))

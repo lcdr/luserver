@@ -19,7 +19,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def on_enter(self, player):
 		if self.is_burning:
-			player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=440)
+			player.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=440)
 			self.object.skill.cast_skill(SKILL_ID)
 
 	def on_skill_event(self, caster, event_name):

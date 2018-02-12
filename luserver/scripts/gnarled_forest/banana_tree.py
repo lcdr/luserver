@@ -11,7 +11,7 @@ class ScriptComponent(script.ScriptComponent):
 	def spawn_banana(self):
 		if self.banana is None:
 			self.banana = server.spawn_object(6909, {"position": self.banana_pos(), "rotation": self.object.physics.rotation})
-			self.banana.add_handler("on_death", self.on_banana_death)
+			self.banana.add_handler("death", self.on_banana_death)
 
 	def on_hit(self, damage, attacker):
 		self.object.stats.life = self.object.stats.max_life # indestructible
@@ -19,7 +19,7 @@ class ScriptComponent(script.ScriptComponent):
 			self.banana.destructible.simply_die(kill_type=KillType.Silent, killer=self.object)
 			self.banana = None
 			falling_banana = server.spawn_object(6718, {"position": self.banana_pos(), "rotation": self.object.physics.rotation})
-			falling_banana.add_handler("on_death", self.on_banana_death)
+			falling_banana.add_handler("death", self.on_banana_death)
 
 	def banana_pos(self):
 		offset = Vector3(-5, 12, 0)

@@ -47,19 +47,19 @@ class ScriptComponent(script.ScriptComponent):
 	def on_destruction(self) -> None:
 		if self.player is not None:
 			self.stop_playing()
-			self.player.remove_handler("on_destruction", self.on_player_destruction)
+			self.player.remove_handler("destruction", self.on_player_destruction)
 
-	def complete_rebuild(self, player):
+	def on_complete_rebuild(self, player):
 		self.player = player
 		# todo: fix this
 		# disabling for now because handlers accidentally get saved to DB
-		#self.player.add_handler("on_destruction", self.on_player_destruction)
+		#self.player.add_handler("destruction", self.on_player_destruction)
 		self.object.call_later(0.1, self.play)
 
 	def play(self):
 		config = CONFIG[self.object.lot]
 		self.notify_client_object(name="startPlaying", param1=0, param2=0, param_str=b"", param_obj=self.player)
-		self.player.char.play_cinematic(path_name=config["cinematic"], start_time_advance=0)
+		self.player.char.camera.play_cinematic(path_name=config["cinematic"], start_time_advance=0)
 		self.player.render.play_animation(config["play_anim"])
 
 		offset = config["player_offset"]
@@ -85,7 +85,7 @@ class ScriptComponent(script.ScriptComponent):
 			return
 
 		if self.object.lot == GUITAR:
-			self.player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=176)
+			self.player.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=176)
 
 		self.notify_client_object(name="stopCheckingMovement", param1=0, param2=0, param_str=b"", param_obj=self.player)
 		self.player.char.end_cinematic(lead_out=1, path_name="")
@@ -100,6 +100,6 @@ class ScriptComponent(script.ScriptComponent):
 	def on_player_destruction(self, player):
 		self.object.destructible.simply_die()
 
-	def fire_event_server_side(self, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=EO):
+	def on_fire_event_server_side(self, args:str=ES, param1:c_int=-1, param2:c_int=-1, param3:c_int=-1, sender:GameObject=EO):
 		if args == "stopPlaying":
 			self.stop_playing()

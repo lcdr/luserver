@@ -1,5 +1,7 @@
+from typing import cast
+
 import luserver.components.script as script
-from luserver.game_object import c_int, EB, EI, EO, GameObject
+from luserver.game_object import c_int, EB, EI, EO, GameObject, ScriptObject
 from luserver.world import server
 from luserver.components.mission import MissionState
 
@@ -10,7 +12,7 @@ class ScriptComponent(script.ScriptComponent):
 	def set_missions(self, missions):
 		self.missions = missions
 
-	def mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:GameObject=EO):
+	def on_mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:GameObject=EO):
 		if mission_id in self.missions:
 			if mission_state in (MissionState.Available, MissionState.CompletedAvailable):
 				visible = 1
@@ -24,4 +26,4 @@ class ScriptComponent(script.ScriptComponent):
 
 			for obj in server.game_objects.values():
 				if obj.spawner_object in spawners:
-					obj.script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=None, param_str=b"")
+					cast(ScriptObject, obj).script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=None, param_str=b"")

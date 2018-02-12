@@ -10,8 +10,6 @@ class SwitchComponent(Component):
 		self._flags["_activated"] = "placeholder_flag" # needed to register changes for serialization
 		self._enabled = True
 		self._activated = False
-		self.object.add_handler("rebuild_init", self._on_rebuild_init)
-		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
 	@property
 	def activated(self) -> bool:
@@ -33,10 +31,10 @@ class SwitchComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.activated))
 
-	def _on_rebuild_init(self, _obj: GameObject) -> None:
+	def on_rebuild_init(self) -> None:
 		self._enabled = False
 
-	def _on_rebuild_complete(self, _obj: GameObject, player: Player) -> None:
+	def on_complete_rebuild(self, player: Player) -> None:
 		self._enabled = True
 
 	def on_enter(self, player: Player) -> None:

@@ -16,7 +16,7 @@ flag = {
 	1962: 2033}
 
 class ScriptComponent(script.ScriptComponent):
-	def mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP):
+	def on_mission_dialogue_o_k(self, is_complete:bool=EB, mission_state:c_int=EI, mission_id:c_int=EI, player:Player=EP):
 		if mission_state == MissionState.ReadyToComplete:
 			if mission_id in package:
 				player.inventory.remove_item(InventoryType.Items, lot=package[mission_id])

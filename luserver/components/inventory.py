@@ -142,16 +142,13 @@ class InventoryComponent(Component):
 			for item_lot, equip in server.db.inventory_component[comp_id]:
 				item = self.add_item(item_lot, persistent=False, notify_client=False)
 				if equip:
-					self.equip_inventory(item_to_equip=item.object_id)
+					self.on_equip_inventory(item_to_equip=item.object_id)
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(is_creation or self.equipped_items_flag))
-		if is_creation or self.equipped_items_flag:
+		if self.flag("equipped_items_flag", out, is_creation):
 			out.write(c_uint(len(self.equipped[-1])))
 			for item in self.equipped[-1]:
-				item.serialize(out)
-			if not is_creation:
-				self.equipped_items_flag = False
+				out.write(item)
 		out.write(c_bit(False))
 
 	def inventory_type_to_inventory(self, inventory_type: int) -> List[Optional[Stack]]:
@@ -175,7 +172,7 @@ class InventoryComponent(Component):
 		self.equipped.append(self.equipped[-1].copy())
 		self.attr_changed("equipped")
 
-	def pop_equipped_items_state(self) -> None:
+	def on_pop_equipped_items_state(self) -> None:
 		if len(self.equipped) == 1:
 			return
 
@@ -191,11 +188,11 @@ class InventoryComponent(Component):
 				if equipped_item.item_type == prev_equipped_item.item_type:
 					if equipped_item.lot != prev_equipped_item.lot:
 						# item has been replaced, equip old item
-						self.equip_inventory(item_to_equip=prev_equipped_item.object_id)
+						self.on_equip_inventory(item_to_equip=prev_equipped_item.object_id)
 					break
 			else:
 				# item has been unequipped without replacement, equip again
-				self.equip_inventory(item_to_equip=prev_equipped_item.object_id)
+				self.on_equip_inventory(item_to_equip=prev_equipped_item.object_id)
 
 		# check for newly equipped items that weren't equipped previously
 		for equipped_item in self.equipped[-1]:
@@ -204,12 +201,12 @@ class InventoryComponent(Component):
 					break
 			else:
 				# item should be unequipped
-				self.un_equip_inventory(item_to_unequip=equipped_item.object_id)
+				self.on_un_equip_inventory(item_to_unequip=equipped_item.object_id)
 
 		del self.equipped[-2]
 		self.attr_changed("equipped")
 
-	def move_item_in_inventory(self, dest_inventory_type:c_int_=0, object_id:c_int64_=EI, inventory_type:c_int_=EI, response_code:c_int_=EI, slot:c_int_=EI) -> None:
+	def on_move_item_in_inventory(self, dest_inventory_type:c_int_=0, object_id:c_int64_=EI, inventory_type:c_int_=EI, response_code:c_int_=EI, slot:c_int_=EI) -> None:
 		assert dest_inventory_type == 0
 		assert object_id != 0
 		assert response_code == 0
@@ -232,7 +229,7 @@ class InventoryComponent(Component):
 
 
 		if hasattr(self.object, "char"):
-			self.object.char.update_mission_task(TaskType.ObtainItem, lot, increment=count)
+			self.object.char.mission.update_mission_task(TaskType.ObtainItem, lot, increment=count)
 
 		if inventory_type is None:
 			if item_type == ItemType.Brick:
@@ -356,7 +353,7 @@ class InventoryComponent(Component):
 			assert item.count >= 0
 			if item.count == 0: # delete item
 				if item in self.equipped[-1]:
-					self.un_equip_inventory(item_to_unequip=item.object_id)
+					self.on_un_equip_inventory(item_to_unequip=item.object_id)
 
 				if inventory_type in (InventoryType.Bricks, InventoryType.TempItems, InventoryType.TempModels, InventoryType.MissionObjects):
 					inventory.remove(item)
@@ -367,7 +364,7 @@ class InventoryComponent(Component):
 						self.add_item(module_lot)
 			return last_affected_item
 
-	def equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64_=EI) -> None:
+	def on_equip_inventory(self, ignore_cooldown:bool=False, out_success:bool=False, item_to_equip:c_int64_=EI) -> None:
 		assert not out_success
 		for inv in (self.items, self.temp_items, self.models):
 			for item in inv:
@@ -401,12 +398,12 @@ class InventoryComponent(Component):
 					# equip sub-items
 					for sub_item in item.sub_items:
 						sub = self.add_item(sub_item, inventory_type=InventoryType.TempItems)
-						self.equip_inventory(item_to_equip=sub.object_id)
+						self.on_equip_inventory(item_to_equip=sub.object_id)
 
 					# unequip any items of the same type
 					for other_item in self.equipped[-1]:
 						if other_item.item_type == item.item_type and other_item.object_id != item.object_id:
-							self.un_equip_inventory(item_to_unequip=other_item.object_id)
+							self.on_un_equip_inventory(item_to_unequip=other_item.object_id)
 							break
 
 					# if this is a rocket, check for launchpads nearby, and possibly activate the launch sequence
@@ -418,7 +415,7 @@ class InventoryComponent(Component):
 									break
 					return
 
-	def un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64_=EI, replacement_object_id:c_int64_=0) -> None:
+	def on_un_equip_inventory(self, even_if_dead:bool=False, ignore_cooldown:bool=False, out_success:bool=False, item_to_unequip:c_int64_=EI, replacement_object_id:c_int64_=0) -> None:
 		assert not out_success
 		assert replacement_object_id == 0
 		for item in self.equipped[-1]:
@@ -455,7 +452,7 @@ class InventoryComponent(Component):
 				# if this is a sub-item of another item, unequip the other item (and its sub-items)
 				for other_item in self.equipped[-1]:
 					if item.lot in other_item.sub_items:
-						self.un_equip_inventory(item_to_unequip=other_item.object_id)
+						self.on_un_equip_inventory(item_to_unequip=other_item.object_id)
 				break
 
 	@broadcast
@@ -463,7 +460,7 @@ class InventoryComponent(Component):
 		inv = self.inventory_type_to_inventory(inventory_type)
 		inv.extend([None] * (size - len(inv)))
 
-	def move_item_between_inventory_types(self, inventory_type_a:c_int_=EI, inventory_type_b:c_int_=EI, object_id:c_int64_=EI, show_flying_loot:bool=True, stack_count:c_uint_=1, template_id:c_int_=-1) -> Stack:
+	def on_move_item_between_inventory_types(self, inventory_type_a:c_int_=EI, inventory_type_b:c_int_=EI, object_id:c_int64_=EI, show_flying_loot:bool=True, stack_count:c_uint_=1, template_id:c_int_=-1) -> Stack:
 		source = self.inventory_type_to_inventory(inventory_type_a)
 		for item in source:
 			if item is not None and (item.object_id == object_id or item.lot == template_id):

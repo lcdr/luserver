@@ -1,5 +1,6 @@
 from ...game_object import c_int, c_int64, EB, EI, EL, single
 from ...ldf import LDF, LDFDataType
+from .subcomponent import CharSubcomponent
 
 class MatchRequestType:
 	Join = 0
@@ -13,8 +14,8 @@ class MatchRequestValue:
 class MatchUpdateType:
 	Time = 3
 
-class CharActivity:
-	def request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=EI, weekly:bool=EB) -> None:
+class CharActivity(CharSubcomponent):
+	def on_request_activity_summary_leaderboard_data(self, game_id:c_int=0, query_type:c_int=1, results_end:c_int=10, results_start:c_int=0, target:c_int64=EI, weekly:bool=EB) -> None:
 		leaderboard = LDF()
 		leaderboard.ldf_set("ADO.Result", LDFDataType.BOOLEAN, True)
 		leaderboard.ldf_set("Result.Count", LDFDataType.INT32, 0)
@@ -24,7 +25,7 @@ class CharActivity:
 	def send_activity_summary_leaderboard_data(self, game_id:c_int=EI, info_type:c_int=EI, leaderboard_data:LDF=EL, throttled:bool=EB, weekly:bool=EB) -> None:
 		pass
 
-	def match_request(self, activator:c_int64=EI, player_choices:LDF=EL, type:c_int=EI, value:c_int=EI) -> None:
+	def on_match_request(self, activator:c_int64=EI, player_choices:LDF=EL, type:c_int=EI, value:c_int=EI) -> None:
 		self.match_response(response=0)
 		if type == MatchRequestType.Join:# and value == MatchRequestValue.Join:
 			update_data = LDF()

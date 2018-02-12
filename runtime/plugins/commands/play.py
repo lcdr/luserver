@@ -22,7 +22,7 @@ class PlayCine(ChatCommand):
 		if args.hideui:
 			# hide HUD
 			sender.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "front_end"}))
-		sender.char.play_cinematic(path_name=args.name, send_server_notify=args.hideui, hide_player_during_cine=not args.showplayer, start_time_advance=0)
+		sender.char.camera.play_cinematic(path_name=args.name, send_server_notify=args.hideui, hide_player_during_cine=not args.showplayer, start_time_advance=0)
 
 class PlayEmote(ChatCommand):
 	def __init__(self):

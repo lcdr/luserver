@@ -1,6 +1,6 @@
 import random
 
-from pyraknet.bitstream import c_bit, c_int, WriteStream
+from pyraknet.bitstream import c_int, WriteStream
 from ..game_object import Config, GameObject
 from .component import Component
 
@@ -17,7 +17,5 @@ class ExhibitComponent(Component):
 		self.object.call_later(_CYCLE_INTERVAL, self._random_exhibit)
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(self._exhibit_flag or is_creation))
-		if self._exhibit_flag or is_creation:
+		if self.flag("_exhibit_flag", out, is_creation):
 			out.write(c_int(self._exhibited_lot))
-			self._exhibit_flag = False

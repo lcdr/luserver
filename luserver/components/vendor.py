@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from pyraknet.bitstream import c_bit, c_uint, WriteStream
 from ..game_object import c_int, c_int64, Config, E, EB, EI, GameObject, Mapping, Player, single
@@ -13,7 +13,7 @@ class VendorComponent(Component):
 	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
 		self.object.vendor = self
-		self.items_for_sale = []
+		self.items_for_sale: List[Tuple[int, bool, int]] = []
 		for row in server.db.vendor_component[comp_id]:
 			self.items_for_sale.extend(server.db.loot_table[row[0]])
 
@@ -29,11 +29,11 @@ class VendorComponent(Component):
 	def vendor_open_window(self) -> None:
 		pass
 
-	def buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int=1, item:c_int=EI) -> None:
+	def on_buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int=1, item:c_int=EI) -> None:
 		new_item = player.inventory.add_item(item, count)
 		player.char.set_currency(currency=player.char.currency - new_item.base_value*count, position=Vector3.zero)
 
-	def sell_to_vendor(self, player: Player, count:c_int=1, item_obj_id:c_int64=EI) -> None:
+	def on_sell_to_vendor(self, player: Player, count:c_int=1, item_obj_id:c_int64=EI) -> None:
 		found = False
 		for inv_type in (InventoryType.Items, InventoryType.Models, InventoryType.Bricks):
 			inv = player.inventory.inventory_type_to_inventory(inv_type)

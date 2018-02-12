@@ -12,6 +12,6 @@ class CollectibleComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_ushort(self._collectible_id))
 
-	def has_been_collected(self, player:Player=EP) -> None:
+	def on_has_been_collected(self, player:Player=EP) -> None:
 		coll_id = self._collectible_id + (server.world_id[0] << 8)
-		player.char.update_mission_task(TaskType.Collect, self.object.lot, increment=coll_id)
+		player.char.mission.update_mission_task(TaskType.Collect, self.object.lot, increment=coll_id)

@@ -207,7 +207,7 @@ class ChatHandling:
 		if recipient_name.startswith("!"):
 			recipients = object_selector(recipient_name)
 			for recipient in recipients:
-				recipient.handle("on_private_chat_message", sender, text)
+				recipient.handle("private_chat_message", sender, text)
 		else:
 			recipient = server.find_player_by_name(recipient_name)
 			self.send_private_chat_message(sender, text, recipient)

@@ -10,5 +10,5 @@ class ScriptComponent(script.ScriptComponent):
 			if "blooming" not in self.script_network_vars:
 				self.set_network_var("blooming", LDFDataType.BOOLEAN, True)
 				for mission_id in FLOWER_MISSIONS:
-					caster.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
+					caster.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
 				self.object.call_later(16, lambda: self.object.destructible.simply_die(killer=caster))

@@ -40,7 +40,7 @@ class ScriptComponent(script.ScriptComponent):
 		player.char.start_celebration_effect(animation="", duration=0, icon_id=0, main_text="", mixer_program=b"", music_cue=b"", path_node_name=b"", sound_guid=b"", sub_text="", celebration_id=celebration_id)
 
 		achievements.append(778)
-		player.char.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually
+		player.char.mission.add_mission(achievements[0]) # for some reason not an achievement, needs to be added manually
 
 		for achievement_id in achievements:
-			player.char.complete_mission(achievement_id)
+			player.char.mission.complete_mission(achievement_id)

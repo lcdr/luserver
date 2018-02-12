@@ -6,10 +6,12 @@ import os
 import re
 import secrets
 import time
+from typing import cast
 
 from pyraknet.bitstream import c_bool, c_ushort
 from luserver.auth import Account, GMLevel, PasswordState
 from luserver.bitstream import WriteStream
+from luserver.game_object import Player
 from luserver.ldf import LDF, LDFDataType
 from luserver.messages import WorldClientMsg
 from luserver.world import server
@@ -45,7 +47,8 @@ class Ban(ChatCommand):
 
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
-			if obj.name == args.player:
+			if obj.lot == 1 and obj.name == args.player:
+				obj = cast(Player, obj)
 				ban_duration = datetime.timedelta(args.days, 0, 0, 0, args.minutes, args.hours, args.weeks)
 				banned_until = time.time() + ban_duration.total_seconds()
 				server.chat.sys_msg_sender("Player will be banned until %s" % datetime.datetime.fromtimestamp(banned_until))
@@ -82,7 +85,7 @@ class CreateAccount(ChatCommand):
 			server.db.accounts[args.username] = Account(args.username, temp_password)
 			server.db.accounts[args.username].password_state = PasswordState.Temp
 
-		sender.char.disp_message_box("Account %s created. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
+		sender.char.ui.disp_message_box("Account %s created. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
 
 class Kick(ChatCommand):
 	def __init__(self):
@@ -91,8 +94,8 @@ class Kick(ChatCommand):
 
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
-			if obj.name == args.player:
-				server.close_connection(obj.char.address)
+			if obj.lot == 1 and obj.name == args.player:
+				server.close_connection(cast(Player, obj).char.address)
 				break
 		else:
 			server.chat.sys_msg_sender("Player not connected")
@@ -109,11 +112,11 @@ class Mute(ChatCommand):
 
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
-			if obj.name == args.player:
+			if obj.lot == 1 and obj.name == args.player:
 				mute_duration = datetime.timedelta(args.days, 0, 0, 0, args.minutes, args.hours, args.weeks)
 				muted_until = time.time() + mute_duration.total_seconds()
 				server.chat.sys_msg_sender("Player will be muted until %s" % datetime.datetime.fromtimestamp(muted_until))
-				obj.char.account.muted_until = muted_until
+				cast(Player, obj).char.account.muted_until = muted_until
 				break
 		else:
 			server.chat.sys_msg_sender("Player not connected")
@@ -173,7 +176,7 @@ class ResetPassword(ChatCommand):
 			server.db.accounts[args.username].set_password(temp_password)
 			server.db.accounts[args.username].password_state = PasswordState.Temp
 
-		sender.char.disp_message_box("Password reset for %s. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
+		sender.char.ui.disp_message_box("Password reset for %s. Temp password %s.\nSave this password somewhere, this is the only time it will be shown." % (args.username, temp_password))
 
 class Restart(ChatCommand):
 	def __init__(self):
@@ -266,8 +269,8 @@ class Unmute(ChatCommand):
 
 	def run(self, args, sender):
 		for obj in server.game_objects.values():
-			if obj.name == args.player:
-				obj.char.account.muted_until = 0
+			if obj.lot == 1 and obj.name == args.player:
+				cast(Player, obj).char.account.muted_until = 0
 				server.chat.sys_msg_sender("%s has been unmuted." % args.player)
 				break
 		else:

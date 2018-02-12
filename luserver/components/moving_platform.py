@@ -43,8 +43,6 @@ class MovingPlatformComponent(Component):
 		self.next_waypoint_index = 1
 		self.callbacks: List[CallbackID] = []
 		self.no_autostart = False
-		self.object.add_handler("rebuild_init", self._on_rebuild_init)
-		self.object.add_handler("complete_rebuild", self._on_rebuild_complete)
 
 		if "attached_path" in set_vars:
 			self.path = Path(*server.world_data.paths[set_vars["attached_path"]])
@@ -72,10 +70,10 @@ class MovingPlatformComponent(Component):
 
 			self.moving_platform_flag = False
 
-	def _on_rebuild_init(self, _obj: GameObject) -> None:
+	def on_rebuild_init(self) -> None:
 		self.stop_pathing()
 
-	def _on_rebuild_complete(self, _obj: GameObject, player: Player) -> None:
+	def on_complete_rebuild(self, player: Player) -> None:
 		if not self.no_autostart:
 			self.start_pathing()
 
