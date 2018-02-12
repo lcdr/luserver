@@ -106,8 +106,7 @@ class StatsSubcomponent(Component):
 		if is_creation:
 			out.write(c_bit(False))
 
-		out.write(c_bit(self.stats_flag or is_creation))
-		if self.stats_flag or is_creation:
+		if self.flag("stats_flag", out, is_creation):
 			out.write(c_uint(self.life))
 			out.write(c_float(self.max_life))
 			out.write(c_uint(self.armor))
@@ -131,13 +130,11 @@ class StatsSubcomponent(Component):
 					out.write(c_bit(False))
 					out.write(c_bit(False))
 
-			self.stats_flag = False
-
 		out.write(c_bit(False))
 
 	def on_destruction(self) -> None:
 		if self.object.spawner_object is not None:
-			self.object.spawner_object.handle("on_spawned_destruction")
+			self.object.spawner_object.handle("spawned_destruction")
 
 	def refill_stats(self) -> None:
 		self.life = self.max_life
@@ -146,4 +143,4 @@ class StatsSubcomponent(Component):
 
 	@broadcast
 	def die(self, client_death:bool=False, spawn_loot:bool=True, death_type:str=ES, direction_relative_angle_xz:float=EF, direction_relative_angle_y:float=EF, direction_relative_force:float=EF, kill_type:c_uint_=0, killer:GameObject=EO, loot_owner:Player=OBJ_NONE) -> None:
-		self.object.handle("on_death", killer, silent=True)
+		self.object.handle("death", killer, silent=True)

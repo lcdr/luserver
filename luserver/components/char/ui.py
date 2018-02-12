@@ -1,7 +1,8 @@
 from ...game_object import c_int, EB, EI, EL, EO, ES, GameObject, OBJ_NONE, single
 from ...ldf import LDF
+from .subcomponent import CharSubcomponent
 
-class CharUI:
+class CharUI(CharSubcomponent):
 	@single
 	def display_message_box(self, show:bool=EB, callback_client:GameObject=EO, id:str=ES, image_id:c_int=EI, text:str=ES, user_data:str=ES) -> None:
 		pass

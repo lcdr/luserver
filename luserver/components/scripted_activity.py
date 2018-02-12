@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, List
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, WriteStream
+from pyraknet.bitstream import c_float, c_int64, c_uint, WriteStream
 from ..game_object import broadcast, c_int, Config, EB, EBY, EI, EL, ES, EO, GameObject, ObjectID, Player, single
 from ..world import server
 from ..ldf import LDF
@@ -23,14 +23,12 @@ class ScriptedActivityComponent(Component):
 			self.transfer_world_id = None
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(self.activity_flag))
-		if self.activity_flag:
+		if self.flag("activity_flag", out):
 			out.write(c_uint(len(self.activity_values)))
 			for object_id, values in self.activity_values.items():
 				out.write(c_int64(object_id))
 				for value in values:
 					out.write(c_float(value))
-			self.activity_flag = False
 
 	def add_player(self, player: Player) -> None:
 		self.activity_values[player.object_id] = [0]*10
@@ -44,7 +42,7 @@ class ScriptedActivityComponent(Component):
 	def activity_start(self) -> None:
 		pass
 
-	def message_box_respond(self, player: Player, button:c_int=EI, id:str=ES, user_data:str=ES) -> None:
+	def on_message_box_respond(self, player: Player, button:c_int=EI, id:str=ES, user_data:str=ES) -> None:
 		if id == "LobbyReady" and button == 1:
 			asyncio.ensure_future(player.char.transfer_to_world((self.transfer_world_id, 0, 0)))
 

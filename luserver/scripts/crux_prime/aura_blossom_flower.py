@@ -6,6 +6,6 @@ class ScriptComponent(script.ScriptComponent):
 		if event_name == "waterspray":
 			if "blooming" not in self.script_network_vars:
 				self.object.physics.drop_loot(12317, caster)
-				caster.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=1136)
+				caster.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=1136)
 
 		super().on_skill_event(caster, event_name)

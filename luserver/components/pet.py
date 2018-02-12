@@ -29,10 +29,10 @@ class PetComponent(Component):
 
 	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
 		assert multi_interact_id is None
-		player.char.notify_pet_taming_minigame(pet=self.object, player_taming=OBJ_NONE, force_teleport=True, notify_type=PetTamingNotify.Begin, pets_dest_pos=self.object.physics.position, tele_pos=player.physics.position, tele_rot=player.physics.rotation)
-		player.char.notify_pet_taming_puzzle_selected(bricks=[30367, 21, 48729, 1, 6141, 1, 6143, 21])
+		player.char.pet.notify_pet_taming_minigame(pet=self.object, player_taming=OBJ_NONE, force_teleport=True, notify_type=PetTamingNotify.Begin, pets_dest_pos=self.object.physics.position, tele_pos=player.physics.position, tele_rot=player.physics.rotation)
+		player.char.pet.notify_pet_taming_puzzle_selected(bricks=[30367, 21, 48729, 1, 6141, 1, 6143, 21])
 		#self.flags = 80
 
-	def pet_taming_minigame_result(self, player: Player, success:bool=EB) -> None:
+	def on_pet_taming_minigame_result(self, player: Player, success:bool=EB) -> None:
 		if success:
-			player.char.update_mission_task(TaskType.TamePet, self.object.lot)
+			player.char.mission.update_mission_task(TaskType.TamePet, self.object.lot)

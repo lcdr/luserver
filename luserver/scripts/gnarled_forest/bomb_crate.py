@@ -31,4 +31,4 @@ class ScriptComponent(script.ScriptComponent):
 		self.object.destructible.simply_die(killer=self.object)
 
 		for mission_id in MISSIONS:
-			attacker.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)
+			attacker.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=mission_id)

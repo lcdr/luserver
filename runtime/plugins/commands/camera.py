@@ -39,7 +39,7 @@ class CamLookAt(ChatCommand):
 		config.ldf_set("lag", LDFDataType.FLOAT, args.lag)
 		config.ldf_set("FOV", LDFDataType.FLOAT, args.fov)
 		config.ldf_set("verticalOffset", LDFDataType.FLOAT, args.voffset)
-		sender.char.add_camera_effect(config, effect_id="lookat", effect_type="lookAt", duration=args.duration)
+		sender.char.camera.add_camera_effect(config, effect_id="lookat", effect_type="lookAt", duration=args.duration)
 
 class CamShake(ChatCommand):
 	def __init__(self):
@@ -69,7 +69,7 @@ class CamShake(ChatCommand):
 		config.ldf_set("xRotation", LDFDataType.FLOAT, args.rot.x)
 		config.ldf_set("yRotation", LDFDataType.FLOAT, args.rot.y)
 		config.ldf_set("zRotation", LDFDataType.FLOAT, args.rot.z)
-		sender.char.add_camera_effect(config, effect_id="shake", effect_type="shake", duration=args.duration)
+		sender.char.camera.add_camera_effect(config, effect_id="shake", effect_type="shake", duration=args.duration)
 
 class CamReset(ChatCommand):
 	def __init__(self):

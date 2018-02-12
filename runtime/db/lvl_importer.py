@@ -1,5 +1,4 @@
 from pyraknet.bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
-from luserver.game_object import GameObject
 from luserver.ldf import LDF
 from luserver.world import BITS_LOCAL
 from luserver.math.quaternion import Quaternion
@@ -204,5 +203,4 @@ class LVLImporter:
 					spawner_vars["spawner_waypoints"] = spawned_vars,
 					spawned_vars = spawner_vars
 
-				obj = GameObject(lot, object_id, spawned_vars)
-				self.world_data.objects[object_id] = obj
+				self.world_data.objects[object_id] = lot, object_id, spawned_vars

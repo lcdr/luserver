@@ -6,7 +6,7 @@ import BTrees
 
 import luserver.world
 from pyraknet.bitstream import c_bool, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, ReadStream
-from luserver.game_object import GameObject
+from luserver.commonserver import WorldData
 from luserver.ldf import LDF
 from luserver.world import World
 from luserver.math.quaternion import Quaternion
@@ -55,7 +55,7 @@ def import_data(root, maps_path):
 		luz_path = os.path.join(maps_path, luz_path)
 		if world == World.KeelhaulCanyon:
 			continue
-		root.world_data[world.value] = SimpleNamespace(objects=BTrees.OOBTree.BTree(), paths=BTrees.OOBTree.BTree(), spawnpoint=(Vector3(), Quaternion()))
+		root.world_data[world.value] = WorldData(BTrees.OOBTree.BTree(), BTrees.OOBTree.BTree(), (Vector3(), Quaternion()))
 
 		_LUZImporter(luz_path, root, root.world_data[world.value])
 
@@ -250,5 +250,4 @@ class _LUZImporter:
 					continue
 				spawner_vars["spawner_name"] = path_name
 				spawner_vars["spawner_waypoints"] = waypoints
-				spawner = GameObject(176, object_id, spawner_vars)
-				self.world_data.objects[object_id] = spawner
+				self.world_data.objects[object_id] = 176, object_id, spawner_vars

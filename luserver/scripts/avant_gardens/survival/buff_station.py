@@ -7,7 +7,7 @@ DROPS = {
 	6431: 6} # armor
 
 class ScriptComponent(script.ScriptComponent):
-	def complete_rebuild(self, player):
+	def on_complete_rebuild(self, player):
 		for powerup, interval in DROPS.items():
 			self.object.call_later(interval, self.spawn, powerup, player)
 

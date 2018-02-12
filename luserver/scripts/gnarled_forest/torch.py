@@ -29,6 +29,6 @@ class ScriptComponent(script.ScriptComponent):
 				self.object.render.stop_f_x_effect(name=b"tikitorch")
 				self.object.render.play_f_x_effect(name=b"", effect_type="water", effect_id=611)
 				self.object.render.play_f_x_effect(name=b"", effect_type="steam", effect_id=611)
-				caster.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=WATER_MISSION)
+				caster.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=WATER_MISSION)
 
 				self.object.call_later(8, self.light_torch)

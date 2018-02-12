@@ -12,7 +12,7 @@ class ScriptComponent(script.ScriptComponent):
 
 	def on_hit(self, damage, attacker):
 		if not self.script_vars["am_hit"]:
-			attacker.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=850)
+			attacker.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=850)
 
 			self.script_vars["am_hit"] = True
 			self.object.render.stop_f_x_effect(name=b"candle_light")

@@ -80,45 +80,35 @@ class Controllable(PhysicsComponent):
 		self.deeper_unknown_float3 = 0, 0, 0
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(self.physics_data_flag or is_creation))
-		if self.physics_data_flag or is_creation:
+		if self.flag("physics_data_flag", out, is_creation):
 			out.write(self.position)
 			out.write(self.rotation)
 
 			out.write(c_bit(self.on_ground))
 			out.write(c_bit(self.unknown_bool))
 
-			out.write(c_bit(self.velocity_flag))
-			if self.velocity_flag:
+			if self.flag("velocity_flag", out):
 				out.write(self.velocity)
-				self.velocity_flag = False
 
-			out.write(c_bit(self.angular_velocity_flag))
-			if self.angular_velocity_flag:
+			if self.flag("angular_velocity_flag", out):
 				out.write(c_float(self.angular_velocity[0]))
 				out.write(c_float(self.angular_velocity[1]))
 				out.write(c_float(self.angular_velocity[2]))
-				self.angular_velocity_flag = False
 
-			out.write(c_bit(self.unknown_flag))
-			if self.unknown_flag:
+			if self.flag("unknown_flag", out):
 				out.write(c_int64(self.unknown_object_id))
 				out.write(c_float(self.unknown_float3[0]))
 				out.write(c_float(self.unknown_float3[1]))
 				out.write(c_float(self.unknown_float3[2]))
 
-				out.write(c_bit(self.deeper_unknown_flag))
-				if self.deeper_unknown_flag:
+				if self.flag("deeper_unknown_flag", out):
 					out.write(c_float(self.deeper_unknown_float3[0]))
 					out.write(c_float(self.deeper_unknown_float3[1]))
 					out.write(c_float(self.deeper_unknown_float3[2]))
-					self.deeper_unknown_flag = False
 
-				self.unknown_flag = False
 			self.write_vehicle_stuff(out, is_creation)
 			if not is_creation:
 				out.write(c_bit(False))
-			self.physics_data_flag = False
 
 	def write_vehicle_stuff(self, out: WriteStream, is_creation: bool) -> None:
 		pass # hook for vehiclephysics
@@ -146,19 +136,15 @@ class SimplePhysicsComponent(PhysicsComponent):
 			out.write(c_float(0))
 		out.write(c_bit(False))
 		out.write(c_bit(False))
-		out.write(c_bit(self.physics_data_flag or is_creation))
-		if self.physics_data_flag or is_creation:
+		if self.flag("physics_data_flag", out, is_creation):
 			out.write(self.position)
 			out.write(self.rotation)
-			self.physics_data_flag = False
 
 class RigidBodyPhantomPhysicsComponent(PhysicsComponent):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(self.physics_data_flag or is_creation))
-		if self.physics_data_flag or is_creation:
+		if self.flag("physics_data_flag", out, is_creation):
 			out.write(self.position)
 			out.write(self.rotation)
-			self.physics_data_flag = False
 
 class VehiclePhysicsComponent(Controllable):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
@@ -272,14 +258,11 @@ class PhantomPhysicsComponent(PhysicsComponent):
 			self.respawn_data = set_vars["respawn_data"]
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
-		out.write(c_bit(self.physics_data_flag or is_creation))
-		if self.physics_data_flag or is_creation:
+		if self.flag("physics_data_flag", out, is_creation):
 			out.write(self.position)
 			out.write(self.rotation)
-			self.physics_data_flag = False
 
-		out.write(c_bit(self.physics_effect_flag or is_creation))
-		if self.physics_effect_flag or is_creation:
+		if self.flag("physics_effect_flag", out, is_creation):
 			out.write(c_bit(self.physics_effect_active))
 			if self.physics_effect_active:
 				out.write(c_uint(self.physics_effect_type))
@@ -287,7 +270,6 @@ class PhantomPhysicsComponent(PhysicsComponent):
 				out.write(c_bit(False))
 				out.write(c_bit(True))
 				out.write(self.physics_effect_direction)
-			self.physics_effect_flag = False
 
 	def on_startup(self) -> None:
 		if self.object.lot in _MODEL_DIMENSIONS or (hasattr(self.object, "primitive_model_type") and self.object.primitive_model_type in (PrimitiveModelType.Cuboid, PrimitiveModelType.Cylinder)):

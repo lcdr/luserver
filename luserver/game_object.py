@@ -1,15 +1,16 @@
 import asyncio
-import functools
 import importlib
 import inspect
 import logging
 import re
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 from functools import wraps
-from typing import Callable, cast, Dict, Generic, List, NewType, Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
-from typing import Sequence as Sequence_
+from typing import Any, Callable, cast, Dict, Generic, List, NewType, Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
 from typing import Mapping as Mapping_
+from typing import Sequence as Sequence_
 
+from mypy_extensions import TypedDict
 from persistent import Persistent
 
 from pyraknet.bitstream import c_bit, c_float, c_ubyte, c_ushort, ReadStream, Serializable, UnsignedIntStruct, WriteStream
@@ -24,8 +25,8 @@ from .bitstream import WriteStream as WriteStream_
 from .ldf import LDF
 from .messages import GameMessage, WorldClientMsg
 from .world import server
-from .math.vector import Vector3
 from .math.quaternion import Quaternion
+from .math.vector import Vector3
 
 log = logging.getLogger(__name__)
 
@@ -64,11 +65,6 @@ class Sequence(Generic[T, U], Sequence_[U]):
 class Mapping(Generic[T, U, V], Mapping_[U, V]):
 	pass
 
-try:
-	from mypy_extensions import TypedDict
-except ImportError:
-	TypedDict = object
-
 class Config(TypedDict, total=False):
 	active_on_load: bool
 	activity_id: int
@@ -88,28 +84,54 @@ class Config(TypedDict, total=False):
 	rebuild_activator_position: Vector3
 	rebuild_complete_time: float
 	rebuild_smash_time: float
+	respawn_data: Tuple[Vector3, Quaternion]
 	respawn_name: str
 	respawn_point_name: str
 	respawn_time: int
 	rotation: Quaternion
 	scale: float
 	script_vars: Dict[str, object]
-	spawner: "GameObject"
+	spawner: "SpawnerObject"
 	spawner_name: str
 	spawner_waypoints: Sequence_["Config"]
 	spawntemplate: int
 	spawn_net_on_smash: str
+	transfer_world_id: int
 
-class GameObject(Replica):
+class FlagObject(ABC):
+	def __init__(self) -> None:
+		self._flags: Dict[str, str] = {}
+
 	def __setattr__(self, name: str, value: object) -> None:
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
+	@abstractmethod
+	def attr_changed(self, name: str) -> None:
+		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
+
+	def flag(self, name: str, stream: WriteStream, additional_condition: bool=False) -> bool:
+		"""
+		This function can be used to simplify common conditional bitstream writes.
+		Evaluate the expression of the attribute with the name "name" or the optional additional condition.
+		Write this value as a bit to the bitstream stream.
+		If the flag was True, set it to False.
+		Return the expression.
+		"""
+		flag = getattr(self, name)
+		condition = flag or additional_condition
+		stream.write(c_bit(condition))
+		if flag:
+			setattr(self, name, False)
+		return condition
+
+class GameObject(Replica, FlagObject):
 	def __init__(self, lot: int, object_id: ObjectID, set_vars: Config=None):
+		super().__init__()
 		if set_vars is None:
 			set_vars = {}
 		self._handlers: Dict[str, List[Callable[..., None]]] = {}
-		self._flags: Dict[str, str] = {
+		self._flags = {
 			"parent_flag": "related_objects_flag",
 			"children_flag": "related_objects_flag",
 			"parent": "parent_flag",
@@ -205,7 +227,6 @@ class GameObject(Replica):
 		return "<GameObject \"%s\", %i, %i>" % (self.name, self.object_id, self.lot)
 
 	def attr_changed(self, name: str) -> None:
-		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
 		if hasattr(self, "_flags") and name in self._flags:
 			setattr(self, self._flags[name], hasattr(self, name))
 			self.signal_serialize()
@@ -225,7 +246,7 @@ class GameObject(Replica):
 		stream.write(self.name, length_type=c_ubyte)
 
 		stream.write(bytes(4)) # time since created on server?
-		stream.write(c_bit(self.config))
+		stream.write(c_bit(bool(self.config)))
 		if self.config:
 			stream.write(self.config.to_bytes())
 		stream.write(c_bit(hasattr(self, "trigger")))
@@ -246,25 +267,18 @@ class GameObject(Replica):
 		self._serialize_scheduled = False
 
 	def serialize(self, stream: WriteStream, is_creation: bool=False) -> None:
-		stream.write(c_bit(self.related_objects_flag or (is_creation and (self.parent is not None or self.children))))
-		if self.related_objects_flag or (is_creation and (self.parent is not None or self.children)):
-			stream.write(c_bit(self.parent_flag or (is_creation and self.parent is not None)))
-			if self.parent_flag or (is_creation and self.parent is not None):
+		if self.flag("related_objects_flag", stream, is_creation and (self.parent is not None or self.children)):
+			if self.flag("parent_flag", stream, is_creation and self.parent is not None):
 				if self.parent is not None:
 					stream.write(c_int64_(self.parent))
 				else:
 					stream.write(c_int64_(0))
 				stream.write(c_bit(False))
-				self.parent_flag = False
 
-			stream.write(c_bit(self.children_flag or (is_creation and self.children)))
-			if self.children_flag or (is_creation and self.children):
+			if self.flag("children_flag", stream, is_creation and self.children):
 				stream.write(c_ushort(len(self.children)))
 				for child in self.children:
 					stream.write(c_int64_(child))
-				self.children_flag = False
-
-			self.related_objects_flag = False
 
 		for comp in self.components:
 			comp.serialize(stream, is_creation)
@@ -283,12 +297,12 @@ class GameObject(Replica):
 				handle.cancel()
 			del server.callback_handles[self.object_id]
 
-		self.handle("on_destruction", silent=True)
+		self.handle("destruction", silent=True)
 
 		del server.game_objects[self.object_id]
 
 	def add_handler(self, event_name: str, handler: Callable[..., None]) -> None:
-		self._handlers.setdefault(event_name, []).append(functools.partial(handler, self))
+		self._handlers.setdefault(event_name, []).append(handler)
 
 	def remove_handler(self, event_name: str, handler: Callable[..., None]) -> None:
 		if event_name not in self._handlers:
@@ -296,31 +310,16 @@ class GameObject(Replica):
 		if handler in self._handlers[event_name]:
 			self._handlers[event_name].remove(handler)
 
-	def handlers(self, event_name: str, silent: bool=False) -> List[Callable]:
-		"""
-		Return matching handlers for an event.
-		Handlers are returned in serialization order, except for ScriptComponent, which is moved to the bottom of the list.
-		"""
-		handlers: List[Callable] = []
-		script_handler = None
-		if event_name in self._handlers:
-			handlers.extend(self._handlers[event_name])
-		for comp in self.components:
-			if hasattr(comp, event_name):
-				handler = getattr(comp, event_name)
-				if isinstance(comp, ScriptComponent):
-					script_handler = handler
-				else:
-					handlers.append(handler)
-		if script_handler is not None:
-			handlers.append(script_handler)
+	def handlers(self, event_name: str, silent: bool=False) -> Sequence_[Callable]:
+		"""Return matching handlers for an event."""
+		if event_name not in self._handlers:
+			if not silent:
+				log.info("Object %s has no handlers for %s", self, event_name)
+			return []
+		else:
+			return self._handlers[event_name]
 
-		if not handlers and not silent:
-			log.info("Object %s has no handlers for %s", self, event_name)
-
-		return handlers
-
-	def handle(self, event_name: str, *args, silent=False, **kwargs) -> None:
+	def handle(self, event_name: str, *args: Any, silent=False, **kwargs: Any) -> None:
 		"""
 		Calls handlers for an event. See handlers() for the order of handlers.
 		If a handler returns True, it's assumed that the handler has sufficiently handled the event and no further handlers will be called.
@@ -329,7 +328,7 @@ class GameObject(Replica):
 			if handler(*args, **kwargs):
 				break
 
-	def send_game_message(self, handler_name: str, *args, **kwargs) -> None:
+	def send_game_message(self, handler_name: str, *args: Any, **kwargs: Any) -> None:
 		"""For game messages with multiple handlers: call all the handlers but only send one message over the network."""
 		handlers = self.handlers(handler_name)
 		if not handlers:
@@ -340,7 +339,7 @@ class GameObject(Replica):
 		for handler in handlers[1:]:
 			handler.__wrapped__(handler.__self__, *args, **kwargs)
 
-	def call_later(self, delay: float, callback: Callable[..., None], *args) -> CallbackID:
+	def call_later(self, delay: float, callback: Callable[..., None], *args: Any) -> CallbackID:
 		"""
 		Call a callback in delay seconds. The callback's handle is recorded so that when the object is destructed all pending callbacks are automatically cancelled.
 		Return the callback id to be used for cancel_callback.
@@ -350,7 +349,7 @@ class GameObject(Replica):
 		server.last_callback_id += 1
 		return callback_id
 
-	def _callback(self, callback_id: CallbackID, callback: Callable[..., None], *args) -> None:
+	def _callback(self, callback_id: CallbackID, callback: Callable[..., None], *args: Any) -> None:
 		"""Execute a callback and delete the handle from the list because it won't be cancelled."""
 		del server.callback_handles[self.object_id][callback_id]
 		callback(*args)
@@ -367,9 +366,9 @@ class GameObject(Replica):
 			message_name = GameMessage(message_id).name
 		except ValueError:
 			return
-		handler_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
+		event_name = re.sub("(?!^)([A-Z])", r"_\1", message_name).lower()
 
-		handlers = self.handlers(handler_name)
+		handlers = self.handlers(event_name)
 		if not handlers:
 			return
 
@@ -400,8 +399,6 @@ class GameObject(Replica):
 
 		player = server.accounts[address].selected_char()
 		for handler in handlers:
-			if hasattr(handler, "__wrapped__"):
-				handler = functools.partial(handler.__wrapped__, handler.__self__)
 			signature = inspect.signature(handler)
 			playerarg = "player" in signature.parameters
 			if playerarg:
@@ -431,7 +428,7 @@ class GameObject(Replica):
 				assert message.read(c_ushort) == 0  # for some reason has a null terminator
 			# todo: convert to LDF
 			return value
-		if issubclass(type_, GameObject):
+		if issubclass(type_, GameObject) or issubclass(type_, Player):
 			return server.get_object(message.read(c_int64_))
 		if issubclass(type_, Serializable):
 			return type_.deserialize(message)
@@ -454,17 +451,33 @@ class GameObject(Replica):
 EO = cast(GameObject, E)
 
 # these are for static typing and shouldn't actually be used
-class PhysicsObject(GameObject):
-	physics: "PhysicsComponent"
 
+class _SpecialObjectMeta(type):
+	def __instancecheck__(self, instance: object) -> bool:
+		if not isinstance(instance, GameObject):
+			return False
+		for attr in self.__annotations__:
+				if not hasattr(instance, attr):
+					return False
+		return True
+
+if TYPE_CHECKING:
+	class _SpecialObject(GameObject):
+		pass
+else:
+	class _SpecialObject(metaclass=_SpecialObjectMeta):
+		pass
+
+class PhysicsObject(_SpecialObject):
+	physics: "PhysicsComponent"
 
 class ControllableObject(PhysicsObject):
 	physics: "Controllable"
 
-class RenderObject(GameObject):
+class RenderObject(_SpecialObject):
 	render: "RenderComponent"
 
-class ScriptObject(GameObject):
+class ScriptObject(_SpecialObject):
 	script: "ScriptComponent"
 
 class StatsObject(PhysicsObject, RenderObject): # safe to assume that a stats object is also a physics object - only 2 entries (6622, 6908) in the database didn't match, and those were test objects
@@ -473,7 +486,15 @@ class StatsObject(PhysicsObject, RenderObject): # safe to assume that a stats ob
 class DestructibleObject(StatsObject):
 	destructible: "DestructibleComponent"
 
-class Player(ControllableObject, DestructibleObject, Persistent):
+class SpawnerObject(_SpecialObject):
+	spawner: "SpawnerComponent"
+
+class Player(ControllableObject, DestructibleObject):
+	char: "CharacterComponent"
+	inventory: "InventoryComponent"
+	skill: "SkillComponent"
+
+class ActualPlayer(GameObject, Persistent):
 	char: "CharacterComponent"
 	inventory: "InventoryComponent"
 	skill: "SkillComponent"
@@ -486,9 +507,6 @@ class Player(ControllableObject, DestructibleObject, Persistent):
 		if not self._p_setattr(name, value):
 			super().__setattr__(name, value)
 			self._p_changed = True
-
-# backwards compatibility
-PersistentObject = Player
 
 EP = cast(Player, E)
 OBJ_NONE = cast(Player, None)
@@ -513,7 +531,7 @@ def _send_game_message(mode: str) -> Callable[[X], X]:
 		from .world import server
 
 		@wraps(func)
-		def wrapper(self, *args, **kwargs):
+		def wrapper(self, *args: Any, **kwargs: Any):
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
 			out = WriteStream_()
 			out.write_header(WorldClientMsg.GameMessage)
@@ -578,14 +596,14 @@ def _game_message_serialize(out, type_: Type[W], value: W) -> None:
 		out.write(value, length_type=c_uint_)
 	elif type_ == str:
 		out.write(value, length_type=c_uint_)
-	elif type_ in (c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_):
+	elif issubclass(type_, (c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_)):
 		out.write(type_(value))
 	elif type_ == LDF:
 		ldf_text = value.to_str()
 		out.write(ldf_text, length_type=c_uint_)
 		if ldf_text:
 			out.write(bytes(2)) # for some reason has a null terminator
-	elif issubclass(type_, GameObject):
+	elif issubclass(type_, GameObject) or issubclass(type_, Player):
 		if value is OBJ_NONE:
 			out.write(c_int64_(0))
 		else:

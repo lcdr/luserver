@@ -163,7 +163,7 @@ class SkillComponent(Component):
 		bitstream = WriteStream()
 		behavior = server.db.skill_behavior[skill_id][0]
 		self.serialize_behavior(behavior, bitstream, target)
-		self.start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bytes(bitstream))
+		self.on_start_skill(skill_id=skill_id, cast_type=cast_type, optional_target_id=target.object_id, ui_skill_handle=self.last_ui_skill_handle, optional_originator_id=0, originator_rot=Quaternion(0, 0, 0, 0), bitstream=bytes(bitstream))
 
 	def cast_sync_skill(self, delay: float, behavior, target: GameObject) -> int:
 		ui_behavior_handle = self.last_ui_handle
@@ -173,7 +173,7 @@ class SkillComponent(Component):
 		bitstream = WriteStream()
 		self.serialize_behavior(behavior, bitstream, target)
 
-		self.object.call_later(delay, lambda: self.sync_skill(bitstream=bytes(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
+		self.object.call_later(delay, lambda: self.on_sync_skill(bitstream=bytes(bitstream), ui_behavior_handle=ui_behavior_handle, ui_skill_handle=self.last_ui_skill_handle))
 		return ui_behavior_handle
 
 	def cast_projectile(self, proj_behavs, target: GameObject) -> ObjectID:
@@ -183,14 +183,14 @@ class SkillComponent(Component):
 			self.original_target_id = target.object_id
 			self.serialize_behavior(behav, bitstream, target)
 		delay = 1
-		self.object.call_later(delay, lambda: self.request_server_projectile_impact(proj_id, target.object_id, bytes(bitstream)))
+		self.object.call_later(delay, lambda: self.on_request_server_projectile_impact(proj_id, target.object_id, bytes(bitstream)))
 		return proj_id
 
 	@broadcast
 	def echo_start_skill(self, used_mouse:bool=False, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=EI, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=EBY, skill_id:c_uint_=EI, ui_skill_handle:c_uint_=0) -> None:
 		pass
 
-	def start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=EI, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=EBY, skill_id:c_uint_=EI, ui_skill_handle:c_uint_=0) -> None:
+	def on_start_skill(self, used_mouse:bool=False, consumable_item_id:c_int64=0, caster_latency:float=0, cast_type:c_int=0, last_clicked_posit:Vector3=Vector3.zero, optional_originator_id:c_int64=EI, optional_target_id:c_int64=0, originator_rot:Quaternion=Quaternion.identity, bitstream:bytes=EBY, skill_id:c_uint_=EI, ui_skill_handle:c_uint_=0) -> None:
 		assert not used_mouse
 		assert caster_latency == 0
 		assert last_clicked_posit == Vector3.zero
@@ -207,7 +207,7 @@ class SkillComponent(Component):
 		stream = ReadStream(bitstream)
 
 		if hasattr(self.object, "char"):
-			self.object.char.update_mission_task(TaskType.UseSkill, None, skill_id)
+			self.object.char.mission.update_mission_task(TaskType.UseSkill, None, skill_id)
 
 		if optional_target_id != 0:
 			if optional_target_id not in server.game_objects:
@@ -230,7 +230,7 @@ class SkillComponent(Component):
 		if not self.everlasting and consumable_item_id != 0 and cast_type == CastType.Consumable:
 			self.object.inventory.remove_item(InventoryType.Items, object_id=consumable_item_id)
 
-	def select_skill(self, from_skill_set:bool=False, skill_id:c_int=EI) -> None:
+	def on_select_skill(self, from_skill_set:bool=False, skill_id:c_int=EI) -> None:
 		pass
 
 	@broadcast
@@ -245,7 +245,7 @@ class SkillComponent(Component):
 	def echo_sync_skill(self, done:bool=False, bitstream:bytes=EBY, ui_behavior_handle:c_uint_=EI, ui_skill_handle:c_uint_=EI) -> None:
 		pass
 
-	def sync_skill(self, done:bool=False, bitstream:bytes=EBY, ui_behavior_handle:c_uint_=EI, ui_skill_handle:c_uint_=EI) -> None:
+	def on_sync_skill(self, done:bool=False, bitstream:bytes=EBY, ui_behavior_handle:c_uint_=EI, ui_skill_handle:c_uint_=EI) -> None:
 		if hasattr(self.object, "char"):
 			player = self.object
 		else:
@@ -273,7 +273,7 @@ class SkillComponent(Component):
 		if done:
 			del self.delayed_behaviors[ui_behavior_handle]
 
-	def request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=EBY) -> None:
+	def on_request_server_projectile_impact(self, local_id:c_int64=0, target_id:c_int64=0, bitstream:bytes=EBY) -> None:
 		stream = ReadStream(bitstream)
 		if target_id == 0:
 			target = self.object

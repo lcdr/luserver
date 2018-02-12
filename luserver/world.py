@@ -68,7 +68,7 @@ import importlib.util
 import logging
 import os.path
 from contextlib import AbstractContextManager as ACM
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, cast, Dict, List, Tuple
 
 import BTrees
 import ZODB
@@ -80,8 +80,8 @@ from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
 from pyraknet.server import Event
 from .auth import Account
-from .commonserver import DisconnectReason, Server
-from .game_object import CallbackID, Config, GameObject, ObjectID, Player
+from .commonserver import DisconnectReason, Server, WorldData
+from .game_object import CallbackID, Config, GameObject, ObjectID, Player, ScriptObject, SpawnerObject
 from .messages import WorldServerMsg
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
@@ -125,7 +125,7 @@ class WorldServer(Server):
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.multi = MultiInstanceAccess()
-		self._handlers: Dict[str, Callable[..., None]] = {}
+		self._handlers: Dict[str, List[Callable[..., None]]] = {}
 		self.char = CharHandling()
 		self.chat = ChatHandling()
 		self.general = GeneralHandling()
@@ -137,11 +137,11 @@ class WorldServer(Server):
 		self.commit()
 		self.current_object_id = 0
 		self.current_spawned_id = BITS_SPAWNED
-		self.world_data = None
+		self.world_data: WorldData = None
 		self.game_objects: Dict[ObjectID, GameObject] = {}
 		self.models = []
 		self.last_callback_id = CallbackID(0)
-		self.callback_handles: Dict[ObjectID, asyncio.Handle] = {}
+		self.callback_handles: Dict[ObjectID, Dict[CallbackID, asyncio.Handle]] = {}
 		self.accounts: Dict[Address, Account] = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
@@ -180,12 +180,16 @@ class WorldServer(Server):
 			custom_script, world_control_lot = self.db.world_info[self.world_id[0]]
 			if world_control_lot is None:
 				world_control_lot = 2365
-			self.world_control_object = self.spawn_object(world_control_lot, set_vars={"custom_script": custom_script}, is_world_control=True)
+			self.world_control_object = cast(ScriptObject, self.spawn_object(world_control_lot, set_vars={"custom_script": custom_script}, is_world_control=True))
 
-			self.spawners: Dict[str, GameObject] = {}
-			self.world_data = self.db.world_data[self.world_id[0]]
+			self.spawners: Dict[str, SpawnerObject] = {}
+			wd = self.db.world_data[self.world_id[0]]
+			objs: Dict[ObjectID, GameObject] = {}
+			for id, data in wd.objects.items():
+				objs[id] = GameObject(*data)
+			self.world_data = WorldData(objs, wd.paths, wd.spawnpoint)
 			for obj in self.world_data.objects.values():
-				obj.handle("on_startup", silent=True)
+				obj.handle("startup", silent=True)
 			if self.world_id[2] != 0:
 				self.models = []
 				for spawner_id, spawn_data in self.db.properties[self.world_id[0]][self.world_id[2]].items():
@@ -206,7 +210,7 @@ class WorldServer(Server):
 			raise RuntimeError("handler not found")
 		self._handlers[event_name].remove(handler)
 
-	def handle(self, event_name: str, *args) -> None:
+	def handle(self, event_name: str, *args: Any) -> None:
 		if event_name not in WorldServer.EVENT_NAMES:
 			raise ValueError("Invalid event name %s", event_name)
 		if event_name not in self._handlers:
@@ -227,7 +231,7 @@ class WorldServer(Server):
 	def spawn_model(self, spawner_id: ObjectID, lot: int, position: Vector3, rotation: Quaternion) -> None:
 		spawned_vars = {"position": position, "rotation": rotation}
 		spawner_vars = {"spawntemplate": lot, "spawner_waypoints": spawned_vars}
-		spawner = GameObject(176, spawner_id, set_vars=spawner_vars)
+		spawner = cast(SpawnerObject, GameObject(176, spawner_id, set_vars=spawner_vars))
 		self.models.append((spawner, spawner.spawner.spawn()))
 
 	def _on_disconnect_or_connection_lost(self, address: Address) -> None:
@@ -311,18 +315,19 @@ class WorldServer(Server):
 		obj = GameObject(lot, object_id, set_vars)
 		self.game_objects[obj.object_id] = obj
 		self.replica_manager.construct(obj)
-		obj.handle("on_startup", silent=True)
+		obj.handle("startup", silent=True)
 		self.handle("spawn", obj)
 		return obj
 
-	def get_object(self, object_id: ObjectID) -> Optional[GameObject]:
+	def get_object(self, object_id: ObjectID) -> GameObject:
 		if object_id == 0:
-			return
+			raise ValueError
 		if object_id in self.game_objects:
 			return self.game_objects[object_id]
 		elif self.world_id[0] != 0 and object_id in self.world_data.objects:
 			return self.world_data.objects[object_id]
 		log.warning("Object %i not found", object_id)
+		raise KeyError(object_id)
 
 	def get_objects_in_group(self, group: str) -> List[GameObject]:
 		matches = []

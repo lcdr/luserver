@@ -7,8 +7,8 @@ MARDOLF_ROCKET_MISSION = 809
 ROCKET_MISSION_PARTS = 9516, 9517, 9518
 
 class ScriptComponent(script.ScriptComponent):
-	def modular_build_finish(self, player, module_lots:Sequence[c_ubyte, c_int]=E):
-		if MARDOLF_ROCKET_MISSION in player.char.missions and player.char.missions[MARDOLF_ROCKET_MISSION].state == MissionState.Active:
+	def on_modular_build_finish(self, player, module_lots:Sequence[c_ubyte, c_int]=E):
+		if MARDOLF_ROCKET_MISSION in player.char.mission.missions and player.char.mission.missions[MARDOLF_ROCKET_MISSION].state == MissionState.Active:
 			for lot in module_lots:
 				if lot in ROCKET_MISSION_PARTS:
-					player.char.update_mission_task(TaskType.Script, self.object.lot, mission_id=MARDOLF_ROCKET_MISSION)
+					player.char.mission.update_mission_task(TaskType.Script, self.object.lot, mission_id=MARDOLF_ROCKET_MISSION)

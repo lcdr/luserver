@@ -12,9 +12,9 @@ class AddMission(ChatCommand):
 	def run(self, args, sender):
 		if args.mission in MISSIONS:
 			for mission_id in MISSIONS[args.mission]:
-				sender.char.add_mission(mission_id)
+				sender.char.mission.add_mission(mission_id)
 		else:
-			sender.char.add_mission(int(args.mission))
+			sender.char.mission.add_mission(int(args.mission))
 
 class CompleteMission(ChatCommand):
 	def __init__(self):
@@ -49,13 +49,13 @@ class CompleteMission(ChatCommand):
 		return missions
 
 	def async_complete_mission(self, mission_id, fully, sender):
-		if mission_id not in sender.char.missions:
-			sender.char.add_mission(mission_id)
+		if mission_id not in sender.char.mission.missions:
+			sender.char.mission.add_mission(mission_id)
 
 		if fully:
-			sender.char.complete_mission(mission_id)
+			sender.char.mission.complete_mission(mission_id)
 		else:
-			mission = sender.char.missions[mission_id]
+			mission = sender.char.mission.missions[mission_id]
 			if mission.state == MissionState.Active:
 				for task in mission.tasks:
 					if isinstance(task.target, tuple):
@@ -66,7 +66,7 @@ class CompleteMission(ChatCommand):
 						parameter = task.parameter[0]
 					else:
 						parameter = None
-					sender.char.update_mission_task(task.type, target, parameter, increment=task.target_value, mission_id=mission_id)
+					sender.char.mission.update_mission_task(task.type, target, parameter, increment=task.target_value, mission_id=mission_id)
 
 class RemoveMission(ChatCommand):
 	def __init__(self):
@@ -74,8 +74,8 @@ class RemoveMission(ChatCommand):
 		self.command.add_argument("id", type=int)
 
 	def run(self, args, sender):
-		if args.id in sender.char.missions:
-			del sender.char.missions[args.id]
+		if args.id in sender.char.mission.missions:
+			del sender.char.mission.missions[args.id]
 			server.chat.sys_msg_sender("Mission removed")
 		else:
 			server.chat.sys_msg_sender("Mission not found")
@@ -85,12 +85,12 @@ class ResetMissions(ChatCommand):
 		super().__init__("resetmissions")
 
 	def run(self, args, sender):
-		sender.char.missions.clear()
+		sender.char.mission.missions.clear()
 		# add achievements
 		for mission_id, data in server.db.missions.items():
 			is_mission = data[3] # if False, it's an achievement (internally works the same as missions, that's why the naming is weird)
 			if not is_mission:
-				sender.char.missions[mission_id] = MissionProgress(mission_id, data)
+				sender.char.mission.missions[mission_id] = MissionProgress(mission_id, data)
 
 MISSIONS = {
 	"VE": [1727, 173, 660, 1896, 308, 1732],

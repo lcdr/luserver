@@ -7,6 +7,8 @@ class MinigameComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	@single
 	def player_ready(self) -> None:
 		pass
+
+	player_ready = single(player_ready)
+	on_player_ready = player_ready

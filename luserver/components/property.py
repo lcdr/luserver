@@ -159,7 +159,7 @@ class PropertyEntranceComponent(Component):
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
 		return True
 
-	def enter_property1(self, player: Player, index:c_int_=EI, return_to_zone:bool=True) -> None:
+	def on_enter_property1(self, player: Player, index:c_int_=EI, return_to_zone:bool=True) -> None:
 		clone_id = 0
 		if not return_to_zone and index == -1:
 			clone_id = player.char.clone_id
@@ -169,7 +169,7 @@ class PropertyEntranceComponent(Component):
 				self.fire_event_client_side(args="RocketEquipped", obj=model, sender=player, param1=clone_id)
 				break
 
-	def property_entrance_sync(self, player: Player, include_null_address:bool=EB, include_null_description:bool=EB, players_own:bool=EB, update_ui:bool=EB, num_results:c_int_=EI, reputation_time:c_int_=EI, sort_method:c_int_=EI, start_index:c_int_=EI, filter_text:bytes=EBY) -> None:
+	def on_property_entrance_sync(self, player: Player, include_null_address:bool=EB, include_null_description:bool=EB, players_own:bool=EB, update_ui:bool=EB, num_results:c_int_=EI, reputation_time:c_int_=EI, sort_method:c_int_=EI, start_index:c_int_=EI, filter_text:bytes=EBY) -> None:
 		my_property = PropertySelectQueryProperty()
 		#my_property.clone_id = player.char.clone_id
 		#my_property.is_owned = True
@@ -207,7 +207,7 @@ class PropertyManagementComponent(Component):
 
 		self.download_property_data(property, player=player)
 
-	def start_building_with_item(self, player: Player, first_time:bool=True, success:bool=EB, source_bag:c_int_=EI, source_id:c_int64_=EI, source_lot:c_int_=EI, source_type:c_int_=EI, target_id:c_int64_=EI, target_lot:c_int_=EI, target_pos:Vector3=EV, target_type:c_int_=EI) -> None:
+	def on_start_building_with_item(self, player: Player, first_time:bool=True, success:bool=EB, source_bag:c_int_=EI, source_id:c_int64_=EI, source_lot:c_int_=EI, source_type:c_int_=EI, target_id:c_int64_=EI, target_lot:c_int_=EI, target_pos:Vector3=EV, target_type:c_int_=EI) -> None:
 		# source is item used for starting, target is module dragged on
 		assert first_time
 		assert not success
@@ -216,7 +216,7 @@ class PropertyManagementComponent(Component):
 
 		player.char.start_arranging_with_item(first_time, self.object, player.physics.position, source_bag, source_id, source_lot, source_type, target_id, target_lot, target_pos, target_type)
 
-	def set_build_mode(self, start:bool=EB, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=EI, start_pos:Vector3=Vector3.zero) -> None:
+	def on_set_build_mode(self, start:bool=EB, distance_type:c_int_=-1, mode_paused:bool=False, mode_value:c_int_=1, player_id:c_int64_=EI, start_pos:Vector3=Vector3.zero) -> None:
 		server.world_control_object.script.on_build_mode(start)
 		self.set_build_mode_confirmed(start, False, mode_paused, mode_value, player_id, start_pos)
 
@@ -249,7 +249,7 @@ class PropertyVendorComponent(Component):
 	def open_property_vendor(self) -> None:
 		pass
 
-	def buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int_=1, item:c_int_=EI) -> None:
+	def on_buy_from_vendor(self, player: Player, confirmed:bool=False, count:c_int_=1, item:c_int_=EI) -> None:
 		# seems to actually add a 3188 property item to player's inventory?
 		self.property_rental_response(clone_id=0, code=0, property_id=0, rentdue=0, player=player) # not really implemented
 		player.char.set_flag(True, 108)

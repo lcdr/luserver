@@ -4,7 +4,7 @@ class ScriptComponent(script.ScriptComponent):
 	def on_startup(self) -> None:
 		self.object.moving_platform.no_autostart = True
 
-	def complete_rebuild(self, player):
+	def on_complete_rebuild(self, player):
 		self.object.physics.proximity_radius(5)
 		self.player = player
 

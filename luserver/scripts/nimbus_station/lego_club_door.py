@@ -14,11 +14,11 @@ class ScriptComponent(script.ScriptComponent):
 		assert multi_interact_id is None
 		if server.world_id[0] == 1700:
 			# todo: check if player has been to NT, if yes then display choice UI
-			player.char.disp_message_box(id="TransferBox", text="UI_TRAVEL_TO_NS", callback=self.object)
+			player.char.ui.disp_message_box(id="TransferBox", text="UI_TRAVEL_TO_NS", callback=self.object)
 		else:
 			player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "Lobby", "context": {"user": str(player.object_id), "callbackObj": str(self.object.object_id), "HelpVisible": "show", "type": "Lego_Club_Valid"}}))
 
-	def message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
+	def on_message_box_respond(self, player, button:c_int=EI, id:str=ES, user_data:str=ES):
 		if id == "PlayButton":
 			self.transfer(player, (1700, 0, 0), "")
 		elif id == "TransferBox":
