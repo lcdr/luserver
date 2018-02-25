@@ -1,8 +1,9 @@
 import asyncio
 import logging
+from typing import cast
 
 from luserver.amf3 import AMF3
-from luserver.game_object import Player
+from luserver.game_object import Player, VendorObject
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server, World
 from luserver.interfaces.plugin import ChatCommand, instance_obj, instance_player, normal_bool, toggle_bool
@@ -362,7 +363,7 @@ class Vendor(ChatCommand):
 		else:
 			raise ValueError
 
-		vendor = server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender})
+		vendor = cast(VendorObject, server.spawn_object(6875, {"name": "Vendor of Everything", "parent": sender}))
 		vendor.vendor.items_for_sale = [(lot, False, 0) for lot in items]
 
 class WorldCommand(ChatCommand):

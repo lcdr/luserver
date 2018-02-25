@@ -3,7 +3,7 @@ import logging
 import os
 import struct
 import time
-from typing import cast, Set, SupportsBytes, Union
+from typing import cast, Iterable, Set, SupportsBytes, Union
 
 import pyraknet.server
 from pyraknet.messages import Address
@@ -65,7 +65,7 @@ class Server:
 			else:
 				log.debug("snd %s", packetname)
 
-	def send(self, data: Union[bytes, SupportsBytes], address: Address=None, broadcast: bool=False) -> None:
+	def send(self, data: Union[bytes, SupportsBytes], recipients: Union[Address, Iterable[Address]]=None, broadcast: bool=False) -> None:
 		data = bytes(data)
 		self._log_packet(data, received=False)
-		self._server.send(data, address, broadcast)
+		self._server.send(data, recipients, broadcast)

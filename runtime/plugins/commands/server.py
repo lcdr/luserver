@@ -195,8 +195,7 @@ class Restart(ChatCommand):
 		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(args.show_message))
-		for address in server.accounts:
-			server.send(redirect, address)
+		server.send(redirect, server.accounts)
 		await asyncio.sleep(5)
 		server.shutdown()
 

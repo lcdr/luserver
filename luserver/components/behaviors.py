@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Iterable, Optional, Sequence, Tuple
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream, WriteStream
 from ..game_object import GameObject
@@ -8,18 +8,22 @@ from ..math.vector import Vector3
 
 log = logging.getLogger("luserver.components.skill")
 
-class _Behavior:
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Behavior:
+	def __init__(self, id: int):
+		self.id = id
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		raise NotImplementedError
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		raise NotImplementedError
 
-class BasicAttack(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class BasicAttack(Behavior):
+	def __init__(self, id: int, on_success: Optional[Behavior]):
+		super().__init__(id)
+		self.on_success = on_success
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.align_write()
 		bitstream.write(c_ushort(0))
 		bitstream.write(c_bit(False))
@@ -32,11 +36,10 @@ class BasicAttack(_Behavior):
 		bitstream.write(c_bit(aoe))
 		enemy_type = 1
 		bitstream.write(c_ubyte(enemy_type))
-		if hasattr(behavior, "on_success"):
-			self.serialize_behavior(behavior.on_success, bitstream, target, level+1)
+		if self.on_success is not None:
+			self.on_success.serialize(bitstream, target, level+1)
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		bitstream.align_read()
 		bitstream.read(c_ushort) # "padding", unused
 		if target == self.object:
@@ -54,15 +57,22 @@ class BasicAttack(_Behavior):
 		log.debug(target)
 		if target is not None:
 			target.destructible.deal_damage(damage, self.object)
-		if hasattr(behavior, "on_success"):
-			self.deserialize_behavior(behavior.on_success, bitstream, target, level+1)
+		if self.on_success is not None:
+			self.on_success.deserialize(bitstream, target, level+1)
 
-class TacArc(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class TacArc(Behavior):
+	def __init__(self, id: int, action: Optional[Behavior], blocked_action: Optional[Behavior], miss_action: Optional[Behavior], check_env: bool, use_picked_target: bool):
+		super().__init__(id)
+		self.action = action
+		self.blocked_action = blocked_action
+		self.miss_action = miss_action
+		self.check_env = check_env
+		self.use_picked_target = use_picked_target
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		is_hit = True
 		bitstream.write(c_bit(is_hit))
-		if behavior.check_env:
+		if self.check_env:
 			is_blocked = False
 			bitstream.write(c_bit(is_blocked))
 		targets = [target]
@@ -71,22 +81,22 @@ class TacArc(_Behavior):
 			bitstream.write(c_int64(target.object_id))
 		for target in targets:
 			log.debug("Target %s", target)
-			self.serialize_behavior(behavior.action, bitstream, target, level+1)
+			self.action.serialize(bitstream, target, level+1)
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		if hasattr(behavior, "use_picked_target") and behavior.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in server.game_objects:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		if self.use_picked_target and self.picked_target_id != 0 and self.picked_target_id in server.game_objects:
 			target = server.game_objects[self.picked_target_id]
 			# todo: there seems to be a skill where this doesn't work and where the rest of the code should be executed as if the following lines weren't there?
 			log.debug("using picked target, not completely working")
-			self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+			self.action.deserialize(bitstream, target, level+1)
 			return
 			# end of lines
 		if bitstream.read(c_bit): # is hit
-			if behavior.check_env:
+			if self.check_env:
 				if bitstream.read(c_bit): # is blocked
 					log.debug("hit but blocked")
-					self.deserialize_behavior(behavior.blocked_action, bitstream, target, level+1)
+					if self.blocked_action is not None:
+						self.blocked_action.deserialize(bitstream, target, level+1)
 					return
 			targets = []
 			for _ in range(bitstream.read(c_uint)): # number of targets
@@ -94,75 +104,76 @@ class TacArc(_Behavior):
 				targets.append(server.game_objects.get(target_id))
 			for target in targets:
 				log.debug("Target %s", target)
-				self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+				if self.action is not None:
+					self.action.deserialize(bitstream, target, level+1)
 
 		else:
-			if getattr(behavior, "check_env", False):
+			if self.check_env:
 				is_blocked = bitstream.read(c_bit)
 				log.debug("blocked bit %s", is_blocked)
 				if is_blocked:
-					if not hasattr(behavior, "blocked_action"):
+					if self.blocked_action is None:
 						log.error("TacArc would be blocked but has no blocked action!")
 						return
 					log.debug("blocked")
-					self.deserialize_behavior(behavior.blocked_action, bitstream, target, level+1)
+					self.blocked_action.deserialize(bitstream, target, level+1)
 					return
-			if hasattr(behavior, "miss_action"):
+			if self.miss_action is not None:
 				log.debug("miss")
-				self.deserialize_behavior(behavior.miss_action, bitstream, target, level+1)
+				self.miss_action.deserialize(bitstream, target, level+1)
 
-class And(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
-		for behav in behavior.behaviors:
-			self.serialize_behavior(behav, bitstream, target, level+1)
+class And(Behavior):
+	def __init__(self, id: int, behavs: Iterable[Behavior]):
+		super().__init__(id)
+		self.behaviors = behavs
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		for behav in behavior.behaviors:
-			self.deserialize_behavior(behav, bitstream, target, level+1)
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
+		for behav in self.behaviors:
+			behav.serialize(bitstream, target, level+1)
 
-class ProjectileAttack(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		for behav in self.behaviors:
+			behav.deserialize(bitstream, target, level+1)
+
+class ProjectileAttack(Behavior):
+	def __init__(self, id: int, projectile_lot: int, spread_count: int):
+		super().__init__(id)
+		self.projectile_lot = projectile_lot
+		self.spread_count = spread_count
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.write(c_int64(target.object_id))
 
 		proj_behavs = []
-		for skill_id, _ in server.db.object_skills[int(behavior.projectile_lot)]:
+		for skill_id, _ in server.db.object_skills[int(self.projectile_lot)]:
 			proj_behavs.append(server.db.skill_behavior[skill_id][0])
-
-		projectile_count = 1
-		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
-			projectile_count = behavior.spread_count
-		for _ in range(projectile_count):
+		for _ in range(self.spread_count):
 			bitstream.write(c_int64(self.cast_projectile(proj_behavs, target)))
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		target_id = bitstream.read(c_int64)
 		if target_id != 0 and target_id in server.game_objects:
 			target = server.game_objects[target_id]
 			log.debug("target %s", target)
 
 		proj_behavs = []
-		for skill_id, _ in server.db.object_skills[int(behavior.projectile_lot)]:
+		for skill_id, _ in server.db.object_skills[int(self.projectile_lot)]:
 			proj_behavs.append(server.db.skill_behavior[skill_id][0])
 
-		projectile_count = 1
-		if hasattr(behavior, "spread_count") and behavior.spread_count > 0:
-			projectile_count = behavior.spread_count
-		for _ in range(projectile_count):
+		for _ in range(self.spread_count):
 			local_id = bitstream.read(c_int64)
 			self.projectile_behaviors[local_id] = proj_behavs
 
-class Heal(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Heal(Behavior):
+	def __init__(self, id: int, life: int):
+		super().__init__(id)
+		self.life = life
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		target.stats.life += behavior.life
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		target.stats.life += self.life
 
 class MovementType:
 	Ground = 1
@@ -175,306 +186,361 @@ class MovementType:
 	Nine = 9  # occurred with item 7311 - cutlass
 	Rail = 10
 
-class MovementSwitch(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class MovementSwitch(Behavior):
+	def __init__(self, id: int, ground_action: Optional[Behavior], jump_action: Optional[Behavior], falling_action: Optional[Behavior], double_jump_action: Optional[Behavior], jetpack_action: Optional[Behavior]):
+		super().__init__(id)
+		self.ground_action = ground_action
+		self.jump_action = jump_action
+		self.falling_action = falling_action
+		self.double_jump_action = double_jump_action
+		self.jetpack_action = jetpack_action
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.write(c_uint(1))
 		return
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		movement_type = bitstream.read(c_uint)
 		log.debug("Movement type %i", movement_type)
 		if movement_type in (MovementType.Ground, MovementType.Seven, MovementType.Nine, MovementType.Rail):
-			action = behavior.ground_action
+			action = self.ground_action
 		elif movement_type == MovementType.Jump:
-			action = behavior.jump_action
+			action = self.jump_action
 		elif movement_type in (MovementType.Falling, MovementType.FallingAfterDoubleJumpAttack):
-			action = getattr(behavior, "falling_action", behavior.ground_action)
+			if self.falling_action is not None:
+				action = self.falling_action
+			else:
+				action = self.ground_action
 		elif movement_type == MovementType.DoubleJump:
-			action = behavior.double_jump_action
+			action = self.double_jump_action
 		elif movement_type == MovementType.Jetpack:
-			action = getattr(behavior, "jetpack_action", behavior.ground_action)
+			if self.jetpack_action is not None:
+				action = self.jetpack_action
+			else:
+				action = self.ground_action
 		else:
-			raise NotImplementedError("Behavior", behavior.id, ": Movement type", movement_type)
+			raise NotImplementedError("Behavior", self.id, ": Movement type", movement_type)
 		if action is not None:
-			self.deserialize_behavior(action, bitstream, target, level+1)
+			action.deserialize(bitstream, target, level+1)
 
-class AreaOfEffect(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class AreaOfEffect(Behavior):
+	def __init__(self, id: int, action: Optional[Behavior]):
+		super().__init__(id)
+		self.action = action
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.write(c_uint(0)) # number of targets
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		targets = []
 		for _ in range(bitstream.read(c_uint)): # number of targets
 			target_id = bitstream.read(c_int64)
 			targets.append(server.game_objects[target_id])
 		log.debug("targets: %s", targets)
-		for target in targets:
-			self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+		if self.action is not None:
+			for target in targets:
+				self.action.deserialize(bitstream, target, level+1)
 
-class OverTime(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		for interval in range(behavior.num_intervals):
-			self.object.call_later(interval * behavior.delay, self.deserialize_behavior, behavior.action, b"", target)
+class OverTime(Behavior):
+	def __init__(self, id: int, action: Behavior, num_intervals: int, delay: float):
+		super().__init__(id)
+		self.action = action
+		self.num_intervals = num_intervals
+		self.delay = delay
 
-class Imagination(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		for interval in range(self.num_intervals):
+			self.object.call_later(interval * self.delay, self.action, b"", target, 0)
+
+class Imagination(Behavior):
+	def __init__(self, id: int, imag: int):
+		super().__init__(id)
+		self.imagination = imag
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		target.stats.imagination += behavior.imagination
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		target.stats.imagination += self.imagination
 
-class TargetCaster(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
-		casted_behavior = behavior.action
-		self.serialize_behavior(casted_behavior, bitstream, target, level+1)
+class TargetCaster(Behavior):
+	def __init__(self, id: int, action: Behavior):
+		super().__init__(id)
+		self.action = action
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		casted_behavior = behavior.action
-		self.deserialize_behavior(casted_behavior, bitstream, target, level+1)
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
+		self.action.serialize(bitstream, target, level+1)
 
-class Stun(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		self.action.deserialize(bitstream, target, level+1)
+
+class Stun(Behavior):
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		# needs to be researched more
 		if False:#target.object_id != self.original_target_id:
 			log.debug("Stun writing bit")
 			bitstream.write(c_bit(False))
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		if False:#target and target.object_id != self.original_target_id:
 			log.debug("Stun reading bit")
 			assert not bitstream.read(c_bit)
 
-class Duration(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
-		self.serialize_behavior(behavior.action, bitstream, target, level+1)
+class Duration(Behavior):
+	def __init__(self, id: int, action: Optional[Behavior], duration: float):
+		super().__init__(id)
+		self.action = action
+		self.duration = duration
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		params = self.deserialize_behavior(behavior.action, bitstream, target, level+1)
-		self.object.call_later(behavior.duration, self.undo_behavior, behavior.action, params)
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
+		if self.action is not None:
+			self.action.serialize(bitstream, target, level+1)
 
-class Knockback(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		if self.action is not None:
+			params = self.action.deserialize(bitstream, target, level+1)
+			self.object.call_later(self.duration, self.undo_behavior, self.action, params)
+
+class Knockback(Behavior):
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.write(c_bit(False))
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		assert not bitstream.read(c_bit)
 
-class AttackDelay(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
-		handle = self.cast_sync_skill(behavior.delay, behavior.action, target)
+class AttackDelay(Behavior):
+	def __init__(self, id: int, action: Optional[Behavior], delay: float):
+		super().__init__(id)
+		self.action = action
+		self.delay = delay
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
+		handle = self.cast_sync_skill(self.delay, self.action, target)
 		log.debug("write handle %s", handle)
 		bitstream.write(c_uint(handle))
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		handle = bitstream.read(c_uint)
 		log.debug("read handle %s", handle)
-		self.delayed_behaviors[handle] = behavior.action
+		self.delayed_behaviors[handle] = self.action
 
 ChargeUp = AttackDelay # works the same
 
-class RepairArmor(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class RepairArmor(Behavior):
+	def __init__(self, id: int, armor: int):
+		super().__init__(id)
+		self.armor = armor
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		target.stats.armor += behavior.armor
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		target.stats.armor += self.armor
 
-class SpawnObject(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		position = self.object.physics.position + self.object.physics.rotation.rotate(Vector3.forward)*behavior.distance
-		return server.spawn_object(behavior.lot, {"parent": self.object, "position": position})
+class SpawnObject(Behavior):
+	def __init__(self, id: int, lot: int, distance: int):
+		super().__init__(id)
+		self.lot = lot
+		self.distance = distance
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		position = self.object.physics.position + self.object.physics.rotation.rotate(Vector3.forward)*self.distance
+		return server.spawn_object(self.lot, {"parent": self.object, "position": position})
 
 SpawnQuickbuild = SpawnObject # works the same
 
-class Switch(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Switch(Behavior):
+	def __init__(self, id: int, action_false: Optional[Behavior], action_true: Optional[Behavior], imagination: int, is_enemy_faction: bool):
+		super().__init__(id)
+		self.action_false = action_false
+		self.action_true = action_true
+		self.imagination = imagination
+		self.is_enemy_faction = is_enemy_faction
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		switch = True
-		if getattr(behavior, "imagination", 0) > 0 or not getattr(behavior, "is_enemy_faction", False):
+		if self.imagination > 0 or not self.is_enemy_faction:
 			log.debug("Switch writing bit")
 			bitstream.write(c_bit(True))
 		if switch:
-			self.serialize_behavior(behavior.action_true, bitstream, target, level+1)
+			if self.action_true is not None:
+				self.action_true.serialize(bitstream, target, level+1)
 		else:
-			self.serialize_behavior(behavior.action_false, bitstream, target, level+1)
+			if self.action_false is not None:
+				self.action_false.serialize(bitstream, target, level+1)
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		switch = True
-		if getattr(behavior, "imagination", 0) > 0 or not getattr(behavior, "is_enemy_faction", False):
+		if self.imagination > 0 or not self.is_enemy_faction:
 			log.debug("Switch reading bit")
 			switch = bitstream.read(c_bit)
 		if switch:
-			self.deserialize_behavior(behavior.action_true, bitstream, target, level+1)
+			if self.action_true is not None:
+				self.action_true.deserialize(bitstream, target, level+1)
 		else:
-			self.deserialize_behavior(behavior.action_false, bitstream, target, level+1)
+			if self.action_false is not None:
+				self.action_false.deserialize(bitstream, target, level+1)
 
-class Buff(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Buff(Behavior):
+	def __init__(self, id: int, life: int, armor: int, imagination: int):
+		super().__init__(id)
+		self.life = life
+		self.armor = armor
+		self.imagination = imagination
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		if hasattr(behavior, "life"):
-			self.object.stats.max_life += behavior.life
-		if hasattr(behavior, "armor"):
-			self.object.stats.max_armor += behavior.armor
-		if hasattr(behavior, "imagination"):
-			self.object.stats.max_imagination += behavior.imagination
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		self.object.stats.max_life += self.life
+		self.object.stats.max_armor += self.armor
+		self.object.stats.max_imagination += self.imagination
 
-class Jetpack(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Jetpack(Behavior):
+	def __init__(self, id: int, bypass_checks: bool, enable_hover: bool, air_speed: float, max_air_speed: float, vertical_velocity: float, warning_effect_id: int):
+		super().__init__(id)
+		self.bypass_checks = bypass_checks
+		self.enable_hover = enable_hover
+		self.air_speed = air_speed
+		self.max_air_speed = max_air_speed
+		self.vertical_velocity = vertical_velocity
+		self.warning_effect_id = warning_effect_id
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		kwargs = {}
-		if hasattr(behavior, "bypass_checks"):
-			kwargs["bypass_checks"] = bool(behavior.bypass_checks)
-		if hasattr(behavior, "enable_hover"):
-			kwargs["hover"] = bool(behavior.enable_hover)
-		if hasattr(behavior, "airspeed"):
-			kwargs["air_speed"] = behavior.airspeed
-		if hasattr(behavior, "max_airspeed"):
-			kwargs["max_air_speed"] = behavior.max_airspeed
-		if hasattr(behavior, "vertical_velocity"):
-			kwargs["vertical_velocity"] = behavior.vertical_velocity
-		if hasattr(behavior, "warning_effect_id"):
-			kwargs["warning_effect_id"] = behavior.warning_effect_id
-		self.object.char.set_jet_pack_mode(enable=True, effect_id=167, **kwargs)
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		self.object.char.set_jet_pack_mode(self.bypass_checks, self.enable_hover, True, 167, self.air_speed, self.max_air_speed, self.vertical_velocity, self.warning_effect_id)
 
-class SkillEvent(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class SkillEvent(Behavior):
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		if behavior.id == 14211:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		if self.id == 14211:
 			event_name = "waterspray"
-		elif behavior.id == 27031:
+		elif self.id == 27031:
 			event_name = "spinjitzu"
 		else:
 			event_name = None
 
 		target.handle("skill_event", self.object, event_name, silent=True)
 
-class SkillCastFailed(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class SkillCastFailed(Behavior):
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		pass
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		self.skill_cast_failed = True
 
-class Chain(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+class Chain(Behavior):
+	def __init__(self, id: int, behaviors: Sequence[Behavior]):
+		super().__init__(id)
+		self.behaviors = behaviors
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		chain_index = bitstream.read(c_uint)
 		log.debug("chain index %i", chain_index)
-		self.deserialize_behavior(behavior.behaviors[chain_index-1], bitstream, target, level+1)
+		self.behaviors[chain_index-1].deserialize(bitstream, target, level+1)
 
-class ForceMovement(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		if getattr(behavior, "hit_action", None) is not None or \
-			 getattr(behavior, "hit_action_enemy", None) is not None or \
-			 getattr(behavior, "hit_action_faction", None) is not None:
+class ForceMovement(Behavior):
+	def __init__(self, id: int, hit_action: Optional[Behavior], hit_action_enemy: Optional[Behavior], hit_action_faction: Optional[Behavior]):
+		super().__init__(id)
+		self.hit_action = hit_action
+		self.hit_action_enemy = hit_action_enemy
+		self.hit_action_faction = hit_action_faction
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		if self.hit_action is not None or \
+			 self.hit_action_enemy is not None or \
+			 self.hit_action_faction is not None:
 			handle = bitstream.read(c_uint)
 			log.debug("move handle %s", handle)
 			self.delayed_behaviors[handle] = None # not known yet
 
-class Interrupt(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+class Interrupt(Behavior):
+	def __init__(self, id: int, interrupt_block: bool):
+		super().__init__(id)
+		self.interrupt_block = interrupt_block
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		if target != self.object:
 			log.debug("Interrupt: target != self, writing bit")
 			bitstream.write(c_bit(False))
-		if not getattr(behavior, "interrupt_block", False):
+		if not self.interrupt_block:
 			bitstream.write(c_bit(False))
 		bitstream.write(c_bit(False))
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		if target != self.object:
 			log.debug("Interrupt: target != self, reading bit")
 			assert not bitstream.read(c_bit)
-		if not getattr(behavior, "interrupt_block", False):
+		if not self.interrupt_block:
 			log.debug("Interrupt: not block, reading bit")
 			assert not bitstream.read(c_bit)
 		assert not bitstream.read(c_bit)
 
-class SwitchMultiple(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+class SwitchMultiple(Behavior):
+	def __init__(self, id: int, behavs: Iterable[Tuple[Behavior, float]]):
+		super().__init__(id)
+		self.behaviors = behavs
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		charge_time = bitstream.read(c_float)
-		for behav, value in behavior.behaviors:
+		for behav, value in self.behaviors:
 			if charge_time <= value:
-				self.deserialize_behavior(behav, bitstream, target, level+1)
+				behav.deserialize(bitstream, target, level+1)
 				break
 
-class Start(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+class Start(Behavior):
+	def __init__(self, id: int, action: Optional[Behavior]):
+		super().__init__(id)
+		self.action = action
 
-class NPCCombatSkill(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
-		self.serialize_behavior(behavior.behavior, bitstream, target, level+1)
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		if self.action is not None:
+			self.action.deserialize(bitstream, target, level+1)
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		self.deserialize_behavior(behavior.behavior, bitstream, target, level+1)
+class NPCCombatSkill(Behavior):
+	def __init__(self, id: int, behavior: Behavior):
+		super().__init__(id)
+		self.behavior = behavior
 
-class Verify(_Behavior):
-	@staticmethod
-	def serialize(self, behavior: Any, bitstream: WriteStream, target: GameObject, level: int) -> None:
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
+		self.behavior.serialize(bitstream, target, level+1)
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		self.behavior.deserialize(bitstream, target, level+1)
+
+class Verify(Behavior):
+	def __init__(self, id: int, action: Behavior):
+		super().__init__(id)
+		self.action = action
+
+	def serialize(self, bitstream: WriteStream, target: GameObject, level: int) -> None:
 		bitstream.write(c_bit(False))
 		bitstream.write(c_uint(0))
 		bitstream.write(c_bit(False)) # blocking
 		bitstream.write(c_bit(False)) # charging
-		self.serialize_behavior(behavior.action, bitstream, target, level+1)
+		self.action.serialize(bitstream, target, level+1)
 
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		assert not bitstream.read(c_bit)
 		assert bitstream.read(c_uint) == 0
 		assert not bitstream.read(c_bit)
 		assert not bitstream.read(c_bit)
-		self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+		self.action.deserialize(bitstream, target, level+1)
 
-class AirMovement(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
+class AirMovement(Behavior):
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
 		handle = bitstream.read(c_uint)
 		log.debug("move handle %s", handle)
 		self.delayed_behaviors[handle] = None # not known yet
 
-class ClearTarget(_Behavior):
-	@staticmethod
-	def deserialize(self, behavior: Any, bitstream: ReadStream, target: GameObject, level: int) -> None:
-		self.deserialize_behavior(behavior.action, bitstream, target, level+1)
+class ClearTarget(Behavior):
+	def __init__(self, id: int, action: Behavior):
+		super().__init__(id)
+		self.action = action
+
+	def deserialize(self, bitstream: ReadStream, target: GameObject, level: int) -> None:
+		self.action.deserialize(bitstream, target, level+1)

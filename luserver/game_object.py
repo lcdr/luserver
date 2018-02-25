@@ -3,7 +3,6 @@ import importlib
 import inspect
 import logging
 import re
-from abc import ABC, abstractmethod
 from collections import OrderedDict
 from functools import wraps
 from typing import Any, Callable, cast, Dict, Generic, List, NewType, Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
@@ -57,7 +56,7 @@ EV = cast(Vector3, E)
 T = TypeVar("T", bound=UnsignedIntStruct)
 U = TypeVar("U")
 V = TypeVar("V")
-W = TypeVar("W")
+W = TypeVar("W", bound=Union[float, bytes, str, c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_, LDF])
 
 class Sequence(Generic[T, U], Sequence_[U]):
 	pass
@@ -98,7 +97,7 @@ class Config(TypedDict, total=False):
 	spawn_net_on_smash: str
 	transfer_world_id: int
 
-class FlagObject(ABC):
+class FlagObject:
 	def __init__(self) -> None:
 		self._flags: Dict[str, str] = {}
 
@@ -106,7 +105,6 @@ class FlagObject(ABC):
 		self.attr_changed(name)
 		super().__setattr__(name, value)
 
-	@abstractmethod
 	def attr_changed(self, name: str) -> None:
 		"""In case an attribute change is not registered by __setattr__ (like setting an attribute of an attribute), manually register the change by calling this. Without a registered change changes will not be broadcast to clients!"""
 
@@ -461,12 +459,8 @@ class _SpecialObjectMeta(type):
 					return False
 		return True
 
-if TYPE_CHECKING:
-	class _SpecialObject(GameObject):
-		pass
-else:
-	class _SpecialObject(metaclass=_SpecialObjectMeta):
-		pass
+class _SpecialObject(GameObject, metaclass=_SpecialObjectMeta):
+	pass
 
 class PhysicsObject(_SpecialObject):
 	physics: "PhysicsComponent"
@@ -489,12 +483,10 @@ class DestructibleObject(StatsObject):
 class SpawnerObject(_SpecialObject):
 	spawner: "SpawnerComponent"
 
-class Player(ControllableObject, DestructibleObject):
-	char: "CharacterComponent"
-	inventory: "InventoryComponent"
-	skill: "SkillComponent"
+class VendorObject(_SpecialObject):
+	vendor: "VendorComponent"
 
-class ActualPlayer(GameObject, Persistent):
+class Player(ControllableObject, DestructibleObject, Persistent):
 	char: "CharacterComponent"
 	inventory: "InventoryComponent"
 	skill: "SkillComponent"
@@ -531,7 +523,7 @@ def _send_game_message(mode: str) -> Callable[[X], X]:
 		from .world import server
 
 		@wraps(func)
-		def wrapper(self, *args: Any, **kwargs: Any):
+		def wrapper(self, *args: Any, **kwargs: Any) -> Any:
 			game_message_id = GameMessage[re.sub("(^|_)(.)", lambda match: match.group(2).upper(), func.__name__)].value
 			out = WriteStream_()
 			out.write_header(WorldClientMsg.GameMessage)
@@ -576,11 +568,11 @@ def _send_game_message(mode: str) -> Callable[[X], X]:
 				exclude_address = None
 				if player is not None:
 					exclude_address = player.char.address
-				server.send(out, address=exclude_address, broadcast=True)
+				server.send(out, exclude_address, broadcast=True)
 			elif mode == "single":
 				if player is None:
 					player = self.object
-				server.send(out, address=player.char.address)
+				server.send(out, player.char.address)
 			if func.__name__ not in ("drop_client_loot", "script_network_var_update"): # todo: don't hardcode this
 				if len(bound_args.arguments) > 1:
 					log.debug(", ".join("%s=%s" % (key, value) for key, value in list(bound_args.arguments.items())[1:]))
@@ -589,7 +581,7 @@ def _send_game_message(mode: str) -> Callable[[X], X]:
 	return decorator
 
 
-def _game_message_serialize(out, type_: Type[W], value: W) -> None:
+def _game_message_serialize(out: WriteStream, type_: Type[W], value: W) -> None:
 	if type_ == float:
 		out.write(c_float(value))
 	elif type_ == bytes:
