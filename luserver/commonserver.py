@@ -50,6 +50,7 @@ class ServerDB:
 	accounts: Dict[str, Account]
 	activities: Dict[int, Tuple[int]]
 	activity_rewards: Dict[int, Tuple[Optional[int], Optional[int], Optional[int]]]
+	behavior: Dict[int, Any]
 	config: Dict[str, object]
 	colors: Dict[int, bool]
 	components_registry: Dict[int, Sequence[Tuple[int, int]]]

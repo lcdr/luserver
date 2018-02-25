@@ -84,10 +84,10 @@ class RebuildComponent(ScriptedActivityComponent):
 				out.write(self.rebuild_activator_position)
 				out.write(c_bit(True))
 
-	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> bool:
 		assert multi_interact_id is None
 		if self.rebuild_state not in (RebuildState.Open, RebuildState.Incomplete):
-			return
+			return False
 		for handle in self.callback_handles:
 			self.object.cancel_callback(handle)
 		self.callback_handles.clear()

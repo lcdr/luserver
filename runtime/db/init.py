@@ -297,6 +297,9 @@ class Init:
 					for npcminlevel, minvalue, maxvalue in reversed(currency_table[currency_index]):
 						if npcminlevel < level:
 							break
+					else:
+						minvalue = None
+						maxvalue = None
 				else:
 					minvalue = None
 					maxvalue = None

@@ -52,12 +52,12 @@ class MouthStyle:
 
 import asyncio
 import logging
-from typing import cast, Tuple
+from typing import Tuple
 
 from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from ..bitstream import WriteStream
-from ..game_object import ActualPlayer, Player
+from ..game_object import Player
 from ..messages import WorldClientMsg, WorldServerMsg
 from ..world import server
 
@@ -178,7 +178,7 @@ class CharHandling:
 
 		try:
 			if return_code == _CharacterCreateReturnCode.Success:
-				new_char = ActualPlayer(server.new_object_id())
+				new_char = Player(server.new_object_id())
 				new_char.name = char_name
 				new_char.char.account = account
 				new_char.char.address = address
@@ -200,7 +200,7 @@ class CharHandling:
 				new_char.inventory.on_equip_inventory(item_to_equip=pants.object_id)
 
 				characters = account.characters
-				characters[char_name] = cast(Player, new_char)
+				characters[char_name] = new_char
 				account.selected_char_name = char_name
 				server.conn.transaction_manager.commit()
 				log.info("Creating new character %s", char_name)

@@ -1,7 +1,7 @@
 from typing import cast
 
 import luserver.components.script as script
-from luserver.game_object import c_int, EB, EI, EO, GameObject, ScriptObject
+from luserver.game_object import c_int, EB, EI, EO, GameObject, OBJ_NONE, ScriptObject
 from luserver.world import server
 from luserver.components.mission import MissionState
 
@@ -26,4 +26,4 @@ class ScriptComponent(script.ScriptComponent):
 
 			for obj in server.game_objects.values():
 				if obj.spawner_object in spawners:
-					cast(ScriptObject, obj).script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=None, param_str=b"")
+					cast(ScriptObject, obj).script.notify_client_object(name="SetVisibility", param1=visible, param2=0, param_obj=OBJ_NONE, param_str=b"")

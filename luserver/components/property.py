@@ -153,7 +153,7 @@ class PropertyEntranceComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> bool:
 		assert multi_interact_id is None
 		self.property_entrance_begin(player=player)
 		player.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "property_menu"}))
