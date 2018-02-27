@@ -4,8 +4,8 @@ from pyraknet.bitstream import c_bit, WriteStream
 from ..game_object import CallbackID, Config, GameObject, Player, StatsObject
 from ..world import server
 from ..math.quaternion import Quaternion
+from .behaviors import NPCCombatSkill
 from .component import Component
-from .skill import BehaviorTemplate
 
 UPDATE_INTERVAL = 1 # todo: make interval skill-dependent
 
@@ -24,7 +24,7 @@ class BaseCombatAIComponent(Component):
 			return
 		if self.object.skill.skills:
 			behavior = server.db.skill_behavior[self.object.skill.skills[0]][0]
-			assert behavior.template == BehaviorTemplate.NPCCombatSkill
+			assert isinstance(behavior, NPCCombatSkill)
 			self.skill_range = min(behavior.max_range, 10)
 		self.object.physics.proximity_radius(self.skill_range)
 

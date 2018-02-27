@@ -21,11 +21,11 @@ class PhysicsComponent(Component):
 
 		if "position" in set_vars:
 			self.position.update(set_vars["position"])
-		elif "parent" in set_vars and hasattr(set_vars["parent"], "physics"):
+		elif "parent" in set_vars and isinstance(set_vars["parent"], PhysicsObject):
 			self.position.update(set_vars["parent"].physics.position)
 		if "rotation" in set_vars:
 			self.rotation.update(set_vars["rotation"])
-		elif "parent" in set_vars and hasattr(set_vars["parent"], "physics"):
+		elif "parent" in set_vars and isinstance(set_vars["parent"], PhysicsObject):
 			self.rotation.update(set_vars["parent"].physics.rotation)
 
 	def on_destruction(self) -> None:

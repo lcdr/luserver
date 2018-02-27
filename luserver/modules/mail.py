@@ -95,7 +95,7 @@ class MailHandling:
 			out.write(c_uint(return_code))
 			server.send(out, player.char.address)
 
-	def send_mail(self, sender_name: str, subject: str, body: str, recipient: Player, attachment=None) -> None:
+	def send_mail(self, sender_name: str, subject: str, body: str, recipient: Player, attachment: Stack=None) -> None:
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		with server.multi:
 			recipient.char.mails.append(mail)

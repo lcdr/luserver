@@ -193,6 +193,8 @@ class GameObject(Replica, FlagObject):
 				if "custom_script" in set_vars and set_vars["custom_script"] is not None:
 					try:
 						script = importlib.import_module("luserver.scripts."+set_vars["custom_script"])
+						if not hasattr(script, "ScriptComponent"):
+							raise RuntimeError("Scripts need to define a ScriptComponent")
 						comp = script.ScriptComponent,
 					except ModuleNotFoundError as e:
 						log.warning(str(e))
@@ -200,6 +202,8 @@ class GameObject(Replica, FlagObject):
 				elif component_id is not None and component_id in server.db.script_component:
 					try:
 						script = importlib.import_module("luserver.scripts."+server.db.script_component[component_id])
+						if not hasattr(script, "ScriptComponent"):
+							raise RuntimeError("Scripts need to define a ScriptComponent")
 						comp = script.ScriptComponent,
 					except ModuleNotFoundError as e:
 						log.warning(str(e))
@@ -427,7 +431,10 @@ class GameObject(Replica, FlagObject):
 			# todo: convert to LDF
 			return value
 		if issubclass(type_, GameObject) or issubclass(type_, Player):
-			return server.get_object(message.read(c_int64_))
+			obj_id = message.read(c_int64_)
+			if obj_id == 0:
+				return None
+			return server.get_object(obj_id)
 		if issubclass(type_, Serializable):
 			return type_.deserialize(message)
 		if issubclass(type_, Sequence):

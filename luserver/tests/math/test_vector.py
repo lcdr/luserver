@@ -5,6 +5,11 @@ class Vector3Test(unittest.TestCase):
 	vec1 = Vector3(1, 2, 3)
 	vec2 = Vector3(4, 5, 6)
 
+	def test_init(self):
+		self.assertEqual(Vector3(), Vector3.zero)
+		self.assertEqual(Vector3(0, 0, 1), Vector3.forward)
+		self.assertEqual(Vector3(Vector3.forward), Vector3.forward)
+
 	def test_equal(self):
 		self.assertEqual(self.vec1, self.vec1)
 

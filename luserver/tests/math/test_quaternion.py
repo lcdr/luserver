@@ -7,6 +7,11 @@ from luserver.math.vector import Vector3
 class QuaternionTest(unittest.TestCase):
 	quat1 = Quaternion.identity
 
+	def test_init(self):
+		self.assertEqual(Quaternion(), Quaternion.identity)
+		self.assertEqual(Quaternion(0, 0, 0, 1), Quaternion.identity)
+		self.assertEqual(Quaternion(Quaternion.identity), Quaternion.identity)
+
 	def test_equal(self):
 		self.assertEqual(self.quat1, self.quat1)
 
