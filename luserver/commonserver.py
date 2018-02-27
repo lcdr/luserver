@@ -32,6 +32,7 @@ from .auth import Account
 from .bitstream import WriteStream
 if TYPE_CHECKING:
 	from .game_object import ObjectID, GameObject
+	from .components.behaviors import Behavior
 from .messages import GeneralMsg, LUMessage, WorldClientMsg, WorldServerMsg
 from .server import Server as _Server
 from .math.vector import Vector3
@@ -76,7 +77,7 @@ class ServerDB:
 	rebuild_component: Dict[int, Tuple[float, float, float, int, int]]
 	script_component: Dict[int, str]
 	servers: Dict[Address, Tuple[int, int, int]]
-	skill_behavior: Dict[int, Tuple[Any, int]]
+	skill_behavior: Dict[int, Tuple["Behavior", int]]
 	vendor_component: Dict[int, LootTableEntry]
 	world_data: Dict[int, WorldData]
 	world_info: Dict[int, Tuple[str, int]]

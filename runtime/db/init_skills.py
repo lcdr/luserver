@@ -1,6 +1,8 @@
+from typing import Optional
+
 import BTrees
 
-from luserver.components.behaviors import And, AreaOfEffect, AttackDelay, Behavior, BasicAttack, Buff, Chain, ClearTarget, Duration, ForceMovement, Heal, Imagination, Interrupt, Jetpack, Knockback, MovementSwitch, NPCCombatSkill, OverTime, ProjectileAttack, RepairArmor, SkillCastFailed, SkillEvent, SpawnObject, Start, Stun, Switch, SwitchMultiple, TacArc, TargetCaster, Verify
+from luserver.components.behaviors import AirMovement, And, ApplyBuff, AreaOfEffect, AttackDelay, BasicAttack, Behavior, Buff, Chain, ChargeUp, ClearTarget, DummyBehavior, Duration, ForceMovement, Heal, Imagination, Interrupt, Jetpack, Knockback, MovementSwitch, NPCCombatSkill, OverTime, ProjectileAttack, RepairArmor, SkillCastFailed, SkillEvent, SpawnObject, SpawnQuickbuild, Start, Stun, Switch, SwitchMultiple, TacArc, TargetCaster, Verify
 from luserver.components.skill import BehaviorTemplate
 
 class Init:
@@ -32,9 +34,11 @@ class Init:
 			root.skill_behavior[skill_id] = self.get_behavior(behavior_id), imagination_cost
 		print("behavs_accessed", self.behavs_accessed)
 
-	def get_behavior(self, behavior_id):
+	def get_behavior(self, behavior_id: int) -> Optional[Behavior]:
 		if behavior_id == 0:
 			return None
+		if behavior_id == 32514:
+			return None # workaround for cycle
 		behavior_id = int(behavior_id)
 		if behavior_id not in self.templates:
 			return None
@@ -77,7 +81,7 @@ class Init:
 		elif template_id == BehaviorTemplate.And:
 			behavs = []
 			for num in range(1, 11):
-				if "behavior %i" % num:
+				if "behavior %i" % num in params:
 					behavs.append(self.get_behavior(params["behavior %i" % num]))
 			behavior = And(behavior_id, behavs)
 
@@ -118,11 +122,11 @@ class Init:
 				action = None
 			behavior = AreaOfEffect(behavior_id, action)
 
-		elif template_id in (BehaviorTemplate.PlayEffect, BehaviorTemplate.Immunity, BehaviorTemplate.DamageBuff, BehaviorTemplate.DamageAbsorption):
-			behavior = Behavior(behavior_id)
+		elif template_id in (BehaviorTemplate.PlayEffect, BehaviorTemplate.Immunity, BehaviorTemplate.DamageBuff, BehaviorTemplate.DamageAbsorption, BehaviorTemplate.CarBoost, BehaviorTemplate.FallSpeed, BehaviorTemplate.Speed, BehaviorTemplate.DarkInspiration, BehaviorTemplate.LootBuff, BehaviorTemplate.VentureVision, BehaviorTemplate.LayBrick, BehaviorTemplate.ConsumeItem, BehaviorTemplate.ChangeIdleFlags, BehaviorTemplate.ChangeOrientation, BehaviorTemplate.AlterCooldown, BehaviorTemplate.End, BehaviorTemplate.AlterChainDelay, BehaviorTemplate.RemoveBuff, BehaviorTemplate.Grab, BehaviorTemplate.ModularBuild, BehaviorTemplate.Block, BehaviorTemplate.Taunt, BehaviorTemplate.PullToPoint, BehaviorTemplate.PropertyRotate, BehaviorTemplate.DamageReduction, BehaviorTemplate.PropertyTeleport, BehaviorTemplate.TakePicture, BehaviorTemplate.Mount, BehaviorTemplate.SkillSet):
+			behavior = DummyBehavior(behavior_id, template_id)
 
 		elif template_id == BehaviorTemplate.OverTime:
-			behavior = OverTime(behavior_id, self.get_behavior(params["action"]), int(params["num_parameters"]), params["delay"])
+			behavior = OverTime(behavior_id, self.get_behavior(params["action"]), int(params["num_intervals"]), params["delay"])
 
 		elif template_id == BehaviorTemplate.Imagination:
 			behavior = Imagination(behavior_id, int(params["imagination"]))
@@ -175,6 +179,9 @@ class Init:
 		elif template_id == BehaviorTemplate.SkillCastFailed:
 			behavior = SkillCastFailed(behavior_id)
 
+		elif template_id == BehaviorTemplate.ApplyBuff:
+			behavior = ApplyBuff(behavior_id)
+
 		elif template_id == BehaviorTemplate.Chain:
 			behavs = []
 			for num in range(1, 5):
@@ -200,6 +207,9 @@ class Init:
 		elif template_id == BehaviorTemplate.Interrupt:
 			behavior = Interrupt(behavior_id, params.get("interrupt_block", False))
 
+		elif template_id == BehaviorTemplate.ChargeUp:
+			behavior = ChargeUp(behavior_id, self.get_behavior(params["action"]), params["max_duration"])
+
 		elif template_id == BehaviorTemplate.SwitchMultiple:
 			behavs = []
 			for num in range(1, 5):
@@ -218,30 +228,29 @@ class Init:
 				behav = self.get_behavior(params["behavior 1"])
 			else:
 				raise ValueError
-			behavior = NPCCombatSkill(behavior_id, behav)
+			behavior = NPCCombatSkill(behavior_id, behav, params["min range"], params["max range"])
 
 		elif template_id == BehaviorTemplate.Verify:
 			behavior = Verify(behavior_id, self.get_behavior(params["action"]))
+
+		elif template_id == BehaviorTemplate.AirMovement:
+			if "ground_action" in params:
+				self.get_behavior(params["ground_action"])
+			if "hit_action" in params:
+				self.get_behavior(params["hit_action"])
+			if "hit_action_enemy" in params:
+				self.get_behavior(params["hit_action_enemy"])
+			if "timeout_action" in params:
+				self.get_behavior(params["timeout_action"])
+			behavior = AirMovement(behavior_id)
+
+		elif template_id == BehaviorTemplate.SpawnQuickbuild:
+			behavior = SpawnQuickbuild(behavior_id, int(params["LOT_ID"]), params.get("distance", 0))
 
 		elif template_id == BehaviorTemplate.ClearTarget:
 			behavior = ClearTarget(behavior_id, self.get_behavior(params["action"]))
 		else:
 			raise ValueError(template_id)
 
-		"""
-		
-		elif template_id == BehaviorTemplate.Block:
-			behavior.break_action = self.get_behavior(behavior.break_action)
-
-		elif template_id == BehaviorTemplate.AirMovement:
-			if hasattr(behavior, "ground_action"):
-				behavior.ground_action = self.get_behavior(behavior.ground_action)
-			if hasattr(behavior, "hit_action"):
-				behavior.hit_action = self.get_behavior(behavior.hit_action)
-			if hasattr(behavior, "hit_action_enemy"):
-				behavior.hit_action_enemy = self.get_behavior(behavior.hit_action_enemy)
-			if hasattr(behavior, "timeout_action"):
-				behavior.timeout_action = self.get_behavior(behavior.timeout_action)
-
-	return self.root.behavior[behavior_id]
-	"""
+		self.root.behavior[behavior_id] = behavior
+		return behavior

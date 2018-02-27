@@ -3,7 +3,7 @@ import logging
 from typing import Sequence, Tuple
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import Config, GameObject
+from ..game_object import Config, GameObject, ScriptObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -33,7 +33,7 @@ class TriggerComponent(Component):
 				assert target[0] == "objGroup"
 				objs = server.get_objects_in_group(target[1])
 				for obj in objs:
-					if hasattr(obj, "script"):
+					if isinstance(obj, ScriptObject):
 						obj.script.fire_event(args[0])
 
 			elif command_name == "SetPhysicsVolumeEffect":

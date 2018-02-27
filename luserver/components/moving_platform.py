@@ -34,6 +34,7 @@ class MovingPlatformComponent(Component):
 		self._flags["current_position"] = "moving_platform_flag"
 		self._flags["current_waypoint_index"] = "moving_platform_flag"
 		self._flags["next_waypoint_index"] = "moving_platform_flag"
+		self.moving_platform_flag = False
 		self.movement_state = MovementState.Stopped
 		self.desired_waypoint_index = -1
 		self.unknown_bool = False # possibly "stop on reaching desired waypoint"

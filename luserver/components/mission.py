@@ -100,7 +100,7 @@ class MissionNPCComponent(Component):
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		pass
 
-	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> None:
+	def on_use(self, player: Player, multi_interact_id: Optional[int]) -> bool:
 		offer = None
 		if multi_interact_id is not None:
 			offer = multi_interact_id

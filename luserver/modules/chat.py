@@ -22,10 +22,10 @@ class ChatPermissionError(Exception):
 	pass
 
 class CustomHelpFormatter(argparse.HelpFormatter):
-	def _get_default_metavar_for_positional(self, action):
+	def _get_default_metavar_for_positional(self, action) -> str:
 		return action.dest+" "+self._get_default_metavar_for_optional(action)
 
-	def _get_default_metavar_for_optional(self, action):
+	def _get_default_metavar_for_optional(self, action) -> str:
 		str_ = ""
 		if action.type is not None:
 			str_ += " <"+action.type.__name__+">"
@@ -56,17 +56,17 @@ class CustomArgumentParser(argparse.ArgumentParser):
 	def _print_message(self, message, *args, **kwargs):
 		server.chat.sys_msg_sender(message)
 
-	def exit(self, status=0, message=None):
+	def exit(self, status=0, message=None) -> None:
 		"""Modified to raise exception instead of exiting."""
 		self._print_message(message)
 		raise ChatCommandExit
 
-	def error(self, message):
+	def error(self, message) -> None:
 		"""Modified to raise exception."""
 		self._print_message(message)
 		raise ChatCommandExit
 
-	def _check_value(self, action, value):
+	def _check_value(self, action, value) -> None:
 		"""Modified to raise original LU error message."""
 		if action.choices is not None and value not in action.choices:
 			if type(action) == argparse._SubParsersAction:
@@ -124,7 +124,7 @@ class ChatHandling:
 		message.write(sender.name, allocated_length=33)
 		message.write(c_int64(sender.object_id))
 		message.write(bytes(2))
-		if hasattr(sender, "char"):
+		if isinstance(sender, Player):
 			message.write(c_bool(sender.char.show_gm_status))
 		else:
 			message.write(c_bool(False))
@@ -154,9 +154,9 @@ class ChatHandling:
 
 	def send_private_chat_message(self, sender: GameObject, text: str, recipient: GameObject) -> None:
 		participants = []
-		if hasattr(sender, "char"):
+		if isinstance(sender, Player):
 			participants.append((sender.char.address, 0))
-		if hasattr(recipient, "char"):
+		if isinstance(recipient, Player):
 			participants.append((recipient.char.address, 3))
 
 		for address, return_code in participants:
@@ -172,12 +172,12 @@ class ChatHandling:
 				message.write(sender.name, allocated_length=33)
 				message.write(c_int64(sender.object_id))
 			message.write(c_ushort(0))
-			if hasattr(sender, "char"):
+			if isinstance(sender, Player):
 				message.write(c_bool(sender.char.show_gm_status))
 			else:
 				message.write(c_bool(False))
 			message.write(recipient.name, allocated_length=33)
-			if hasattr(recipient, "char"):
+			if isinstance(recipient, Player):
 				message.write(c_bool(recipient.char.show_gm_status))
 			else:
 				message.write(c_bool(False))
