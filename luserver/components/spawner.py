@@ -36,7 +36,7 @@ class SpawnerComponent(Component):
 			self.spawn()
 
 	def spawn(self) -> GameObject:
-		if not self._active or self.num_spawned >= self.num_to_maintain:
+		if self.num_spawned >= self.num_to_maintain:
 			return
 
 		spawned_vars = self.waypoints[self.last_waypoint_index].copy()

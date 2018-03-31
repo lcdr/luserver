@@ -3,6 +3,7 @@ import logging
 from typing import cast
 
 from luserver.amf3 import AMF3
+from luserver.auth import GMLevel
 from luserver.game_object import Player, VendorObject
 from luserver.ldf import LDF, LDFDataType
 from luserver.world import server, World
@@ -36,6 +37,7 @@ class Currency(ChatCommand):
 class Dab(ChatCommand):
 	def __init__(self):
 		super().__init__("dab")
+		self.command.set_defaults(perm=GMLevel.Nothing)
 
 	def run(self, args, sender):
 		sender.render.play_animation("cute-spin-exit")

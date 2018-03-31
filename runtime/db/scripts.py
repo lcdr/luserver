@@ -89,6 +89,7 @@ SCRIPTS = {
 	r"02_server\Map\General\L_FRICTION_VOLUME_SERVER.lua": "general.friction_volume",
 	r"02_server\Map\General\L_POI_MISSION.lua": "general.poi_mission",
 	r"02_server\Map\General\L_TOUCH_MISSION_UPDATE_SERVER.lua": "general.touch_complete_mission",
+	r"02_server\Map\NS\CONCERT_CHOICEBUILD_MANAGER_SERVER.lua": "nimbus_station.concert_choicebuild_manager",
 	r"02_server\Map\NS\L_NS_LUP_TELEPORT.lua": "nimbus_station.lup_teleport",
 	r"02_server\Map\NS\L_NS_TOKEN_CONSOLE_SERVER.lua": "nimbus_station.token_console",
 	r"02_server\Map\NT\L_NT_ASSEMBLYTUBE_SERVER.lua": "nexus_tower.assembly_tube",

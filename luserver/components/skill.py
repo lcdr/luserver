@@ -182,7 +182,6 @@ class SkillComponent(Component):
 		else:
 			target = self.object
 		self.picked_target_id = optional_target_id
-		print(skill_id)
 		behavior, imagination_cost = server.db.skill_behavior[skill_id]
 		self.original_target_id = target.object_id
 		self.skill_cast_failed = False

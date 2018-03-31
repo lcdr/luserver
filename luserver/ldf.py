@@ -41,6 +41,14 @@ class LDF:
 	def __repr__(self) -> str:
 		return "LDF: "+repr(self._dict)
 
+	def get(self, key: str, default: _LDFValue) -> _LDFValue:
+		if key in self._dict:
+			return self[key]
+		return default
+
+	def clear(self) -> None:
+		self._dict.clear()
+
 	def ldf_get(self, key: str) -> Tuple[LDFDataType, _LDFValue]:
 		return self._dict.__getitem__(key)
 

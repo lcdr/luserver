@@ -61,10 +61,10 @@ def import_data(root, maps_path):
 
 def _parse_lutriggers(lutriggers_path):
 	event_names = {
-		"OnActivated": "on_activated",
-		"OnCreate": "on_startup",
-		"OnDectivated": "on_deactivated",
-		"OnEnter": "on_enter"}
+		"OnActivated": "switch_activated",
+		"OnCreate": "startup",
+		"OnDectivated": "switch_deactivated",
+		"OnEnter": "enter"}
 
 	triggers = {}
 	tree = xml.etree.ElementTree.parse(lutriggers_path)

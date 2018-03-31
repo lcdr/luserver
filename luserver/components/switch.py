@@ -20,13 +20,10 @@ class SwitchComponent(Component):
 		if not self._enabled:
 			return
 		self._activated = value
-		if hasattr(self.object, "trigger"):
-			if value:
-				if hasattr(self.object.trigger, "on_activated"):
-					self.object.trigger.on_activated()
-			else:
-				if hasattr(self.object.trigger, "on_deactivated"):
-					self.object.trigger.on_deactivated()
+		if value:
+			self.object.handle("switch_activated")
+		else:
+			self.object.handle("switch_deactivated")
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(self.activated))

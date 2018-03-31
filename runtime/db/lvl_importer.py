@@ -152,7 +152,7 @@ class LVLImporter:
 			self.lvl.read(c_float), self.lvl.read(c_float), self.lvl.read(c_float)
 
 	def parse_chunk_type_2001(self):
-		whitelisted_serverside_lots = 176, 2292, 3964, 4734, 4764, 4860, 4945, 5633, 5652, 6247, 6383, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7869, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11182, 11274, 11279, 11280, 11281, 12166, 12175, 12232, 12384, 12661, 13054, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14225, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16477, 16506, 16513, 16627
+		whitelisted_serverside_lots = 176, 2292, 3964, 4734, 4764, 4844, 4860, 4945, 5633, 5652, 6247, 6383, 6396, 6464, 6465, 6466, 6700, 6842, 6958, 6960, 7085, 7608, 7869, 7973, 8139, 8419, 9930, 10009, 10042, 10413, 10496, 11165, 11178, 11182, 11274, 11279, 11280, 11281, 12166, 12175, 12232, 12384, 12661, 13054, 13142, 13834, 13835, 13881, 13882, 14013, 14031, 14086, 14087, 14199, 14214, 14215, 14216, 14217, 14218, 14220, 14225, 14226, 14242, 14243, 14244, 14245, 14246, 14248, 14249, 14289, 14290, 14291, 14292, 14293, 14294, 14330, 14331, 14332, 14333, 14345, 14346, 14347, 14348, 14510, 14530, 15902, 16477, 16506, 16513, 16627
 
 		for _ in range(self.lvl.read(c_uint)):
 			object_id = self.lvl.read(c_int64)  # seems like the object id, but without some bits
@@ -196,10 +196,14 @@ class LVLImporter:
 
 					spawner_vars = {}
 					spawner_vars["spawntemplate"] = config["spawntemplate"]
+					if "groups" in spawned_vars:
+						spawner_vars["groups"] = spawned_vars["groups"]
 					if "spawnsGroupOnSmash" in config:
 						if config["spawnsGroupOnSmash"]:
 							assert "spawnNetNameForSpawnGroupOnSmash" in config
 							spawner_vars["spawn_net_on_smash"] = config["spawnNetNameForSpawnGroupOnSmash"]
+					if "spawnActivator" in config and not config["spawnActivator"]:
+						spawner_vars["active_on_load"] = False
 					spawner_vars["spawner_waypoints"] = spawned_vars,
 					spawned_vars = spawner_vars
 
