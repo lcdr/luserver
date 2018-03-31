@@ -192,7 +192,7 @@ class Init:
 		# actually persistent stuff
 
 		self.root.activity_rewards = BTrees.IOBTree.BTree()
-		for object_template, loot_matrix_index, currency_index in self.cdclient.execute("select objectTemplate, LootMatrixIndex, CurrencyIndex from ActivityRewards"):
+		for object_template, activity_rating, loot_matrix_index, currency_index in self.cdclient.execute("select objectTemplate, activityRating, LootMatrixIndex, CurrencyIndex from ActivityRewards"):
 			# doesn't currently account for activity ratings
 			if loot_matrix_index is not None:
 				loot = loot_matrix.get(loot_matrix_index)
@@ -204,9 +204,10 @@ class Init:
 				minvalue = None
 				maxvalue = None
 
-			self.root.activity_rewards[object_template] = loot, minvalue, maxvalue
+			self.root.activity_rewards.setdefault(object_template, []).append((activity_rating, (loot, minvalue, maxvalue)))
 
-
+		for key, value in self.root.activity_rewards.items():
+			value.sort(key=lambda x: x[0])
 
 		item_type_fixes = {
 			3513: ItemType.RightHand,  # NPC Sky Lane Helmet

@@ -11,7 +11,7 @@ class ChatCommand:
 		self.command.set_defaults(func=self.run)
 		self.command.set_defaults(perm=GMLevel.Admin)
 
-	def run(self, args: Any, sender: GameObject) -> None:
+	def run(self, args: Any, sender: Player) -> None:
 		raise NotImplementedError
 
 def toggle_bool(str_: str) -> Optional[bool]:

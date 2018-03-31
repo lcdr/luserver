@@ -47,7 +47,10 @@ class RebuildComponent(ScriptedActivityComponent):
 		self.success = False
 		self.enabled = True
 		self.activity_id = set_vars.get("activity_id", db_entry[4])
-		self.completion_rewards = server.db.activity_rewards.get(self.activity_id, (None, None, None))
+		if self.activity_id in server.db.activity_rewards:
+			self.completion_rewards = server.db.activity_rewards[self.activity_id][0][1]
+		else:
+			self.completion_rewards = None, None, None
 
 		if "rebuild_activator_position" in set_vars:
 			self.rebuild_activator_position = set_vars["rebuild_activator_position"]

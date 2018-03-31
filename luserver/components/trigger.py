@@ -15,10 +15,9 @@ log = logging.getLogger(__name__)
 class TriggerComponent(Component):
 	def __init__(self, obj: GameObject, set_vars: Config, comp_id: int):
 		super().__init__(obj, set_vars, comp_id)
-		self.object.trigger = self
 		if "trigger_events" in set_vars:
 			for event_name, commands in set_vars["trigger_events"].items():
-				setattr(self, event_name, functools.partial(self.on_event_process_commands, commands))
+				self.object.add_handler(event_name, functools.partial(self.on_event_process_commands, commands))
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
 		out.write(c_bit(False))

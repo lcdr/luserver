@@ -1,7 +1,7 @@
 from typing import Dict
 
 from pyraknet.bitstream import c_bit, WriteStream
-from ..game_object import broadcast, c_int, Config, EB, EF, EO, EP, ES, GameObject, OBJ_NONE, Player, StatsObject
+from ..game_object import broadcast, c_int, Config, EB, EF, EO, EP, ES, GameObject, OBJ_NONE, Player, SpawnerObject, StatsObject
 from ..world import server
 from ..math.vector import Vector3
 from .component import Component
@@ -33,6 +33,7 @@ class DestructibleComponent(Component):
 			self.object.stats.is_smashable = set_vars["is_smashable"]
 		else:
 			self.object.stats.is_smashable = comp[5]
+		self.spawn_group_on_smash = set_vars.get("spawn_group_on_smash", "")
 		del self.comp_id
 
 	def serialize(self, out: WriteStream, is_creation: bool) -> None:
@@ -49,7 +50,7 @@ class DestructibleComponent(Component):
 					loot_owner = dealer
 				else:
 					loot_owner = OBJ_NONE
-				self.on_request_die(unknown_bool=False, death_type="", direction_relative_angle_xz=0, direction_relative_angle_y=0, direction_relative_force=10, killer=dealer, loot_owner=loot_owner)
+				self.simply_die(killer=dealer, loot_owner=loot_owner)
 			self.object.stats.life = max(0, self.object.stats.life - (damage - self.object.stats.armor))
 		self.object.stats.armor = max(0, self.object.stats.armor - damage)
 
@@ -85,6 +86,11 @@ class DestructibleComponent(Component):
 			if server.world_control_object is not None and hasattr(server.world_control_object.script, "player_died"):
 				server.world_control_object.script.player_died(player=self.object)
 		else:
+			if self.spawn_group_on_smash != "":
+				for obj in server.get_objects_in_group(self.spawn_group_on_smash):
+					if isinstance(obj, SpawnerObject):
+						obj.spawner.spawn()
+
 			if not hasattr(self.object, "comp_108"):
 				if self.object.lot == 9632: # hardcode for property guard, generalize this somewhen
 					self.object.call_later(5, lambda: server.replica_manager.destruct(self.object))

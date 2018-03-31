@@ -1,6 +1,8 @@
+from persistent import Persistent
+
 from ...game_object import Player
 
-class CharSubcomponent:
+class CharSubcomponent(Persistent):
 	def __init__(self, player: Player):
 		self.object = player
 		for name in dir(self):
