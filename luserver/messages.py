@@ -1,31 +1,24 @@
 from enum import Enum, IntEnum
 
+class MessageType(Enum):
+	General = 0
+	AuthServer = 1
+	Social = 2
+	WorldServer = 4
+	WorldClient = 5
+
 class LUMessage(IntEnum):
-	@staticmethod
-	def header() -> int:
-		pass
+	pass
 
 class GeneralMsg(LUMessage):
-	@staticmethod
-	def header() -> int:
-		return 0x00
-
 	Handshake = 0x00
 	DisconnectNotify = 0x01
 	GeneralNotify = 0x02
 
 class AuthServerMsg(LUMessage):
-	@staticmethod
-	def header() -> int:
-		return 0x01
-
 	LoginRequest = 0x00
 
 class SocialMsg(LUMessage):
-	@staticmethod
-	def header() -> int:
-		return 0x02
-
 	GeneralChatMessage = 0x01
 	PrivateChatMessage = 0x02
 	AddFriendRequest = 0x07
@@ -38,10 +31,6 @@ class SocialMsg(LUMessage):
 	TeamGetStatus = 0x15
 
 class WorldServerMsg(LUMessage):
-	@staticmethod
-	def header() -> int:
-		return 0x04
-
 	SessionInfo = 0x01
 	CharacterListRequest = 0x02
 	CharacterCreateRequest = 0x03
@@ -56,10 +45,6 @@ class WorldServerMsg(LUMessage):
 	StringCheck = 0x19
 
 class WorldClientMsg(LUMessage):
-	@staticmethod
-	def header() -> int:
-		return 0x05
-
 	LoginResponse = 0x00
 	LoadWorld = 0x02
 	CharacterData = 0x04
@@ -79,12 +64,14 @@ class WorldClientMsg(LUMessage):
 	Moderation = 0x3b
 
 # Sadly no better way to get a mapping from headers to enums
-msg_enum = {
-	0x00: GeneralMsg,
-	0x01: AuthServerMsg,
-	0x02: SocialMsg,
-	0x04: WorldServerMsg,
-	0x05: WorldClientMsg}
+MSG_TO_ENUM = {
+	MessageType.General.value: GeneralMsg,
+	MessageType.AuthServer.value: AuthServerMsg,
+	MessageType.Social.value: SocialMsg,
+	MessageType.WorldServer.value: WorldServerMsg,
+	MessageType.WorldClient.value: WorldClientMsg}
+
+ENUM_TO_MSG = {enum: msg for msg, enum in MSG_TO_ENUM.items()}
 
 class GameMessage(Enum):
 	Teleport = 19

@@ -19,7 +19,8 @@ class ScriptComponent(script.ScriptComponent):
 			server.spawners["FXObject"].spawner.destroy()
 
 		# todo: implement distinction between instance and claim property (different launcher)
-		server.spawners["Launcher"].spawner.activate()
+		for spawner in ("Launcher", "Mailbox"):
+			server.spawners[spawner].spawner.activate()
 
 		if 320 not in player.char.mission.missions:
 			server.spawners["PropertyGuard"].spawner.activate()
@@ -28,7 +29,7 @@ class ScriptComponent(script.ScriptComponent):
 	on_player_ready = player_ready
 
 	def start_maelstrom(self):
-		for spawner in ("SpiderBoss", "SpiderEggs"):
+		for spawner in ("SpiderBoss", "SpiderEggs", "Spider_Scream"):
 			server.spawners[spawner].spawner.activate()
 
 		server.spawners["Rocks"].spawner.activate()

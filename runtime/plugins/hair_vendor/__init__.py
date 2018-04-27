@@ -1,8 +1,8 @@
-from luserver.world import server
+from luserver.world import Event, server
 
 class HairVendor:
 	def __init__(self):
-		server.add_handler("spawn", self.on_spawn)
+		server.add_handler(Event.Spawn, self.on_spawn)
 
 	def on_spawn(self, obj):
 		if obj.lot == 3925:

@@ -33,7 +33,7 @@ from .bitstream import WriteStream
 if TYPE_CHECKING:
 	from .game_object import ObjectID, GameObject
 	from .components.behaviors import Behavior
-from .messages import GeneralMsg, LUMessage, WorldClientMsg, WorldServerMsg
+from .messages import ENUM_TO_MSG, GeneralMsg, LUMessage, MessageType, WorldServerMsg
 from .server import Server as _Server
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
@@ -86,7 +86,12 @@ log = logging.getLogger(__name__)
 
 class Server(_Server, ABC):
 	_NETWORK_VERSION = 171022
-	_EXPECTED_PEER_TYPE = WorldClientMsg.header()
+	_EXPECTED_PEER_TYPE = MessageType.WorldClient.value
+
+	@property
+	@abstractmethod
+	def _PEER_TYPE(self) -> int:
+		pass
 
 	def __init__(self, address: Address, max_connections: int, db_conn: Connection):
 		super().__init__(address, max_connections)
@@ -103,7 +108,7 @@ class Server(_Server, ABC):
 		header = stream.read(c_ushort)
 		subheader = stream.read(c_ubyte)
 		stream.skip_read(4)
-		if header == WorldServerMsg.header() and subheader == WorldServerMsg.Routing:
+		if header == MessageType.WorldServer.value and subheader == WorldServerMsg.Routing:
 			stream.skip_read(4)
 			header = stream.read(c_ushort)
 			subheader = stream.read(c_ubyte)
@@ -115,20 +120,16 @@ class Server(_Server, ABC):
 				handler(stream, address)
 
 	def register_handler(self, packet_id: LUMessage, handler: Callable[[ReadStream, Address], None]) -> None:
-		header = packet_id.header()
+		header = ENUM_TO_MSG[type(packet_id)]
 		subheader = packet_id
 		self._packet_handlers.setdefault((header, subheader), []).append(handler)
-
-	@abstractmethod
-	def peer_type(self) -> int:
-		pass
 
 	def _send_handshake(self, address: Address) -> None:
 		out = WriteStream()
 		out.write_header(GeneralMsg.Handshake)
 		out.write(c_uint(self._NETWORK_VERSION))
 		out.write(bytes(4))
-		out.write(c_uint(self.peer_type()))
+		out.write(c_uint(self._PEER_TYPE))
 		self.send(out, address)
 
 	def _on_handshake(self, handshake: ReadStream, address: Address) -> None:

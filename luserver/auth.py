@@ -2,9 +2,9 @@ from typing import Dict, TYPE_CHECKING
 
 try:
 	import bcrypt
-	from passlib.hash import bcrypt as encryption
+	from passlib.hash import bcrypt as hash
 except ImportError:
-	from passlib.hash import pbkdf2_sha256 as encryption
+	from passlib.hash import pbkdf2_sha256 as hash
 
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class Account(Persistent):
 	def __init__(self, username: str, password: str):
 		self.username = username
-		self.password = encryption.encrypt(password)
+		self.password = hash.hash(password)
 		self.password_state = PasswordState.Set
 		self.session_key = ""
 		#self.address = address
@@ -28,19 +28,20 @@ class Account(Persistent):
 		return self.characters[self.selected_char_name]
 
 	def set_password(self, password: str) -> None:
-		self.password = encryption.encrypt(password)
+		self.password = hash.hash(password)
 
 import asyncio
 import datetime
 import logging
 import random
+import secrets
 import time
 
 from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from . import commonserver
 from .bitstream import WriteStream
-from .messages import AuthServerMsg, WorldClientMsg
+from .messages import AuthServerMsg, MessageType, WorldClientMsg
 
 log = logging.getLogger(__name__)
 
@@ -62,15 +63,20 @@ class _LoginReturnCode:
 	PlaySchedule = 13
 	AccountNotActivated = 14
 
+class _LoginMessage:
+	AccountBanned = "You have been banned until %s. If you believe this was in error, contact the server operator."
+	PasswordIsTemp = "Your password is one-use-only.\nSign in again to set the used password as your permanent password."
+	PasswordSet = "Password has been set."
+	SameTempPassword = "Password must not be the same as temporary password"
+
 class AuthServer(commonserver.Server):
+	_PEER_TYPE = MessageType.AuthServer.value
+
 	def __init__(self, host: str, max_connections: int, db_conn):
 		super().__init__((host, 1001), max_connections, db_conn)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
 		self.register_handler(AuthServerMsg.LoginRequest, lambda request, address: asyncio.ensure_future(self._on_login_request(request, address)))
-
-	def peer_type(self) -> int:
-		return AuthServerMsg.header()
 
 	async def _on_login_request(self, request: ReadStream, address: Address) -> None:
 		return_code = _LoginReturnCode.InsufficientAccountPermissions # needed to display error message
@@ -86,29 +92,30 @@ class AuthServer(commonserver.Server):
 			password = request.read(str, allocated_length=41)
 
 			if username not in self.db.accounts:
-				log.info("Login attempt with username %s and invalid password", username)
+				log.info("Login attempt with invalid username %s", username)
 				raise LoginError(_LoginReturnCode.InvalidUsernameOrPassword)
 
 			account = self.db.accounts[username]
 
 			if account.gm_level != GMLevel.Admin and account.banned_until > time.time():
-				raise LoginError("You have been banned until %s. If you believe this was in error, contact the server operator." % datetime.datetime.fromtimestamp(account.banned_until))
+				raise LoginError(_LoginMessage.AccountBanned % datetime.datetime.fromtimestamp(account.banned_until))
 
 			if account.password_state == PasswordState.AcceptNew:
-				if encryption.verify(password, account.password):
-					raise LoginError("Password must not be the same as temporary password")
-				account.password = encryption.encrypt(password)
+				if hash.verify(password, account.password):
+					raise LoginError(_LoginMessage.SameTempPassword)
+				account.password = hash.hash(password)
 				account.password_state = PasswordState.Set
 				self.conn.transaction_manager.commit()
-				raise LoginError("Password has been set.")
+				raise LoginError(_LoginMessage.PasswordSet)
 
-			if not encryption.verify(password, account.password):
+			if not hash.verify(password, account.password):
+				log.info("Login attempt with username %s and invalid password", username)
 				raise LoginError(_LoginReturnCode.InvalidUsernameOrPassword)
 
 			if account.password_state == PasswordState.Temp:
 				account.password_state = PasswordState.AcceptNew
 				self.conn.transaction_manager.commit()
-				raise LoginError("Your password is one-use-only.\nSign in again to set the used password as your permanent password.")
+				raise LoginError(_LoginMessage.PasswordIsTemp)
 
 			"""
 			if account.address is not None and account.address != address:
@@ -121,7 +128,7 @@ class AuthServer(commonserver.Server):
 				self.send(duplicate_notify, address)
 			"""
 
-			session_key = hex(random.getrandbits(128))[2:]
+			session_key = secrets.token_hex(16)
 			#account.address = address
 			account.session_key = session_key
 			self.conn.transaction_manager.commit()

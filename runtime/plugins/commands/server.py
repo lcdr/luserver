@@ -14,7 +14,7 @@ from luserver.bitstream import WriteStream
 from luserver.game_object import Player
 from luserver.ldf import LDF, LDFDataType
 from luserver.messages import WorldClientMsg
-from luserver.world import server
+from luserver.world import Event, server
 from luserver.components.physics import AABB, CollisionSphere, PrimitiveModelType
 from luserver.interfaces.plugin import ChatCommand, normal_bool
 from luserver.math.quaternion import Quaternion
@@ -125,7 +125,7 @@ class PhysicsDebug(ChatCommand):
 	def __init__(self):
 		super().__init__("physicsdebug")
 		self.debug_markers = []
-		server.add_handler("proximity_radius", self.on_proximity_radius)
+		server.add_handler(Event.ProximityRadius, self.on_proximity_radius)
 
 	def run(self, args, sender):
 		if self.debug_markers:
@@ -210,7 +210,7 @@ class Send(ChatCommand):
 		if not args.broadcast and args.address is None:
 			args.address = sender.char.address
 
-		path = os.path.normpath(os.path.join(__file__, "..", "..", "..", "runtime", "packets", args.directory))
+		path = os.path.normpath(os.path.join(__file__, "..", "..", "..", "packets", args.directory))
 		files = os.listdir(path)
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
 		for file in files:

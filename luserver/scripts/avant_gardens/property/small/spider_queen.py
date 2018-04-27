@@ -16,7 +16,7 @@ class ScriptComponent(script.ScriptComponent):
 		if (self.object.stats.life > 222 and self.object.stats.life - damage <= 222) or (
 		    self.object.stats.life > 111 and self.object.stats.life - damage <= 111):
 			self.spiderlings_defeated = 0
-			self.object.ai._disable()
+			self.object.ai.disable()
 			self.object.physics.rotation.update(Quaternion.identity)
 			self.object.physics.attr_changed("rotation")
 			self.object.render.play_animation("withdraw")

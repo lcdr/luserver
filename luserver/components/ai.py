@@ -39,7 +39,10 @@ class BaseCombatAIComponent(Component):
 	def on_complete_rebuild(self, player: Player) -> None:
 		self._enabled = True
 
-	def _disable(self) -> None:
+	def enable(self):
+		self._enabled = True
+
+	def disable(self) -> None:
 		self._enabled = False
 		if self.update_handle is not None:
 			self.object.cancel_callback(self.update_handle)
