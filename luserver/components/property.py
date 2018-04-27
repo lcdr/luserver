@@ -198,7 +198,7 @@ class PropertyManagementComponent(Component):
 	def download_property_data(self, data:PropertyData=EPD) -> None:
 		pass
 
-	def query_property_data(self, player: Player) -> None:
+	def on_query_property_data(self, player: Player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()
@@ -236,7 +236,7 @@ class PropertyVendorComponent(Component):
 	def download_property_data(self, data:PropertyData=EPD) -> None:
 		pass
 
-	def query_property_data(self, player: Player) -> None:
+	def on_query_property_data(self, player: Player) -> None:
 		if server.world_id[0] not in server.db.property_template:
 			return
 		property = PropertyData()

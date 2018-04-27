@@ -5,7 +5,7 @@ from typing import Optional
 
 from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, WriteStream
 from ..game_object import Config, broadcast, EBY, GameObject, PhysicsObject, Player
-from ..world import server
+from ..world import Event, server
 from ..math.quaternion import Quaternion
 from ..math.vector import Vector3
 from .component import Component
@@ -36,7 +36,7 @@ class PhysicsComponent(Component):
 		for comp in self.object.components:
 			if hasattr(comp, "on_enter") or hasattr(comp, "on_exit"):
 				server.general.tracked_objects[self.object] = CollisionSphere(self.object, radius)
-				server.handle("proximity_radius", self)
+				server.handle(Event.ProximityRadius, self)
 				break
 
 	# not really related to physics, but depends on physics and hasn't been conclusively associated with a component

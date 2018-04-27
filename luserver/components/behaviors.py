@@ -367,7 +367,7 @@ class SpawnObject(Behavior):
 
 	def _deserialize(self, bitstream: ReadStream, caster: GameObject, target: GameObject, level: int) -> None:
 		position = caster.physics.position + caster.physics.rotation.rotate(Vector3.forward)*self.distance
-		return server.spawn_object(self.lot, {"parent": self.object, "position": position})
+		return server.spawn_object(self.lot, {"parent": caster, "position": position})
 
 SpawnQuickbuild = SpawnObject # works the same
 

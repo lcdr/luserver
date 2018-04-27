@@ -240,8 +240,9 @@ class CharHandling:
 		char_id = request.read(c_int64)
 
 		characters = server.accounts[address].characters
-		selected_char = [i for i in characters.values() if i.object_id == char_id][0]
-		server.accounts[address].selected_char_name = selected_char.name
+		selected_char_name = [key for key, value in characters.items() if value.object_id == char_id][0]
+		server.accounts[address].selected_char_name = selected_char_name
+		selected_char = server.accounts[address].selected_char()
 		selected_char.char.address = address
 		selected_char.char.online = True
 

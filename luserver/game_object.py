@@ -125,7 +125,7 @@ class FlagObject:
 
 class GameObject(Replica, FlagObject):
 	def __init__(self, lot: int, object_id: ObjectID, set_vars: Config=None):
-		super().__init__()
+		FlagObject.__init__(self)
 		if set_vars is None:
 			set_vars = {}
 		self._handlers: Dict[str, List[Callable[..., None]]] = {}
@@ -188,7 +188,7 @@ class GameObject(Replica, FlagObject):
 					comp_ids.remove(comp)
 			comp_ids.append((40, None))
 
-		for component_type, component_id in sorted(comp_ids, key=lambda x: component_order.index(x[0]) if x[0] in component_order else 99999):
+		for component_type, component_id in sorted(comp_ids, key=lambda x: _component_order.index(x[0]) if x[0] in _component_order else 99999):
 			if component_type == 5:
 				if "custom_script" in set_vars and set_vars["custom_script"] is not None:
 					try:
@@ -210,8 +210,8 @@ class GameObject(Replica, FlagObject):
 						comp = ScriptComponent,
 				else:
 					comp = ScriptComponent,
-			elif component_type in component:
-				comp = component[component_type]
+			elif component_type in _component:
+				comp = _component[component_type]
 			else:
 				#print("Component type %i has no class!" % component_type)
 				continue
@@ -323,23 +323,12 @@ class GameObject(Replica, FlagObject):
 
 	def handle(self, event_name: str, *args: Any, silent=False, **kwargs: Any) -> None:
 		"""
-		Calls handlers for an event. See handlers() for the order of handlers.
+		Calls handlers for an event.
 		If a handler returns True, it's assumed that the handler has sufficiently handled the event and no further handlers will be called.
 		"""
 		for handler in self.handlers(event_name, silent):
 			if handler(*args, **kwargs):
 				break
-
-	def send_game_message(self, handler_name: str, *args: Any, **kwargs: Any) -> None:
-		"""For game messages with multiple handlers: call all the handlers but only send one message over the network."""
-		handlers = self.handlers(handler_name)
-		if not handlers:
-			return
-
-		send_handler = handlers[0]
-		send_handler(*args, **kwargs)
-		for handler in handlers[1:]:
-			handler.__wrapped__(handler.__self__, *args, **kwargs)
 
 	def call_later(self, delay: float, callback: Callable[..., None], *args: Any) -> CallbackID:
 		"""
@@ -658,44 +647,44 @@ from .components.switch import SwitchComponent
 from .components.trigger import TriggerComponent
 from .components.vendor import VendorComponent
 
-component: Dict[int, Tuple[Type[Component], ...]] = OrderedDict()
-component[108] = Comp108Component,
-component[1] = ControllablePhysicsComponent,
-component[3] = SimplePhysicsComponent,
-component[20] = RigidBodyPhantomPhysicsComponent,
-component[30] = VehiclePhysicsComponent,
-component[40] = PhantomPhysicsComponent,
-component[7] = DestructibleComponent, StatsSubcomponent
-component[23] = StatsSubcomponent, CollectibleComponent
-component[4] = CharacterComponent,
-component[12] = ModularBuildComponent,
-component[17] = InventoryComponent,
-component[26] = PetComponent,
-component[5] = ScriptComponent,
-component[71] = RacingControlComponent,
-component[9] = SkillComponent,
-component[11] = ItemComponent,
-component[60] = BaseCombatAIComponent,
-component[48] = StatsSubcomponent, RebuildComponent
-component[25] = MovingPlatformComponent,
+_component: Dict[int, Tuple[Type[Component], ...]] = OrderedDict()
+_component[108] = Comp108Component,
+_component[1] = ControllablePhysicsComponent,
+_component[3] = SimplePhysicsComponent,
+_component[20] = RigidBodyPhantomPhysicsComponent,
+_component[30] = VehiclePhysicsComponent,
+_component[40] = PhantomPhysicsComponent,
+_component[7] = DestructibleComponent, StatsSubcomponent
+_component[23] = StatsSubcomponent, CollectibleComponent
+_component[4] = CharacterComponent,
+_component[12] = ModularBuildComponent,
+_component[17] = InventoryComponent,
+_component[26] = PetComponent,
+_component[5] = ScriptComponent,
+_component[71] = RacingControlComponent,
+_component[9] = SkillComponent,
+_component[11] = ItemComponent,
+_component[60] = BaseCombatAIComponent,
+_component[48] = StatsSubcomponent, RebuildComponent
+_component[25] = MovingPlatformComponent,
 
-component[73] = MissionNPCComponent, # belongs to the other nonserialized components below but is moved up to have higher priority than VendorComponent
+_component[73] = MissionNPCComponent, # belongs to the other nonserialized components below but is moved up to have higher priority than VendorComponent
 
-component[49] = SwitchComponent,
-component[16] = VendorComponent,
-component[6] = BouncerComponent,
-component[39] = ScriptedActivityComponent,
-component[75] = ExhibitComponent,
-component[42] = ModelComponent,
-component[2] = RenderComponent,
-component[107] = Comp107Component,
+_component[49] = SwitchComponent,
+_component[16] = VendorComponent,
+_component[6] = BouncerComponent,
+_component[39] = ScriptedActivityComponent,
+_component[75] = ExhibitComponent,
+_component[42] = ModelComponent,
+_component[2] = RenderComponent,
+_component[107] = Comp107Component,
 
-component[10] = SpawnerComponent,
-component[43] = PropertyEntranceComponent,
-component[45] = PropertyManagementComponent,
-component[50] = MinigameComponent,
-component[65] = PropertyVendorComponent,
-component[67] = LaunchpadComponent,
-component[104] = RailActivatorComponent,
+_component[10] = SpawnerComponent,
+_component[43] = PropertyEntranceComponent,
+_component[45] = PropertyManagementComponent,
+_component[50] = MinigameComponent,
+_component[65] = PropertyVendorComponent,
+_component[67] = LaunchpadComponent,
+_component[104] = RailActivatorComponent,
 
-component_order = list(component.keys())
+_component_order = list(_component.keys())

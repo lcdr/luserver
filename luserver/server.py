@@ -6,8 +6,8 @@ import time
 from typing import cast, Iterable, Set, SupportsBytes, Union
 
 import pyraknet.server
-from pyraknet.messages import Address
-from .messages import msg_enum, GameMessage, WorldClientMsg, WorldServerMsg
+from pyraknet.messages import Address, Message
+from .messages import MSG_TO_ENUM, GameMessage, MessageType, WorldClientMsg, WorldServerMsg
 
 log = logging.getLogger(__name__)
 
@@ -29,17 +29,17 @@ class Server:
 		from .modules.mail import MailID
 		header = data[1]
 		subheader = data[3]
-		if header == WorldServerMsg.header() and subheader == WorldServerMsg.Routing:
+		if header == MessageType.WorldServer.value and subheader == WorldServerMsg.Routing:
 			header = data[13]
 			subheader = data[15]
-		if (header, subheader) == (WorldServerMsg.header(), WorldServerMsg.GameMessage) or (header, subheader) == (WorldClientMsg.header(), WorldClientMsg.GameMessage):
+		if (header, subheader) == (MessageType.WorldServer.value, WorldServerMsg.GameMessage) or (header, subheader) == (MessageType.WorldClient.value, WorldClientMsg.GameMessage):
 			message_id = cast(int, c_ushort.unpack(data[16:18])[0])
 			try:
 				message_name = GameMessage(message_id).name
 			except ValueError:
 				message_name = str(message_id)
 			return "GameMessage/" + message_name
-		if (header, subheader) == (WorldServerMsg.header(), WorldServerMsg.Mail) or (header, subheader) == (WorldClientMsg.header(), WorldClientMsg.Mail):
+		if (header, subheader) == (MessageType.WorldServer.value, WorldServerMsg.Mail) or (header, subheader) == (MessageType.WorldClient.value, WorldClientMsg.Mail):
 			mail_id = cast(int, c_uint.unpack(data[8:12])[0])
 			try:
 				packetname = MailID(mail_id).name
@@ -47,9 +47,9 @@ class Server:
 				packetname = str(mail_id)
 			return "Mail/" + packetname
 		try:
-			return msg_enum[header](subheader).name
+			return MSG_TO_ENUM[header](subheader).name
 		except ValueError:
-			return msg_enum[header].__name__ + "/%.2x" % subheader
+			return MSG_TO_ENUM[header].__name__ + "/%.2x" % subheader
 
 	def _log_packet(self, data: bytes, received: bool) -> None:
 		packetname = self._packetname(data)
@@ -67,5 +67,6 @@ class Server:
 
 	def send(self, data: Union[bytes, SupportsBytes], recipients: Union[Address, Iterable[Address]]=None, broadcast: bool=False) -> None:
 		data = bytes(data)
-		self._log_packet(data, received=False)
+		if data[0] == Message.UserPacket:
+			self._log_packet(data, received=False)
 		self._server.send(data, recipients, broadcast)

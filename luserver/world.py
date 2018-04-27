@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import auto, Enum
 
 # instance singleton
 # can't just use a variable because it can't be updated when using from world import server
@@ -14,6 +14,10 @@ class _Instance:
 		delattr(_server, name)
 
 server: "WorldServer" = _Instance()
+
+class Event(Enum):
+	ProximityRadius = auto()
+	Spawn = auto()
 
 class World(Enum):
 	VentureExplorer = 1000
@@ -75,14 +79,14 @@ import ZODB
 from persistent.mapping import PersistentMapping
 from ZODB.Connection import Connection
 
+import pyraknet.server
 from pyraknet.bitstream import ReadStream
 from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
-from pyraknet.server import Event
 from .auth import Account
 from .commonserver import DisconnectReason, Server, WorldData
 from .game_object import CallbackID, Config, GameObject, ObjectID, Player, ScriptObject, SpawnerObject
-from .messages import WorldServerMsg
+from .messages import MessageType, WorldServerMsg
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
 from .modules.char import CharHandling
@@ -110,14 +114,16 @@ class MultiInstanceAccess(ACM):
 		server.commit()
 
 class WorldServer(Server):
+	_PEER_TYPE = MessageType.WorldServer.value
+
 	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection):
 		super().__init__(address, max_connections, db_conn)
 		self.replica_manager = ReplicaManager(self._server)
 		global _server
 		_server = self
 		self.external_address = external_host, address[1]
-		self._server.add_handler(Event.NetworkInit, self._on_network_init)
-		self._server.add_handler(Event.Disconnect, self._on_disconnect_or_connection_lost)
+		self._server.add_handler(pyraknet.server.Event.NetworkInit, self._on_network_init)
+		self._server.add_handler(pyraknet.server.Event.Disconnect, self._on_disconnect_or_connection_lost)
 		self._server.not_console_logged_packets.add("ReplicaManagerSerialize")
 		self.not_console_logged_packets.add("PositionUpdate")
 		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
@@ -125,7 +131,7 @@ class WorldServer(Server):
 		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
 		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
 		self.multi = MultiInstanceAccess()
-		self._handlers: Dict[str, List[Callable[..., None]]] = {}
+		self._handlers: Dict[Event, List[Callable[..., None]]] = {}
 		self.char = CharHandling()
 		self.chat = ChatHandling()
 		self.general = GeneralHandling()
@@ -148,9 +154,6 @@ class WorldServer(Server):
 		self.register_handler(WorldServerMsg.SessionInfo, self._on_session_info)
 		self._load_plugins()
 		self.set_world_id(world_id)
-
-	def peer_type(self) -> int:
-		return WorldServerMsg.header()
 
 	def _on_network_init(self, address: Address) -> None:
 		self.external_address = self.external_address[0], address[1] # update port (for OS-chosen port)
@@ -196,26 +199,18 @@ class WorldServer(Server):
 					lot, position, rotation = spawn_data
 					self.spawn_model(spawner_id, lot, position, rotation)
 
-	EVENT_NAMES = "proximity_radius", "spawn"
+	def add_handler(self, event: Event, handler: Callable[..., None]) -> None:
+		self._handlers.setdefault(event, []).append(handler)
 
-	def add_handler(self, event_name: str, handler: Callable[..., None]) -> None:
-		if event_name not in WorldServer.EVENT_NAMES:
-			raise ValueError("Invalid event name %s", event_name)
-		self._handlers.setdefault(event_name, []).append(handler)
-
-	def remove_handler(self, event_name: str, handler: Callable[..., None]) -> None:
-		if event_name not in WorldServer.EVENT_NAMES:
-			raise ValueError("Invalid event name %s", event_name)
-		if event_name not in self._handlers or handler not in self._handlers[event_name]:
+	def remove_handler(self, event: Event, handler: Callable[..., None]) -> None:
+		if event not in self._handlers or handler not in self._handlers[event]:
 			raise RuntimeError("handler not found")
-		self._handlers[event_name].remove(handler)
+		self._handlers[event].remove(handler)
 
-	def handle(self, event_name: str, *args: Any) -> None:
-		if event_name not in WorldServer.EVENT_NAMES:
-			raise ValueError("Invalid event name %s", event_name)
-		if event_name not in self._handlers:
+	def handle(self, event: Event, *args: Any) -> None:
+		if event not in self._handlers:
 			return
-		for handler in self._handlers[event_name]:
+		for handler in self._handlers[event]:
 			handler(*args)
 
 	def _load_plugins(self) -> None:
@@ -249,20 +244,21 @@ class WorldServer(Server):
 		username = session_info.read(str, allocated_length=33)
 		session_key = session_info.read(str, allocated_length=33)
 
-		try:
-			if self.db.accounts[username].session_key != session_key:
-				log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username].session_key, session_key)
-				self.close_connection(address, reason=DisconnectReason.InvalidSessionKey)
-		except KeyError:
+		if username not in self.db.accounts:
 			log.error("User %s not found in database", username)
 			self.close_connection(address)
-		else:
-			account = self.db.accounts[username]
-			#account.address = address
-			#self.conn.transaction_manager.commit()
-			self.accounts[address] = account
+			return
+		if self.db.accounts[username].session_key != session_key:
+			log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username].session_key, session_key)
+			self.close_connection(address, reason=DisconnectReason.InvalidSessionKey)
+			return
 
-			self.general.on_validated(address)
+		account = self.db.accounts[username]
+		#account.address = address
+		#self.conn.transaction_manager.commit()
+		self.accounts[address] = account
+
+		self.general.on_validated(address)
 
 	def new_spawned_id(self) -> ObjectID:
 		self.current_spawned_id += 1
@@ -316,7 +312,7 @@ class WorldServer(Server):
 		self.game_objects[obj.object_id] = obj
 		self.replica_manager.construct(obj)
 		obj.handle("startup", silent=True)
-		self.handle("spawn", obj)
+		self.handle(Event.Spawn, obj)
 		return obj
 
 	def get_object(self, object_id: ObjectID) -> GameObject:
