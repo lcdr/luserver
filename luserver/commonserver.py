@@ -21,19 +21,18 @@ import logging
 import os
 import subprocess
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from ZODB.Connection import Connection
 
 from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
-from pyraknet.server import Event
 from .auth import Account
 from .bitstream import WriteStream
 if TYPE_CHECKING:
 	from .game_object import ObjectID, GameObject
 	from .components.behaviors import Behavior
-from .messages import ENUM_TO_MSG, GeneralMsg, LUMessage, MessageType, WorldServerMsg
+from .messages import GeneralMsg, MessageType, WorldServerMsg
 from .server import Server as _Server
 from .math.vector import Vector3
 from .math.quaternion import Quaternion
@@ -97,32 +96,7 @@ class Server(_Server, ABC):
 		super().__init__(address, max_connections)
 		self.conn = db_conn
 		self.db: ServerDB = self.conn.root
-		self._packet_handlers: Dict[Tuple[int, int], List[Callable[..., None]]] = {}
-		self._server.add_handler(Event.UserPacket, self._on_lu_packet)
 		self.register_handler(GeneralMsg.Handshake, self._on_handshake)
-
-	def _on_lu_packet(self, data: bytes, address: Address) -> None:
-		super()._on_lu_packet(data, address)
-		stream = ReadStream(data, unlocked=True)
-		stream.skip_read(1)
-		header = stream.read(c_ushort)
-		subheader = stream.read(c_ubyte)
-		stream.skip_read(4)
-		if header == MessageType.WorldServer.value and subheader == WorldServerMsg.Routing:
-			stream.skip_read(4)
-			header = stream.read(c_ushort)
-			subheader = stream.read(c_ubyte)
-			stream.skip_read(4)
-		read_offset = stream.read_offset
-		if (header, subheader) in self._packet_handlers:
-			for handler in self._packet_handlers[(header, subheader)]:
-				stream.read_offset = read_offset
-				handler(stream, address)
-
-	def register_handler(self, packet_id: LUMessage, handler: Callable[[ReadStream, Address], None]) -> None:
-		header = ENUM_TO_MSG[type(packet_id)]
-		subheader = packet_id
-		self._packet_handlers.setdefault((header, subheader), []).append(handler)
 
 	def _send_handshake(self, address: Address) -> None:
 		out = WriteStream()

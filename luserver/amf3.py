@@ -24,8 +24,8 @@ class _AMF3Reader:
 		value = 0
 		for i in range(4):
 			byte = self.data.read(c_ubyte)
-			if i < 4:
-				value = (value << 7) | byte & 0x7f
+			if i < 3:
+				value = (value << 7) | (byte & 0x7f)
 				if not byte & 0x80:
 					break
 			else:
@@ -89,20 +89,20 @@ class _AMF3Writer:
 		self.write_type(data)
 
 	def write_u29(self, value: int) -> None:
-		if value < 0x80:
-			self.out.write(c_ubyte(value))
-		elif value < 0x4000:
-			self.out.write(c_ubyte((value >> 7) | 0x80))
-			self.out.write(c_ubyte(value & 0x7f))
-		elif value < 0x200000:
-			self.out.write(c_ubyte((value >> 14) | 0x80))
-			self.out.write(c_ubyte((value >> 7) | 0x80))
-			self.out.write(c_ubyte(value & 0x7f))
-		elif value < 0x20000000:
-			self.out.write(c_ubyte((value >> 22) | 0x80))
-			self.out.write(c_ubyte((value >> 15) | 0x80))
-			self.out.write(c_ubyte((value >> 7) | 0x80))
-			self.out.write(c_ubyte(value & 0xff))
+		if value > 0x1fffffff:
+			raise ValueError("%i too large for u29" % value)
+		if value < 0:
+			raise ValueError("%i is not unsigned" % value)
+		for i in range(4):
+			if i < 3:
+				byte = value & 0x7f
+				bit = value > 0x7f
+				self.out.write(c_ubyte((bit << 7) | byte))
+				value >>= 7
+				if not bit:
+					break
+			else:
+				self.out.write(c_ubyte(value))
 
 	def write_type(self, value: _AMF3Type) -> None:
 		if value is None:
@@ -128,7 +128,7 @@ class _AMF3Writer:
 		self.write_u29((len(encoded) << 1) | 0x01)
 		self.out.write(encoded)
 
-	def write_array(self, array: Dict[Union[str, int], _AMF3Type]) -> None:
+	def write_array(self, array: Dict[str, _AMF3Type]) -> None:
 		self.write_u29(0x01) # literal, 0 dense items
 		for key, value in array.items():
 			assert isinstance(key, str)
@@ -137,7 +137,7 @@ class _AMF3Writer:
 		self.write_str("")
 
 class AMF3(Serializable):
-	def __init__(self, data: dict):
+	def __init__(self, data: _AMF3Type):
 		self.data = data
 
 	def __str__(self) -> str:

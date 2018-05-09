@@ -225,7 +225,7 @@ class WorldServer(Server):
 
 	def spawn_model(self, spawner_id: ObjectID, lot: int, position: Vector3, rotation: Quaternion) -> None:
 		spawned_vars = {"position": position, "rotation": rotation}
-		spawner_vars = {"spawntemplate": lot, "spawner_waypoints": spawned_vars}
+		spawner_vars = {"spawntemplate": lot, "spawner_waypoints": (spawned_vars,)}
 		spawner = cast(SpawnerObject, GameObject(176, spawner_id, set_vars=spawner_vars))
 		self.models.append((spawner, spawner.spawner.spawn()))
 
