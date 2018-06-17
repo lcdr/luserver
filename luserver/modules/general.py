@@ -108,6 +108,8 @@ class GeneralHandling:
 		for emote_id in player.char.unlocked_emotes:
 			ET.SubElement(unlocked_emotes, "e", id=str(emote_id))
 		inv = ET.SubElement(root, "inv")
+		if player.inventory.consumable_slot_lot != -1:
+			inv.set("csl", str(player.inventory.consumable_slot_lot))
 		bag = ET.SubElement(inv, "bag")
 		ET.SubElement(bag, "b", t="0", m=str(len(player.inventory.items)))
 		ET.SubElement(bag, "b", t="5", m=str(len(player.inventory.models)))

@@ -80,6 +80,8 @@ class DestructibleComponent(Component):
 		if isinstance(self.object, Player):
 			if server.world_id[0] % 100 == 0:
 				coins_lost = min(10000, self.object.char.currency//100)
+				if 100 > self.object.char.currency > 0:
+					coins_lost = 1 # seems this is what the client does
 				self.object.char.set_currency(currency=self.object.char.currency - coins_lost, loot_type=8, position=Vector3.zero)
 			self.object.char.dismount()
 
