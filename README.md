@@ -2,7 +2,7 @@
 ## A LEGO Universe server
 ### Created by lcdr
 ### Source repository at https://bitbucket.org/lcdr/luserver/
-### License: GPL v3
+### License: [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html)
 
 ### Installation
 #### Dependencies

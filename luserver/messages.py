@@ -208,6 +208,7 @@ class GameMessage(Enum):
 	ZonePropertyModelEquipped = 1372
 	NotifyRacingClient = 1390
 	RacingPlayerLoaded = 1392
+	SetConsumableItem = 1409
 	UsedInformationPlaque = 1419
 	ActivateBrickMode = 1438
 	ModifyLegoScore = 1459

@@ -137,6 +137,7 @@ class InventoryComponent(Component):
 		self.behaviors: List[Optional[Stack]] = PersistentList([None]*200)
 		self.temp_models: List[Stack] = PersistentList()
 		self.mission_objects: List[Stack] = PersistentList()
+		self.consumable_slot_lot = -1
 
 		if comp_id in server.db.inventory_component:
 			for item_lot, equip in server.db.inventory_component[comp_id]:
@@ -472,6 +473,9 @@ class InventoryComponent(Component):
 				new_item = self.add_item(item.lot, move_stack_count, inventory_type=inventory_type_b, show_flying_loot=show_flying_loot)
 				self.remove_item(inventory_type_a, item, count=move_stack_count)
 				return new_item
+
+	def on_set_consumable_item(self, item_template_id:c_int_=EI) -> None:
+		self.consumable_slot_lot = item_template_id
 
 	def has_item(self, inventory_type: int, lot: int) -> bool:
 		inv = self.inventory_type_to_inventory(inventory_type)

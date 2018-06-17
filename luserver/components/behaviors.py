@@ -68,7 +68,7 @@ class BasicAttack(Behavior):
 			return
 		assert not bitstream.read(c_bit)
 		assert not bitstream.read(c_bit)
-		assert bitstream.read(c_bit)
+		bitstream.read(c_bit) # usually False, but is True when using whirlwind scythe offhand skill (todo: investigate)
 		log.debug(bitstream.read(c_uint))
 		damage = bitstream.read(c_uint)
 		log.debug(damage)
