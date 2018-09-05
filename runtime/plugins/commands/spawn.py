@@ -1,5 +1,6 @@
 from typing import cast
 
+from luserver.auth import GMLevel
 from luserver.game_object import PhysicsObject
 from luserver.world import server
 from luserver.components.physics import PhysicsEffect
@@ -9,6 +10,7 @@ from luserver.math.vector import Vector3
 class DestroySpawned(ChatCommand):
 	def __init__(self):
 		super().__init__("destroyspawned")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("--lot", type=int)
 
 	def run(self, args, sender):
@@ -20,6 +22,7 @@ class DestroySpawned(ChatCommand):
 class Spawn(ChatCommand):
 	def __init__(self):
 		super().__init__("spawn", description="Spawn an object")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--position", nargs=3, type=float)
 		self.command.add_argument("--name", nargs="+")
@@ -41,6 +44,7 @@ class Spawn(ChatCommand):
 class SpawnPhantom(ChatCommand):
 	def __init__(self):
 		super().__init__("spawnphantom")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("--type", choices=("wall", "cube"), default="cube")
 		self.command.add_argument("--effect", choices=("push", "attract", "repulse", "gravity", "friction"), default="push")
 		self.command.add_argument("--amount", type=float, default=500)
