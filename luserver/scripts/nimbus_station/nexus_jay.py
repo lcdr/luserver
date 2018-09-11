@@ -13,7 +13,7 @@ PARADOX_FLAG = 48
 SENTINEL_FLAG = 49
 
 class ScriptComponent(script.ScriptComponent):
-	def respond_to_mission(self, mission_id, player, reward_item):
+	def on_respond_to_mission(self, mission_id, player, reward_item):
 		if mission_id != JOIN_FACTION_MISSION_ID:
 			return
 
