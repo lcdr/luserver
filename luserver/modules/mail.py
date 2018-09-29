@@ -69,7 +69,7 @@ class MailHandling:
 			if attachment_item_count != 0:
 				removed_item = player.inventory.remove_item(InventoryType.Max, object_id=attachment_item_object_id, count=attachment_item_count)
 				object_id = server.new_object_id()
-				attachment = Stack(server.db, object_id, removed_item.lot)
+				attachment = Stack(server.db, object_id, removed_item.lot, attachment_item_count)
 				attachment_cost = (removed_item.base_value * attachment_item_count)//10
 			else:
 				attachment = None
