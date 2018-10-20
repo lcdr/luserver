@@ -372,6 +372,9 @@ class WorldCommand(ChatCommand):
 	def __init__(self):
 		super().__init__("world", description="Go to world")
 		self.command.add_argument("name")
+		self.command.add_argument("--player", type=instance_player)
 
 	def run(self, args, sender):
-		asyncio.ensure_future(sender.char.transfer_to_world((World[args.name].value, 0, 0), respawn_point_name=""))
+		if args.player is None:
+			args.player = sender
+		asyncio.ensure_future(args.player.char.transfer_to_world((World[args.name].value, 0, 0), respawn_point_name=""))
