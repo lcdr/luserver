@@ -1,14 +1,19 @@
+from luserver.auth import GMLevel
 from luserver.components.inventory import InventoryType
-from luserver.interfaces.plugin import ChatCommand
+from luserver.interfaces.plugin import ChatCommand, instance_player
 
 class AddItem(ChatCommand):
 	def __init__(self):
 		super().__init__("additem")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("lot", type=int)
 		self.command.add_argument("--count", type=int, default=1)
+		self.command.add_argument("--player", type=instance_player)
 
 	def run(self, args, sender):
-		sender.inventory.add_item(args.lot, args.count)
+		if args.player is None:
+			args.player = sender
+		args.player.inventory.add_item(args.lot, args.count)
 
 class ExtendInventory(ChatCommand):
 	def __init__(self):
