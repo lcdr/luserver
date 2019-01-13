@@ -60,6 +60,7 @@ class Everlasting(ChatCommand):
 class Faction(ChatCommand):
 	def __init__(self):
 		super().__init__("faction")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("faction", type=int)
 
 	def run(self, args, sender):
