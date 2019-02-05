@@ -48,10 +48,8 @@ class CustomHelpFormatter(argparse.HelpFormatter):
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
-	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, add_help=False, **kwargs):
+	def __init__(self, *args, usage=argparse.SUPPRESS, formatter_class=CustomHelpFormatter, **kwargs):
 		super().__init__(*args, usage=usage, formatter_class=formatter_class, add_help=False, **kwargs)
-		if add_help:
-			self.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
 
 	def _print_message(self, message, *args, **kwargs):
 		server.chat.sys_msg_sender(message)
@@ -70,7 +68,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
 		"""Modified to raise original LU error message."""
 		if action.choices is not None and value not in action.choices:
 			if type(action) == argparse._SubParsersAction:
-				raise argparse.ArgumentError(action, "Invalid command \"%s\". Type /--help for a list of commands." % value)
+				raise argparse.ArgumentError(action, "Invalid command \"%s\". Type /help for a list of commands." % value)
 			else:
 				super()._check_value(action, value)
 
