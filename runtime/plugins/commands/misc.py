@@ -139,9 +139,16 @@ class Gravity(ChatCommand):
 class Help(ChatCommand):
 	def __init__(self):
 		super().__init__("help")
+		self.command.set_defaults(perm=GMLevel.Nothing)
 
 	def run(self, args, sender):
-		server.chat.sys_msg_sender("Please use -h / --help for help.")
+		server.chat.sys_msg_sender("Available commands:")
+		available_commands = []
+		for name, parser in server.chat.commands._name_parser_map.items():
+			if sender.char.account.gm_level >= parser.get_default("perm"):
+				available_commands.append(name)
+		available_commands.sort()
+		server.chat.sys_msg_sender("\n".join(available_commands))
 
 class HighStats(ChatCommand):
 	def __init__(self):
