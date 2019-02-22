@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_uint
+from bitstream import c_uint
 from ...game_object import broadcast, c_int, c_uint64, E, EB, EI, EO, EV, GameObject, OBJ_NONE, Sequence, single
 from ...game_object import c_uint as c_uint_
 from ...math.vector import Vector3

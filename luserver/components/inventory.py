@@ -46,7 +46,7 @@ from typing import List, Optional, Tuple
 from persistent import Persistent
 from persistent.list import PersistentList
 
-from pyraknet.bitstream import c_bit, c_int, c_int64, c_uint, c_ushort, ReadStream, Serializable, WriteStream
+from bitstream import c_bit, c_int, c_int64, c_uint, c_ushort, ReadStream, Serializable, WriteStream
 from ..commonserver import ServerDB
 from ..game_object import broadcast, Config, EI, EL, EV, GameObject, ObjectID, single
 from ..game_object import c_int as c_int_

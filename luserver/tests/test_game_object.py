@@ -1,7 +1,7 @@
 from enum import Enum
 from unittest.mock import Mock, patch
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_uint, c_ushort, ReadStream
+from bitstream import c_bit, c_float, c_int, c_int64, c_uint, c_ushort, ReadStream
 from luserver.tests.test_world import SessionWorldTest
 from luserver.bitstream import WriteStream
 from luserver.messages import WorldClientMsg

@@ -1,6 +1,6 @@
 import logging
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
+from bitstream import c_bit, c_float, c_int, c_uint, WriteStream
 from ..game_object import broadcast, Config, EF, ES, EO, GameObject, OBJ_NONE, Player
 from ..game_object import c_uint as c_uint_
 from .component import Component

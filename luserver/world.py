@@ -72,7 +72,8 @@ import importlib.util
 import logging
 import os.path
 from contextlib import AbstractContextManager as ACM
-from typing import Any, Callable, cast, Dict, List, Tuple
+from ssl import SSLContext
+from typing import Any, Callable, cast, Dict, List, Optional, Tuple
 
 import BTrees
 import ZODB
@@ -80,9 +81,10 @@ from persistent.mapping import PersistentMapping
 from ZODB.Connection import Connection
 
 import pyraknet.server
-from pyraknet.bitstream import ReadStream
+from bitstream import ReadStream
 from pyraknet.messages import Address
 from pyraknet.replicamanager import ReplicaManager
+from pyraknet.transports.abc import ConnectionEvent, ConnectionType, TransportEvent
 from .auth import Account
 from .commonserver import DisconnectReason, Server, WorldData
 from .game_object import CallbackID, Config, GameObject, ObjectID, Player, ScriptObject, SpawnerObject
@@ -116,20 +118,15 @@ class MultiInstanceAccess(ACM):
 class WorldServer(Server):
 	_PEER_TYPE = MessageType.WorldServer.value
 
-	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection):
-		super().__init__(address, max_connections, db_conn)
-		self.replica_manager = ReplicaManager(self._server)
+	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection, ssl: Optional[SSLContext]):
+		excluded_packets = {"PositionUpdate", "GameMessage/DropClientLoot", "GameMessage/PickupItem", "GameMessage/ReadyForUpdates", "GameMessage/ScriptNetworkVarUpdate"}
+		super().__init__(address, max_connections, db_conn, ssl, excluded_packets)
+		self.replica_manager = ReplicaManager(self._dispatcher)
 		global _server
 		_server = self
-		self.external_address = external_host, address[1]
-		self._server.add_handler(pyraknet.server.Event.NetworkInit, self._on_network_init)
-		self._server.add_handler(pyraknet.server.Event.Disconnect, self._on_disconnect_or_connection_lost)
-		self._server.not_console_logged_packets.add("ReplicaManagerSerialize")
-		self.not_console_logged_packets.add("PositionUpdate")
-		self.not_console_logged_packets.add("GameMessage/DropClientLoot")
-		self.not_console_logged_packets.add("GameMessage/PickupItem")
-		self.not_console_logged_packets.add("GameMessage/ReadyForUpdates")
-		self.not_console_logged_packets.add("GameMessage/ScriptNetworkVarUpdate")
+		self.external_host = external_host
+		self._dispatcher.add_listener(TransportEvent.NetworkInit, self._on_network_init)
+		self._dispatcher.add_listener(ConnectionEvent.Close, self._on_conn_close)
 		self.multi = MultiInstanceAccess()
 		self._handlers: Dict[Event, List[Callable[..., None]]] = {}
 		self.char = CharHandling()
@@ -145,20 +142,24 @@ class WorldServer(Server):
 		self.current_spawned_id = BITS_SPAWNED
 		self.world_data: WorldData = None
 		self.game_objects: Dict[ObjectID, GameObject] = {}
+		self.player_data: Dict[Player, Dict] = {}
 		self.models = []
 		self.last_callback_id = CallbackID(0)
 		self.callback_handles: Dict[ObjectID, Dict[CallbackID, asyncio.Handle]] = {}
-		self.accounts: Dict[Address, Account] = {}
+		self.accounts: Dict[Connection, Account] = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
-		self.register_handler(WorldServerMsg.SessionInfo, self._on_session_info)
+		self._dispatcher.add_listener(WorldServerMsg.SessionInfo, self._on_session_info)
 		self._load_plugins()
 		self.set_world_id(world_id)
 
-	def _on_network_init(self, address: Address) -> None:
-		self.external_address = self.external_address[0], address[1] # update port (for OS-chosen port)
+	def _on_network_init(self, conn_type: ConnectionType, address: Address) -> None:
+		print(conn_type, address)
+		external_address = self.external_host, address[1] # update port (for OS-chosen port)
 		with self.multi:
-			self.db.servers[self.external_address] = self.world_id
+			if self.world_id not in self.db.servers:
+				self.db.servers[self.world_id] = PersistentMapping()
+			self.db.servers[self.world_id][conn_type] = external_address
 
 	def _check_shutdown(self) -> None:
 		# shut down instances with no players every 60 minutes
@@ -171,14 +172,14 @@ class WorldServer(Server):
 		self.commit()
 		for address in self.accounts.copy():
 			self.close_connection(address, DisconnectReason.ServerShutdown)
-		if self.external_address in self.db.servers:
+		if self.world_id in self.db.servers:
 			with self.multi:
-				del self.db.servers[self.external_address]
+				del self.db.servers[self.world_id]
 		asyncio.get_event_loop().stop()
 		log.info("Shutdown complete")
 
 	def set_world_id(self, world_id: Tuple[int, int]) -> None:
-		self.world_id = world_id[0], 0, world_id[1]
+		self.world_id = world_id[0], self.instance_id, world_id[1]
 		if self.world_id[0] != 0: # char
 			custom_script, world_control_lot = self.db.world_info[self.world_id[0]]
 			if world_control_lot is None:
@@ -229,16 +230,16 @@ class WorldServer(Server):
 		spawner = cast(SpawnerObject, GameObject(176, spawner_id, set_vars=spawner_vars))
 		self.models.append((spawner, spawner.spawner.spawn()))
 
-	def _on_disconnect_or_connection_lost(self, address: Address) -> None:
+	def _on_conn_close(self, conn: Connection) -> None:
 		if self.world_id[0] != 0:
-			player = self.accounts[address].selected_char()
+			player = self.accounts[conn].selected_char()
 			if player in self.replica_manager._network_ids: # might already be destructed if "switch character" is selected:
 				self.replica_manager.destruct(player)
-		#self.accounts[address].address = None
-		del self.accounts[address]
+		#self.accounts[conn].address = None
+		del self.accounts[conn]
 		self.commit()
 
-	def _on_session_info(self, session_info: ReadStream, address: Address) -> None:
+	def _on_session_info(self, session_info: ReadStream, conn: Connection) -> None:
 		self.commit()
 		self.conn.sync()
 		username = session_info.read(str, allocated_length=33)
@@ -246,19 +247,17 @@ class WorldServer(Server):
 
 		if username not in self.db.accounts:
 			log.error("User %s not found in database", username)
-			self.close_connection(address)
+			conn.close()
 			return
 		if self.db.accounts[username].session_key != session_key:
 			log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username].session_key, session_key)
-			self.close_connection(address, reason=DisconnectReason.InvalidSessionKey)
+			self.close_connection(conn, reason=DisconnectReason.InvalidSessionKey)
 			return
 
 		account = self.db.accounts[username]
-		#account.address = address
-		#self.conn.transaction_manager.commit()
-		self.accounts[address] = account
+		self.accounts[conn] = account
 
-		self.general.on_validated(address)
+		self.general.on_validated(conn)
 
 	def new_spawned_id(self) -> ObjectID:
 		self.current_spawned_id += 1

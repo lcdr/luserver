@@ -54,8 +54,8 @@ import asyncio
 import logging
 from typing import Tuple
 
-from pyraknet.bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, ReadStream
-from pyraknet.messages import Address
+from bitstream import c_int64, c_bool, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.transports.abc import Connection
 from ..bitstream import WriteStream
 from ..game_object import Player
 from ..messages import WorldClientMsg, WorldServerMsg
@@ -93,14 +93,14 @@ _PANTS_LOT = {
 
 class CharHandling:
 	def __init__(self) -> None:
-		server.register_handler(WorldServerMsg.CharacterListRequest, self._on_character_list_request)
-		server.register_handler(WorldServerMsg.CharacterCreateRequest, self._on_character_create_request)
-		server.register_handler(WorldServerMsg.CharacterDeleteRequest, self._on_character_delete_request)
-		server.register_handler(WorldServerMsg.EnterWorld, self._on_enter_world)
+		server._dispatcher.add_listener(WorldServerMsg.CharacterListRequest, self._on_character_list_request)
+		server._dispatcher.add_listener(WorldServerMsg.CharacterCreateRequest, self._on_character_create_request)
+		server._dispatcher.add_listener(WorldServerMsg.CharacterDeleteRequest, self._on_character_delete_request)
+		server._dispatcher.add_listener(WorldServerMsg.EnterWorld, self._on_enter_world)
 
-	def _on_character_list_request(self, data: ReadStream, address: Address) -> None:
+	def _on_character_list_request(self, data: ReadStream, conn: Connection) -> None:
 		try:
-			selected_char = server.accounts[address].selected_char()
+			selected_char = server.accounts[conn].selected_char()
 
 			if server.world_id[0] != 0:
 				server.replica_manager.destruct(selected_char)
@@ -108,7 +108,7 @@ class CharHandling:
 			pass
 
 		server.conn.sync()
-		characters = server.accounts[address].characters
+		characters = server.accounts[conn].characters
 		log.info("sending %i characters", len(characters))
 		character_list = [i[1] for i in sorted(characters.items(), key=lambda x: x[0])]
 
@@ -116,7 +116,7 @@ class CharHandling:
 		response.write_header(WorldClientMsg.CharacterList)
 		response.write(c_ubyte(len(characters)))
 		try:
-			selected = character_list.index(server.accounts[address].selected_char())
+			selected = character_list.index(server.accounts[conn].selected_char())
 		except KeyError:
 			selected = 0
 		response.write(c_ubyte(selected))
@@ -158,10 +158,10 @@ class CharHandling:
 			for item in char.inventory.equipped[-1]:
 				response.write(c_uint(item.lot))
 
-		server.send(response, address)
+		conn.send(response)
 
-	def _on_character_create_request(self, request: ReadStream, address: Address) -> None:
-		account = server.accounts[address]
+	def _on_character_create_request(self, request: ReadStream, conn: Connection) -> None:
+		account = server.accounts[conn]
 		char_name = request.read(str, allocated_length=33)
 		predef_name_ids = request.read(c_uint), request.read(c_uint), request.read(c_uint)
 
@@ -181,7 +181,6 @@ class CharHandling:
 				new_char = Player(server.new_object_id())
 				new_char.name = char_name
 				new_char.char.account = account
-				new_char.char.address = address
 
 				request.skip_read(9)
 				new_char.char.shirt_color = request.read(c_uint)
@@ -213,13 +212,13 @@ class CharHandling:
 		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterCreateResponse)
 		response.write(c_ubyte(return_code))
-		server.send(response, address)
+		conn.send(response)
 
 		if return_code == _CharacterCreateReturnCode.Success:
-			self._on_character_list_request(ReadStream(b""), address)
+			self._on_character_list_request(ReadStream(b""), conn)
 
-	def _on_character_delete_request(self, request: ReadStream, address: Address) -> None:
-		characters = server.accounts[address].characters
+	def _on_character_delete_request(self, request: ReadStream, conn: Connection) -> None:
+		characters = server.accounts[conn].characters
 		char_id = request.read(c_int64)
 
 		for char in characters:
@@ -232,18 +231,18 @@ class CharHandling:
 		response = WriteStream()
 		response.write_header(WorldClientMsg.CharacterDeleteResponse)
 		response.write(c_ubyte(_CharacterDeleteReturnCode.Success))
-		server.send(response, address)
+		conn.send(response)
 
 		# todo: delete property
 
-	def _on_enter_world(self, request: ReadStream, address: Address) -> None:
+	def _on_enter_world(self, request: ReadStream, conn: Connection) -> None:
 		char_id = request.read(c_int64)
 
-		characters = server.accounts[address].characters
+		characters = server.accounts[conn].characters
 		selected_char_name = [key for key, value in characters.items() if value.object_id == char_id][0]
-		server.accounts[address].selected_char_name = selected_char_name
-		selected_char = server.accounts[address].selected_char()
-		selected_char.char.address = address
+		server.accounts[conn].selected_char_name = selected_char_name
+		selected_char = server.accounts[conn].selected_char()
+		server.player_data[selected_char] = {"conn": conn}
 		selected_char.char.online = True
 
 		if selected_char.char.world[0] == 0:

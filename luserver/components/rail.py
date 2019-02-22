@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pyraknet.bitstream import WriteStream
+from bitstream import WriteStream
 from ..game_object import Config, GameObject, Player
 from .component import Component
 

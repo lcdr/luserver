@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_ushort, WriteStream
+from bitstream import c_ushort, WriteStream
 from ..game_object import Config, EP, GameObject, Player
 from ..world import server
 from .component import Component

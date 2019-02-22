@@ -2,7 +2,7 @@ import enum
 import logging
 from typing import Dict, Iterable
 
-from pyraknet.bitstream import c_bit, c_uint, c_uint64, ReadStream, WriteStream
+from bitstream import c_bit, c_uint, c_uint64, ReadStream, WriteStream
 from ..game_object import broadcast, c_int, c_int64, Config, EBY, EI, GameObject, ObjectID, single
 from ..game_object import c_uint as c_uint_
 from ..world import server

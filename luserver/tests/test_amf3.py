@@ -2,7 +2,7 @@ import unittest
 from functools import partial
 
 from luserver.amf3 import AMF3, _AMF3Reader, _AMF3Writer
-from pyraknet.bitstream import ReadStream, WriteStream
+from bitstream import ReadStream, WriteStream
 
 class AMF3Test(unittest.TestCase):
 	encodes = {

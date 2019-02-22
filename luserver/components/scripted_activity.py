@@ -1,7 +1,7 @@
 import asyncio
 from typing import Dict, List
 
-from pyraknet.bitstream import c_float, c_int64, c_uint, WriteStream
+from bitstream import c_float, c_int64, c_uint, WriteStream
 from ..game_object import broadcast, c_int, Config, EB, EBY, EI, EL, ES, EO, GameObject, ObjectID, Player, single
 from ..world import server
 from ..ldf import LDF

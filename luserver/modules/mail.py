@@ -18,8 +18,8 @@ import time
 
 import persistent
 
-from pyraknet.bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort, ReadStream
-from pyraknet.messages import Address
+from bitstream import c_bool, c_int, c_int64, c_uint, c_uint64, c_ushort, ReadStream
+from pyraknet.transports.abc import Connection
 from ..bitstream import WriteStream
 from ..game_object import Player
 from ..messages import WorldClientMsg, WorldServerMsg
@@ -38,11 +38,11 @@ class _MailSendReturnCode:
 
 class MailHandling:
 	def __init__(self) -> None:
-		server.register_handler(WorldServerMsg.Mail, self._on_mail)
+		server._dispatcher.add_listener(WorldServerMsg.Mail, self._on_mail)
 
-	def _on_mail(self, message: ReadStream, address: Address) -> None:
+	def _on_mail(self, message: ReadStream, conn: Connection) -> None:
 		mail_id = message.read(c_uint)
-		player = server.accounts[address].selected_char()
+		player = server.accounts[conn].selected_char()
 		if mail_id == MailID.MailSend:
 			self._on_mail_send(message, player)
 		elif mail_id == MailID.MailDataRequest:
@@ -93,13 +93,13 @@ class MailHandling:
 			out.write_header(WorldClientMsg.Mail)
 			out.write(c_uint(MailID.MailSendResponse))
 			out.write(c_uint(return_code))
-			server.send(out, player.char.address)
+			player.char.data()["conn"].send(out)
 
 	def send_mail(self, sender_name: str, subject: str, body: str, recipient: Player, attachment: Stack=None) -> None:
 		mail = Mail(server.new_object_id(), sender_name, subject, body, attachment)
 		with server.multi:
 			recipient.char.mails.append(mail)
-		if recipient.char.address in server._server._connected:
+		if recipient.char.data()["conn"].get_address() in server._server._connected:
 			self._send_mail_notification(recipient)
 
 	def _send_mail_data(self, player: Player) -> None:
@@ -132,7 +132,7 @@ class MailHandling:
 			mails.write(bytes(1))
 			mails.write(bytes(2))
 			mails.write(bytes(4))
-		server.send(mails, player.char.address)
+		player.char.data()["conn"].send(mails)
 
 	def _on_mail_attachment_collect(self, data: ReadStream, player: Player) -> None:
 		data.skip_read(4) # ???
@@ -146,7 +146,7 @@ class MailHandling:
 				out.write(c_uint(MailID.MailAttachmentCollectResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				server.send(out, player.char.address)
+				player.char.data()["conn"].send(out)
 				break
 
 	def _on_mail_delete(self, data: ReadStream, player: Player) -> None:
@@ -160,7 +160,7 @@ class MailHandling:
 				out.write(c_uint(MailID.MailDeleteResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				server.send(out, player.char.address)
+				player.char.data()["conn"].send(out)
 				break
 
 	def _on_mail_read(self, data: ReadStream, player: Player) -> None:
@@ -174,7 +174,7 @@ class MailHandling:
 				out.write(c_uint(MailID.MailReadResponse))
 				out.write(bytes(4))
 				out.write(c_int64(mail_id))
-				server.send(out, player.char.address)
+				player.char.data()["conn"].send(out)
 				break
 
 	def _send_mail_notification(self, player: Player) -> None:
@@ -188,7 +188,7 @@ class MailHandling:
 		notification.write(bytes(32))
 		notification.write(c_uint(unread_mails_count))
 		notification.write(bytes(4))
-		server.send(notification, player.char.address)
+		player.char.data()["conn"].send(notification)
 
 class Mail(persistent.Persistent):
 	def __init__(self, id: int, sender: str, subject: str, body: str, attachment: Stack=None):

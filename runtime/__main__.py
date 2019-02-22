@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import subprocess
+import ssl
 import sys
 import time
 
@@ -57,8 +58,14 @@ while True:
 		subprocess.Popen("runzeo -a 12345 -f "+os.path.normpath(os.path.join(__file__, "..", "db", "server_db.db")), shell=True, creationflags=flags)
 		time.sleep(3)
 
+if "ssl_cert_file" in config["connection"] and "ssl_key_file" in config["connection"]:
+	context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+	context.load_cert_chain(config["connection"]["ssl_cert_file"], config["connection"]["ssl_key_file"])
+else:
+	context = None
+
 if len(sys.argv) == 1:
-	AuthServer(config["connection"]["internal_host"], max_connections=8, db_conn=conn)
+	a = AuthServer(config["connection"]["internal_host"], max_connections=8, db_conn=conn, ssl=context)
 else:
 	world_id = int(sys.argv[1]), int(sys.argv[2])
 	if len(sys.argv) == 4:
@@ -75,7 +82,7 @@ else:
 				sys.exit()
 		else:
 			port = 0
-	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn)
+	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn, ssl=context)
 
 loop = asyncio.get_event_loop()
 loop.run_forever()

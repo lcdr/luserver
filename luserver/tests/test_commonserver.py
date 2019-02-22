@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from pyraknet.bitstream import c_uint
+from bitstream import c_uint
 from luserver.world import WorldServer
 from luserver.auth import AuthServer
 from luserver.bitstream import WriteStream

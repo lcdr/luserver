@@ -1,5 +1,5 @@
 import luserver.components.script as script
-from pyraknet.bitstream import c_int, c_ubyte
+from bitstream import c_int, c_ubyte
 from luserver.game_object import E, Sequence
 from luserver.components.mission import MissionState, TaskType
 

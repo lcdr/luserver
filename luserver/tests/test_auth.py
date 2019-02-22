@@ -2,7 +2,7 @@ import asyncio
 import datetime
 from unittest.mock import patch
 
-from pyraknet.bitstream import c_ubyte, c_uint, c_ushort
+from bitstream import c_ubyte, c_uint, c_ushort
 from luserver.world import WorldServer
 from luserver.auth import Account, AuthServer, _LoginMessage, _LoginReturnCode, PasswordState
 from luserver.bitstream import WriteStream

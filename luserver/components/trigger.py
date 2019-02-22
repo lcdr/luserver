@@ -2,7 +2,7 @@ import functools
 import logging
 from typing import Sequence, Tuple
 
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from ..game_object import Config, GameObject, ScriptObject
 from ..world import server
 from ..math.vector import Vector3

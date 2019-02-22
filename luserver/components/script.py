@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from .. ldf import LDF, LDFDataType, _LDFValue
 from ..game_object import broadcast, c_int, c_int64, Config, EBY, EI, EL, EO, ES, GameObject
 from .component import Component

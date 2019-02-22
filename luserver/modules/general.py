@@ -6,8 +6,8 @@ import logging
 import xml.etree.ElementTree as ET
 from typing import cast, Dict, Tuple
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadStream
-from pyraknet.messages import Address
+from bitstream import c_bit, c_float, c_int64, c_uint, c_ushort, ReadStream
+from pyraknet.transports.abc import Connection
 from ..auth import GMLevel
 from ..bitstream import WriteStream
 from ..game_object import ControllableObject, GameObject, Player
@@ -59,14 +59,14 @@ class GeneralHandling:
 	def __init__(self) -> None:
 		self.tracked_objects: Dict[GameObject, Collider] = {}
 
-		server.register_handler(WorldServerMsg.LoadComplete, self._on_client_load_complete)
-		server.register_handler(WorldServerMsg.PositionUpdate, self._on_position_update)
-		server.register_handler(WorldServerMsg.GameMessage, self._on_game_message)
+		server._dispatcher.add_listener(WorldServerMsg.LoadComplete, self._on_client_load_complete)
+		server._dispatcher.add_listener(WorldServerMsg.PositionUpdate, self._on_position_update)
+		server._dispatcher.add_listener(WorldServerMsg.GameMessage, self._on_game_message)
 
-	def on_validated(self, address: Address) -> None:
+	def on_validated(self, conn: Connection) -> None:
 		if server.world_id[0] != 0:
-			player = server.accounts[address].selected_char()
-			player.char.address = address
+			player = server.accounts[conn].selected_char()
+			server.player_data[player] = {"conn": conn}
 			server.game_objects[player.object_id] = player
 			player.parent = None
 			player.children = []
@@ -79,11 +79,11 @@ class GeneralHandling:
 					dest = 1100, 0, 0
 				asyncio.ensure_future(player.char.transfer_to_world(dest, respawn_point_name=""))
 			else:
-				self._send_load_world(server.world_id, address)
+				self._send_load_world(server.world_id, conn)
 
-	def _send_load_world(self, destination: Tuple[int, int, int], address: Address) -> None:
+	def _send_load_world(self, destination: Tuple[int, int, int], conn: Connection) -> None:
 		world_id, world_instance, world_clone = destination
-		player = server.accounts[address].selected_char()
+		player = server.accounts[conn].selected_char()
 
 		load_world = WriteStream()
 		load_world.write_header(WorldClientMsg.LoadWorld)
@@ -94,10 +94,10 @@ class GeneralHandling:
 		load_world.write(bytes(2))
 		load_world.write(player.physics.position)
 		load_world.write(bytes(4))
-		server.send(load_world, address)
+		conn.send(load_world)
 
-	def _on_client_load_complete(self, data: ReadStream, address: Address) -> None:
-		player = server.accounts[address].selected_char()
+	def _on_client_load_complete(self, data: ReadStream, conn: Connection) -> None:
+		player = server.accounts[conn].selected_char()
 
 		chardata = WriteStream()
 		chardata.write_header(WorldClientMsg.CharacterData)
@@ -191,14 +191,14 @@ class GeneralHandling:
 
 		encoded_ldf = chd_ldf.to_bytes()
 		chardata.write(encoded_ldf)
-		server.send(chardata, address)
+		conn.send(chardata)
 
-		server.replica_manager.add_participant(address)  # Add to replica manager sync list
+		server.replica_manager.add_participant(conn)  # Add to replica manager sync list
 		server.replica_manager.construct(player)
 		player.char.server_done_loading_all_objects()
 
-	def _on_position_update(self, message: ReadStream, address: Address) -> None:
-		player = server.accounts[address].selected_char()
+	def _on_position_update(self, message: ReadStream, conn: Connection) -> None:
+		player = server.accounts[conn].selected_char()
 		vehicle = None
 		if player.char.vehicle_id != 0:
 			vehicle = cast(ControllableObject, server.game_objects[player.char.vehicle_id])
@@ -264,10 +264,10 @@ class GeneralHandling:
 
 		player.char.last_collisions = collisions
 
-	def _on_game_message(self, message: ReadStream, address: Address) -> None:
+	def _on_game_message(self, message: ReadStream, conn: Connection) -> None:
 		object_id = message.read(c_int64)
 		try:
 			obj = server.get_object(object_id)
 		except KeyError:
 			return
-		obj.on_game_message(message, address)
+		obj.on_game_message(message, conn)

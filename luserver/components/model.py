@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_bit, c_float, c_int, WriteStream
+from bitstream import c_bit, c_float, c_int, WriteStream
 from ..game_object import Config, GameObject
 from ..ldf import LDFDataType
 from .component import Component

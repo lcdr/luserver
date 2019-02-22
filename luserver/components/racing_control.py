@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pyraknet.bitstream import c_bit, c_int64, c_uint, c_ushort, WriteStream
+from bitstream import c_bit, c_int64, c_uint, c_ushort, WriteStream
 from ..game_object import broadcast, c_int, Config, EI, ES, GameObject, Player
 from ..game_object import c_int64 as c_int64_
 from ..game_object import c_uint as c_uint_

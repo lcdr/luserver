@@ -1,6 +1,6 @@
 from typing import cast, Optional
 
-from pyraknet.bitstream import c_bit, c_int64, WriteStream
+from bitstream import c_bit, c_int64, WriteStream
 from ..game_object import c_int, Config, DestructibleObject, EB, EF, ES, EO, EP, GameObject, Player
 from ..world import server
 from .component import Component

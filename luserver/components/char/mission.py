@@ -2,7 +2,7 @@ from typing import Dict
 
 from persistent.mapping import PersistentMapping
 
-from pyraknet.bitstream import c_ubyte
+from bitstream import c_ubyte
 from ...game_object import c_int, c_int64, E, EI, EO, GameObject, Player, Sequence, single
 from ...world import server
 from ...math.vector import Vector3

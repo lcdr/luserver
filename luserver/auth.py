@@ -11,6 +11,8 @@ from persistent.mapping import PersistentMapping
 if TYPE_CHECKING:
 	from .game_object import Player
 
+from pyraknet.transports.abc import Connection
+
 class Account(Persistent):
 	def __init__(self, username: str, password: str):
 		self.username = username
@@ -36,8 +38,10 @@ import logging
 import random
 import secrets
 import time
+from ssl import SSLContext
+from typing import Optional
 
-from pyraknet.bitstream import c_bool, c_ubyte, c_uint, c_ushort, ReadStream
+from bitstream import c_bool, c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Address
 from . import commonserver
 from .bitstream import WriteStream
@@ -72,13 +76,16 @@ class _LoginMessage:
 class AuthServer(commonserver.Server):
 	_PEER_TYPE = MessageType.AuthServer.value
 
-	def __init__(self, host: str, max_connections: int, db_conn):
-		super().__init__((host, 1001), max_connections, db_conn)
+	def __init__(self, host: str, max_connections: int, db_conn, ssl: Optional[SSLContext]):
+		super().__init__((host, 1001), max_connections, db_conn, ssl)
 		self.db.servers.clear()
 		self.conn.transaction_manager.commit()
-		self.register_handler(AuthServerMsg.LoginRequest, lambda request, address: asyncio.ensure_future(self._on_login_request(request, address)))
+		self._dispatcher.add_listener(AuthServerMsg.LoginRequest, self._on_log_req)
 
-	async def _on_login_request(self, request: ReadStream, address: Address) -> None:
+	def _on_log_req(self, stream: ReadStream, conn: Connection) -> None:
+		asyncio.ensure_future(self._on_login_request(stream, conn))
+
+	async def _on_login_request(self, request: ReadStream, conn: Connection) -> None:
 		return_code = _LoginReturnCode.InsufficientAccountPermissions # needed to display error message
 		message = ""
 		redirect_host, redirect_port = "", 0
@@ -132,7 +139,7 @@ class AuthServer(commonserver.Server):
 			#account.address = address
 			account.session_key = session_key
 			self.conn.transaction_manager.commit()
-			redirect_host, redirect_port = await self.address_for_world((0, 0, 0))
+			redirect_host, redirect_port = await self.address_for_world((0, 0, 0), conn.get_type())
 			log.info("Logging in %s to world %s with key %s", username, (redirect_host, redirect_port), session_key)
 
 		except LoginError as e:
@@ -175,7 +182,7 @@ class AuthServer(commonserver.Server):
 		response.write(message, length_type=c_ushort) # custom error message
 		response.write(c_uint(4))  # length of remaining bytes including this
 		# remaining would be optional debug "stamps"
-		self.send(bytes(response), address)
+		conn.send(bytes(response))
 
 class GMLevel:
 	Nothing = 0

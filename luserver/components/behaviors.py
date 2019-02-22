@@ -2,7 +2,7 @@ import logging
 import pprint
 from typing import Iterable, Optional, Sequence, Tuple
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream, WriteStream
+from bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream, WriteStream
 from ..game_object import GameObject
 from ..world import server
 from ..math.vector import Vector3

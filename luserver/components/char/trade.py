@@ -1,6 +1,6 @@
 from typing import cast, Optional
 
-from pyraknet.bitstream import c_uint
+from bitstream import c_uint
 from ...game_object import c_int64, c_uint64, E, EI, ES, EO, EP, GameObject, Mapping, ObjectID, Player, single
 from ...game_object import c_uint as c_uint_
 from ...world import server

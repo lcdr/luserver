@@ -1,6 +1,6 @@
 import logging
 
-from pyraknet.bitstream import c_int64, c_uint
+from bitstream import c_int64, c_uint
 from ...bitstream import WriteStream
 from ...game_object import broadcast, c_int, E, EBY, EI, EV, GameObject, Mapping, OBJ_NONE, single
 from ...game_object import c_int64 as c_int64_
@@ -75,7 +75,7 @@ class CharProperty(CharSubcomponent):
 		save_response.write(c_uint(1))
 		save_response.write(c_int64(server.new_object_id()))
 		save_response.write(lxfml_data_compressed, length_type=c_uint)
-		server.send(save_response, self.object.char.address)
+		self.object.char.conn.send(save_response)
 
 	@single
 	def handle_u_g_c_equip_post_delete_based_on_edit_mode(self, inv_item:c_int64_=EI, items_total:c_int=0) -> None:

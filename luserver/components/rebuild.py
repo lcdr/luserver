@@ -1,7 +1,7 @@
 import time
 from typing import List, Optional
 
-from pyraknet.bitstream import c_bit, c_float, c_uint, WriteStream
+from bitstream import c_bit, c_float, c_uint, WriteStream
 from ..game_object import broadcast, CallbackID, Config, EB, EF, EI, EO, EP, GameObject, OBJ_NONE, Player, StatsObject
 from ..game_object import c_int as c_int_
 from ..game_object import c_uint as c_uint_
