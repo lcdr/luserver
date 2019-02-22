@@ -67,7 +67,7 @@ import logging
 import random
 from typing import Dict, Optional
 
-from pyraknet.bitstream import WriteStream
+from bitstream import WriteStream
 from ..game_object import c_int, Config, EB, EI, EO, EP, GameObject, ObjectID, Player, single
 from ..world import server
 from .component import Component

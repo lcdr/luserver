@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Tuple
 
-from pyraknet.bitstream import c_bit, c_uint, WriteStream
+from bitstream import c_bit, c_uint, WriteStream
 from ..game_object import c_int, c_int64, Config, E, EB, EI, GameObject, Mapping, Player, single
 from ..world import server
 from ..math.vector import Vector3

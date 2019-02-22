@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from .component import Component
 
 class Comp107Component(Component):

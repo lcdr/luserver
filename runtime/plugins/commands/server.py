@@ -8,7 +8,7 @@ import secrets
 import time
 from typing import cast
 
-from pyraknet.bitstream import c_bool, c_ushort
+from bitstream import c_bool, c_ushort
 from luserver.auth import Account, GMLevel, PasswordState
 from luserver.bitstream import WriteStream
 from luserver.game_object import Player
@@ -188,14 +188,17 @@ class Restart(ChatCommand):
 
 	async def do_restart(self, args, sender):
 		server.conn.transaction_manager.commit()
-		server_address = await server.address_for_world(server.world_id, include_self=False)
-		log.info("Sending redirect to world %s", server_address)
-		redirect = WriteStream()
-		redirect.write_header(WorldClientMsg.Redirect)
-		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
-		redirect.write(c_ushort(server_address[1]))
-		redirect.write(c_bool(args.show_message))
-		server.send(redirect, server.accounts)
+		for obj in server.game_objects.values():
+			if obj.lot == 1:
+				conn = obj.char.data()["conn"]
+				server_address = await server.address_for_world(server.world_id, conn.get_type(), include_self=False)
+				log.info("Sending redirect to world %s", server_address)
+				redirect = WriteStream()
+				redirect.write_header(WorldClientMsg.Redirect)
+				redirect.write(server_address[0].encode("latin1"), allocated_length=33)
+				redirect.write(c_ushort(server_address[1]))
+				redirect.write(c_bool(args.show_message))
+				conn.send(redirect)
 		await asyncio.sleep(5)
 		server.shutdown()
 

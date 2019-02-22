@@ -1,6 +1,6 @@
 from typing import Dict
 
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from ..game_object import broadcast, c_int, Config, EB, EF, EO, EP, ES, GameObject, OBJ_NONE, Player, SpawnerObject, StatsObject
 from ..world import server
 from ..math.vector import Vector3

@@ -3,7 +3,7 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from pyraknet.bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, WriteStream
+from bitstream import c_bit, c_float, c_int64, c_ubyte, c_uint, WriteStream
 from ..game_object import Config, broadcast, EBY, GameObject, PhysicsObject, Player
 from ..world import Event, server
 from ..math.quaternion import Quaternion

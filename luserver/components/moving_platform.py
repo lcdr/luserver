@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_uint, WriteStream
+from bitstream import c_bit, c_float, c_int, c_uint, WriteStream
 from ..game_object import CallbackID, Config, GameObject, Player
 from ..world import server
 from ..math.vector import Vector3

@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from pyraknet.bitstream import c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
+from bitstream import c_bit, c_bool, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, WriteStream
 from ...amf3 import AMF3
 from ...auth import GMLevel
 from ...bitstream import WriteStream as WriteStream_
@@ -71,7 +71,6 @@ class CharacterComponent(Component):
 		# DB stuff
 
 		self.account = None
-		self.address = None
 		self._online = False
 		self._world = 0, 0, 0
 		self.currency = 0 # todo: consider whether a property with set_currency is possible
@@ -278,6 +277,9 @@ class CharacterComponent(Component):
 		self._world = value
 		self.send_friend_update_notify(FriendUpdateType.WorldChange)
 
+	def data(self):
+		return server.player_data[self.object]
+
 	def send_friend_update_notify(self, update_type: int) -> None:
 		update_notify = WriteStream_()
 		update_notify.write_header(WorldClientMsg.FriendUpdateNotify)
@@ -294,8 +296,8 @@ class CharacterComponent(Component):
 			if friend_ref() is None:
 				outdated_refs.insert(0, index)
 			else:
-				if friend_ref().char.address in server._server._connected:
-					server.send(update_notify, friend_ref().char.address)
+				if friend_ref().char.data()["conn"] in server._server._connected:
+					friend_ref().char.data()["conn"].send(update_notify)
 
 		for index in outdated_refs:
 			del self.friends[index]
@@ -306,6 +308,8 @@ class CharacterComponent(Component):
 		self.online = False
 		self.dropped_loot.clear()
 		self.last_collisions.clear()
+		if self.object in server.player_data:
+			del server.player_data[self.object]
 		self.check_for_leaks()
 
 	def check_for_leaks(self, fullcheck: bool=False) -> None:
@@ -399,14 +403,14 @@ class CharacterComponent(Component):
 			self.object.physics.attr_changed("rotation")
 		server.commit()
 
-		server_address = await server.address_for_world(world, include_self)
+		server_address = await server.address_for_world(world, self.data()["conn"].get_type(), include_self)
 		log.info("Sending redirect to world %s", server_address)
 		redirect = WriteStream_()
 		redirect.write_header(WorldClientMsg.Redirect)
 		redirect.write(server_address[0].encode("latin1"), allocated_length=33)
 		redirect.write(c_ushort(server_address[1]))
 		redirect.write(c_bool(False))
-		server.send(redirect, self.address)
+		self.data()["conn"].send(redirect)
 
 	async def transfer_to_last_non_instance(self, position: Vector3=None, rotation: Quaternion=None) -> None:
 		if position is not None:
@@ -517,7 +521,7 @@ class CharacterComponent(Component):
 		assert player_id == self.object.object_id
 		self.player_ready()
 		if self.world == (0, 0, 0):
-			server.chat.system_message(server.db.config["new_char_message"], self.address, broadcast=False)
+			server.chat.system_message(server.db.config["new_char_message"], self.data()["conn"], broadcast=False)
 		self.world = server.world_id
 
 		for item in self.object.inventory.equipped[-1]:

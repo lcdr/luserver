@@ -4,8 +4,8 @@ import functools
 import logging
 import time
 
-from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
-from pyraknet.messages import Address
+from bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
+from pyraknet.transports.abc import Connection
 from ..auth import GMLevel
 from ..bitstream import WriteStream
 from ..game_object import GameObject, Player
@@ -84,11 +84,11 @@ class ChatHandling:
 			parser.set_defaults(func=lambda args, sender: None)
 			parser.set_defaults(perm=GMLevel.Nothing)
 
-		server.register_handler(WorldServerMsg.GeneralChatMessage, self._on_general_chat_message)
-		server.register_handler(SocialMsg.PrivateChatMessage, self._on_private_chat_message)
-		server.register_handler(WorldServerMsg.StringCheck, self._on_moderation_string_check)
+		server._dispatcher.add_listener(WorldServerMsg.GeneralChatMessage, self._on_general_chat_message)
+		server._dispatcher.add_listener(SocialMsg.PrivateChatMessage, self._on_private_chat_message)
+		server._dispatcher.add_listener(WorldServerMsg.StringCheck, self._on_moderation_string_check)
 
-	def _on_moderation_string_check(self, request: ReadStream, address: Address) -> None:
+	def _on_moderation_string_check(self, request: ReadStream, conn: Connection) -> None:
 		request.skip_read(1) # super chat level
 		request_id = request.read(c_ubyte)
 
@@ -98,12 +98,12 @@ class ChatHandling:
 		response.write(bytes(2))
 		response.write(c_ubyte(request_id))
 
-		server.send(response, address)
+		conn.send(response)
 
-	def _on_general_chat_message(self, message: ReadStream, address: Address) -> None:
-		sender = server.accounts[address].selected_char()
+	def _on_general_chat_message(self, message: ReadStream, conn: Connection) -> None:
+		sender = server.accounts[conn].selected_char()
 		if sender.char.account.gm_level != GMLevel.Admin and sender.char.account.muted_until > time.time():
-			self.system_message("Your account is muted until %s" % datetime.datetime.fromtimestamp(sender.char.account.muted_until), address, broadcast=False)
+			self.system_message("Your account is muted until %s" % datetime.datetime.fromtimestamp(sender.char.account.muted_until), conn, broadcast=False)
 			return
 
 		message.skip_read(3)
@@ -129,9 +129,9 @@ class ChatHandling:
 		message.write(encoded_text)
 		message.write(bytes(2)) # null terminator
 
-		server.send(message, broadcast=True)
+		server.broadcast(message)
 
-	def system_message(self, text, address: Address=None, broadcast: bool=True, log_level=logging.INFO) -> None:
+	def system_message(self, text, conn: Connection=None, broadcast: bool=True, log_level=logging.INFO) -> None:
 		if text:
 			text = str(text)
 			log.log(log_level, text)
@@ -148,16 +148,19 @@ class ChatHandling:
 			message.write(encoded_text)
 			message.write(bytes(2)) # null terminator
 
-			server.send(message, address, broadcast)
+			if broadcast:
+				conn.broadcast(message)
+			else:
+				conn.send(message)
 
 	def send_private_chat_message(self, sender: GameObject, text: str, recipient: GameObject) -> None:
 		participants = []
 		if isinstance(sender, Player):
-			participants.append((sender.char.address, 0))
+			participants.append((sender.char.data()["conn"], 0))
 		if isinstance(recipient, Player):
-			participants.append((recipient.char.address, 3))
+			participants.append((sender.char.data()["conn"], 3))
 
-		for address, return_code in participants:
+		for conn, return_code in participants:
 			message = WriteStream()
 			message.write_header(SocialMsg.PrivateChatMessage)
 			message.write(c_int64(0))
@@ -182,9 +185,9 @@ class ChatHandling:
 			message.write(c_ubyte(return_code))
 			message.write(text, allocated_length=(len(text)+1))
 
-			server.send(message, address)
+			conn.send(message)
 
-	def _on_private_chat_message(self, message: ReadStream, address: Address) -> None:
+	def _on_private_chat_message(self, message: ReadStream, conn: Connection) -> None:
 		assert message.read(c_int64) == 0 # unknown
 		assert message.read(c_ubyte) == 7 # chat channel
 		text_length = message.read(c_uint)
@@ -200,7 +203,7 @@ class ChatHandling:
 		text = message.read(str, allocated_length=text_length)
 		assert message.all_read()
 
-		sender = server.accounts[address].selected_char()
+		sender = server.accounts[conn].selected_char()
 
 		if recipient_name.startswith("!"):
 			recipients = object_selector(recipient_name)
@@ -211,7 +214,7 @@ class ChatHandling:
 			self.send_private_chat_message(sender, text, recipient)
 
 	def parse_command(self, command: str, sender: Player) -> None:
-		self.sys_msg_sender = functools.partial(self.system_message, address=sender.char.address, broadcast=False)
+		self.sys_msg_sender = functools.partial(self.system_message, conn=sender.char.data()["conn"], broadcast=False)
 		try:
 			args = self._chat_parser.parse_args(command.split())
 

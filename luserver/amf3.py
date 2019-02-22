@@ -1,6 +1,6 @@
 from typing import Dict, List, Union
 
-from pyraknet.bitstream import c_double, c_ubyte, ReadStream, Serializable, WriteStream
+from bitstream import c_double, c_ubyte, ReadStream, Serializable, WriteStream
 
 UNDEFINED_MARKER = 0
 FALSE_MARKER = 2

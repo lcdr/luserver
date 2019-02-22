@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional
 
-from pyraknet.bitstream import WriteStream
+from bitstream import WriteStream
 from ..game_object import broadcast, c_int, c_int64, Config, EO, ES, GameObject, Player
 from ..world import server
 from .component import Component

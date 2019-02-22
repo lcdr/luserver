@@ -1,4 +1,4 @@
-from pyraknet.bitstream import WriteStream
+from bitstream import WriteStream
 from ..game_object import single
 from .component import Component
 

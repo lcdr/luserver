@@ -1,6 +1,6 @@
 from typing import cast, List, Optional, Tuple
 
-from pyraknet.bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, WriteStream
+from bitstream import c_bit, c_float, c_int, c_int64, c_ubyte, c_uint, c_uint64, c_ushort, ReadStream, Serializable, WriteStream
 from ..amf3 import AMF3
 from ..game_object import broadcast, E, EB, EBY, EI, EO, ES, EV, GameObject, Player, Sequence, single
 from ..game_object import c_int as c_int_

@@ -12,12 +12,12 @@ from typing import Sequence as Sequence_
 from mypy_extensions import TypedDict
 from persistent import Persistent
 
-from pyraknet.bitstream import c_bit, c_float, c_ubyte, c_ushort, ReadStream, Serializable, UnsignedIntStruct, WriteStream
-from pyraknet.bitstream import c_int as c_int_
-from pyraknet.bitstream import c_int64 as c_int64_
-from pyraknet.bitstream import c_uint as c_uint_
-from pyraknet.bitstream import c_uint64 as c_uint64_
-from pyraknet.messages import Address
+from bitstream import c_bit, c_float, c_ubyte, c_ushort, ReadStream, Serializable, UnsignedIntStruct, WriteStream
+from bitstream import c_int as c_int_
+from bitstream import c_int64 as c_int64_
+from bitstream import c_uint as c_uint_
+from bitstream import c_uint64 as c_uint64_
+from pyraknet.transports.abc import Connection
 from pyraknet.replicamanager import Replica
 from .amf3 import AMF3
 from .bitstream import WriteStream as WriteStream_
@@ -351,7 +351,7 @@ class GameObject(Replica, FlagObject):
 			server.callback_handles[self.object_id][callback_id].cancel()
 			del server.callback_handles[self.object_id][callback_id]
 
-	def on_game_message(self, message: ReadStream, address: Address) -> None:
+	def on_game_message(self, message: ReadStream, conn: Connection) -> None:
 		message_id = message.read(c_ushort)
 		try:
 			message_name = GameMessage(message_id).name
@@ -388,7 +388,7 @@ class GameObject(Replica, FlagObject):
 			if kwargs:
 				log.debug(", ".join("%s=%s" % (key, value) for key, value in kwargs.items()))
 
-		player = server.accounts[address].selected_char()
+		player = server.accounts[conn].selected_char()
 		for handler in handlers:
 			signature = inspect.signature(handler)
 			playerarg = "player" in signature.parameters
@@ -561,14 +561,14 @@ def _send_game_message(mode: str) -> Callable[[X], X]:
 					value = bound_args.arguments[param.name]
 					_game_message_serialize(out, param.annotation, value)
 			if mode == "broadcast":
-				exclude_address = None
+				exclude = []
 				if player is not None:
-					exclude_address = player.char.address
-				server.send(out, exclude_address, broadcast=True)
+					exclude.append(player.char.data()["conn"])
+				server.broadcast(out, exclude=exclude)
 			elif mode == "single":
 				if player is None:
 					player = self.object
-				server.send(out, player.char.address)
+				player.char.data()["conn"].send(out)
 			if func.__name__ not in ("drop_client_loot", "script_network_var_update"): # todo: don't hardcode this
 				if len(bound_args.arguments) > 1:
 					log.debug(", ".join("%s=%s" % (key, value) for key, value in list(bound_args.arguments.items())[1:]))

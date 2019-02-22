@@ -1,6 +1,6 @@
 import unittest
 
-from pyraknet.bitstream import c_ubyte, c_uint, c_ushort, ReadStream
+from bitstream import c_ubyte, c_uint, c_ushort, ReadStream
 from pyraknet.messages import Message
 from luserver.bitstream import WriteStream
 from luserver.messages import MessageType, WorldClientMsg

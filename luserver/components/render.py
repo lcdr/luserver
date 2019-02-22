@@ -1,6 +1,6 @@
 from typing import Dict, Tuple
 
-from pyraknet.bitstream import c_float, c_int, c_int64, c_ubyte, c_uint, WriteStream
+from bitstream import c_float, c_int, c_int64, c_ubyte, c_uint, WriteStream
 from ..game_object import Config, broadcast, EB, EBY, EF, ES, EO, GameObject
 from ..game_object import c_int as c_int_
 from ..game_object import c_int64 as c_int64_

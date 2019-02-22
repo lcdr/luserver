@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort
+from bitstream import c_bool, c_int64, c_ubyte, c_uint, c_ushort
 from luserver.tests.test_world import SessionWorldTest
 from luserver.bitstream import WriteStream
 from luserver.messages import WorldClientMsg, WorldServerMsg

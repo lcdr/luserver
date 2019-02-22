@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_ubyte, WriteStream
+from bitstream import c_ubyte, WriteStream
 from ..game_object import c_int, c_int64, E, EB, EI, EV, Player, Sequence
 from ..math.vector import Vector3
 from .component import Component

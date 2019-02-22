@@ -7,7 +7,7 @@ class MessageType(Enum):
 	WorldServer = 4
 	WorldClient = 5
 
-class LUMessage(IntEnum):
+class LUMessage(Enum):
 	pass
 
 class GeneralMsg(LUMessage):

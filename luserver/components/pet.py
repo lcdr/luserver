@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pyraknet.bitstream import c_bit, c_uint, WriteStream
+from bitstream import c_bit, c_uint, WriteStream
 from ..game_object import Config, EB, GameObject, OBJ_NONE, Player
 from .component import Component
 from .mission import TaskType

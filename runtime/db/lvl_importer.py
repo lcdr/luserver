@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
+from bitstream import c_float, c_int64, c_ubyte, c_uint, c_ushort, ReadStream
 from luserver.ldf import LDF
 from luserver.world import BITS_LOCAL
 from luserver.math.quaternion import Quaternion

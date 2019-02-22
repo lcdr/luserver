@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from ..game_object import CallbackID, Config, GameObject, Player, StatsObject
 from ..world import server
 from ..math.quaternion import Quaternion

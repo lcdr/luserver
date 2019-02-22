@@ -1,4 +1,4 @@
-from pyraknet.bitstream import c_bit, WriteStream
+from bitstream import c_bit, WriteStream
 from ..game_object import c_int64, EB, EI
 from .component import Component
 

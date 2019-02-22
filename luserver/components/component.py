@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from pyraknet.bitstream import WriteStream
+from bitstream import WriteStream
 from ..game_object import Config, FlagObject, GameObject
 
 class Component(FlagObject, ABC):

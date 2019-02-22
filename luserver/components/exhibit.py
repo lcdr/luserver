@@ -1,6 +1,6 @@
 import random
 
-from pyraknet.bitstream import c_int, WriteStream
+from bitstream import c_int, WriteStream
 from ..game_object import Config, GameObject
 from .component import Component
 
