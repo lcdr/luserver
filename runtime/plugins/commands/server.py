@@ -181,6 +181,7 @@ class ResetPassword(ChatCommand):
 class Restart(ChatCommand):
 	def __init__(self):
 		super().__init__("restart", aliases=("r",))
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("--show_message", action="store_true")
 
 	def run(self, args, sender):
