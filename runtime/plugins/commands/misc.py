@@ -379,6 +379,7 @@ class Vendor(ChatCommand):
 class WorldCommand(ChatCommand):
 	def __init__(self):
 		super().__init__("world", description="Go to world")
+		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("name")
 		self.command.add_argument("--player", type=instance_player)
 
