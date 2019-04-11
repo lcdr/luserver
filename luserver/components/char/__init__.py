@@ -296,7 +296,7 @@ class CharacterComponent(Component):
 			if friend_ref() is None:
 				outdated_refs.insert(0, index)
 			else:
-				if friend_ref().char.data()["conn"] in server._server._connected:
+				if friend_ref() in server.player_data:
 					friend_ref().char.data()["conn"].send(update_notify)
 
 		for index in outdated_refs:

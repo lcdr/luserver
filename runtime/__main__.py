@@ -9,6 +9,7 @@ import time
 import toml
 import ZEO
 
+from pyraknet.transports.abc import ConnectionType
 from luserver.auth import AuthServer
 from luserver.world import WorldServer
 
@@ -74,7 +75,10 @@ else:
 		if config["connection"]["port_range"]:
 			range_start, range_stop = config["connection"]["port_range"]
 			for port in range(range_start, range_stop):
-				if (config["connection"]["external_host"], port) not in conn.root.servers:
+				for conns in conn.root.servers.values():
+					if conns[ConnectionType.RakNet] == (config["connection"]["external_host"], port):
+						break
+				else:
 					log.info("Using port %i", port)
 					break
 			else:
