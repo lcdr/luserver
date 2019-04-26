@@ -148,6 +148,7 @@ class WorldServer(Server):
 		self.callback_handles: Dict[ObjectID, Dict[CallbackID, asyncio.Handle]] = {}
 		self.accounts: Dict[Connection, Account] = {}
 		atexit.register(self.shutdown)
+		asyncio.get_event_loop().call_later(60, self._autosave)
 		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
 		self._dispatcher.add_listener(WorldServerMsg.SessionInfo, self._on_session_info)
 		self._load_plugins()
@@ -160,6 +161,10 @@ class WorldServer(Server):
 			if self.world_id not in self.db.servers:
 				self.db.servers[self.world_id] = PersistentMapping()
 			self.db.servers[self.world_id][conn_type] = external_address
+
+	def _autosave(self) -> None:
+		self.commit()
+		asyncio.get_event_loop().call_later(60, self._autosave)
 
 	def _check_shutdown(self) -> None:
 		# shut down instances with no players every 60 minutes
