@@ -207,13 +207,8 @@ class Send(ChatCommand):
 	def __init__(self):
 		super().__init__("send", description="This will manually send packets")
 		self.command.add_argument("directory", help="Name of subdirectory of ./packets/ which contains the packets you want to send")
-		self.command.add_argument("--address")
-		self.command.add_argument("--broadcast", action="store_true", default=False)
 
 	def run(self, args, sender):
-		if not args.broadcast and args.address is None:
-			args.address = sender.char.address
-
 		path = os.path.normpath(os.path.join(__file__, "..", "..", "..", "packets", args.directory))
 		files = os.listdir(path)
 		files.sort(key=lambda text: [int(text) if text.isdigit() else text for c in re.split(r"(\d+)", text)]) # sort using numerical values
@@ -223,7 +218,7 @@ class Send(ChatCommand):
 				data = content.read()
 				#if data[:4] == b"\x53\x05\x00\x0c":
 				#	data = data[:8] + bytes(c_int64(sender.object_id)) + data[16:]
-				server.send(data, args.address, args.broadcast)
+				sender.char.data()["conn"].send(data)
 
 class SetGMLevel(ChatCommand):
 	def __init__(self):
