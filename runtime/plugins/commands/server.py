@@ -188,7 +188,7 @@ class Restart(ChatCommand):
 		asyncio.ensure_future(self.do_restart(args, sender))
 
 	async def do_restart(self, args, sender):
-		server.conn.transaction_manager.commit()
+		server.commit()
 		for obj in server.game_objects.values():
 			if obj.lot == 1:
 				conn = obj.char.data()["conn"]
