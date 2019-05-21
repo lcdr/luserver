@@ -62,9 +62,12 @@ class Faction(ChatCommand):
 		super().__init__("faction")
 		self.command.set_defaults(perm=GMLevel.Mod)
 		self.command.add_argument("faction", type=int)
+		self.command.add_argument("--player", type=instance_player)
 
 	def run(self, args, sender):
-		sender.stats.faction = args.faction
+		if args.player is None:
+			args.player = sender
+		args.player.stats.faction = args.faction
 
 class FlashingText(ChatCommand):
 	def __init__(self):
