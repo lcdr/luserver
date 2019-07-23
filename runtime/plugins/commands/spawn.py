@@ -2,6 +2,7 @@ from typing import cast
 
 from luserver.auth import GMLevel
 from luserver.game_object import PhysicsObject
+from luserver.ldf import LDF, LDFDataType
 from luserver.world import server
 from luserver.components.physics import PhysicsEffect
 from luserver.interfaces.plugin import ChatCommand
@@ -50,6 +51,7 @@ class SpawnPhantom(ChatCommand):
 		self.command.add_argument("--amount", type=float, default=500)
 		self.command.add_argument("--direction", nargs=3, type=float, default=None)
 		self.command.add_argument("--scale", type=float, default=1)
+		self.command.add_argument("--invisible", action="store_true")
 
 	def run(self, args, sender):
 		if args.type == "wall":
@@ -68,6 +70,10 @@ class SpawnPhantom(ChatCommand):
 			"scale": args.scale,
 			"parent": sender,
 			"position": sender.physics.position+displacement}
+		if args.invisible:
+			config = LDF()
+			config.ldf_set("renderDisabled", LDFDataType.BOOLEAN, True)
+			set_vars["config"] = config
 		obj = cast(PhysicsObject, server.spawn_object(lot, set_vars))
 		obj.physics.physics_effect_active = True
 		obj.physics.physics_effect_type = PhysicsEffect[args.effect.title()]
