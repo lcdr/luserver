@@ -153,6 +153,20 @@ class Help(ChatCommand):
 		available_commands.sort()
 		server.chat.sys_msg_sender("\n".join(available_commands))
 
+class HideUI(ChatCommand):
+	def __init__(self):
+		super().__init__("hideui")
+
+	def run(self, args, sender):
+		# todo: fix this
+		# disabling for now because handlers accidentally get saved to DB
+		#sender.add_handler("start_skill", self.show_ui)
+		sender.char.u_i_message_server_to_single_client(message_name=b"pushGameState", args=AMF3({"state": "front_end"}))
+
+	def show_ui(self, player, *args, **kwargs):
+		player.char.u_i_message_server_to_single_client(message_name=b"popGameState", args=AMF3({"state": "front_end"}))
+		player.remove_handler("on_start_skill", self.show_ui)
+
 class HighStats(ChatCommand):
 	def __init__(self):
 		super().__init__("highstats")

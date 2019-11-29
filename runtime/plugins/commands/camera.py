@@ -77,3 +77,14 @@ class CamReset(ChatCommand):
 
 	def run(self, args, sender):
 		sender.char.remove_all_camera_effects()
+
+class Freecam(ChatCommand):
+	def __init__(self):
+		super().__init__("freecam")
+		self.command.add_argument("--off", action="store_true", default=False)
+
+	def run(self, args, sender):
+		if args.off:
+			sender.char.camera.set_player_control_scheme(scheme=0)
+		else:
+			sender.char.camera.set_player_control_scheme(scheme=9)
