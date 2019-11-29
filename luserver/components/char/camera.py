@@ -18,6 +18,10 @@ class CyclingMode:
 	DisallowCycling = 1
 
 class CharCamera(CharSubcomponent):
+	@broadcast
+	def set_player_control_scheme(self, delay_if_in_cinematic:bool=False, switch_cam:bool=True, scheme:c_int=0) -> None:
+		pass
+
 	@single
 	def play_cinematic(self, allow_ghost_updates:bool=True, close_multi_interact:bool=False, send_server_notify:bool=False, use_controlled_object_for_audio_listener:bool=False, end_behavior:c_uint=EndBehavior.Return, hide_player_during_cine:bool=False, lead_in:float=-1.0, leave_player_locked_when_finished:bool=False, lock_player:bool=True, path_name:str=ES, result:bool=False, skip_if_same_path:bool=False, start_time_advance:float=EF) -> None:
 		pass

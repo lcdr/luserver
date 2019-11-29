@@ -75,6 +75,7 @@ ENUM_TO_MSG = {enum: msg for msg, enum in MSG_TO_ENUM.items()}
 
 class GameMessage(Enum):
 	Teleport = 19
+	SetPlayerControlScheme = 26
 	DropClientLoot = 30
 	Die = 37
 	RequestDie = 38
