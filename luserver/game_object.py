@@ -584,6 +584,20 @@ def _game_message_serialize(out: WriteStream, type_: Type[W], value: W) -> None:
 		out.write(value, length_type=c_uint_)
 	elif type_ == str:
 		out.write(value, length_type=c_uint_)
+	elif hasattr(type_, "__origin__"):
+		if type_.__origin__ == Sequence:
+			length_type, value_type = type_.__args__
+			out.write(length_type(len(value)))
+			for i in value:
+				_game_message_serialize(out, value_type, i)
+		elif type_.__origin__ == Mapping:
+			length_type, key_type, value_type = type_.__args__
+			out.write(length_type(len(value)))
+			for k, v in value.items():
+				_game_message_serialize(out, key_type, k)
+				_game_message_serialize(out, value_type, v)
+		else:
+			raise TypeError(type_)
 	elif issubclass(type_, (c_int_, c_int64_, c_ubyte, c_uint_, c_uint64_)):
 		out.write(type_(value))
 	elif type_ == LDF:
@@ -598,17 +612,6 @@ def _game_message_serialize(out: WriteStream, type_: Type[W], value: W) -> None:
 			out.write(c_int64_(value.object_id))
 	elif inspect.isclass(type_) and issubclass(type_, Serializable):
 		type_.serialize(value, out)
-	elif issubclass(type_, Sequence):
-		length_type, value_type = type_.__args__
-		out.write(length_type(len(value)))
-		for i in value:
-			_game_message_serialize(out, value_type, i)
-	elif issubclass(type_, Mapping):
-		length_type, key_type, value_type = type_.__args__
-		out.write(length_type(len(value)))
-		for k, v in value.items():
-			_game_message_serialize(out, key_type, k)
-			_game_message_serialize(out, value_type, v)
 	else:
 		raise TypeError(type_)
 
