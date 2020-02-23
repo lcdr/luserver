@@ -584,7 +584,7 @@ def _game_message_serialize(out: WriteStream, type_: Type[W], value: W) -> None:
 		out.write(value, length_type=c_uint_)
 	elif type_ == str:
 		out.write(value, length_type=c_uint_)
-	elif hasattr(type_, "__origin__"):
+	elif hasattr(type_, "__origin__") and type_.__origin__ is not None:
 		if type_.__origin__ == Sequence:
 			length_type, value_type = type_.__args__
 			out.write(length_type(len(value)))
