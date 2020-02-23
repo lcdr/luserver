@@ -22,19 +22,6 @@ from luserver.math.vector import Vector3
 
 log = logging.getLogger(__name__)
 
-class Auth(ChatCommand):
-	def __init__(self):
-		super().__init__("auth")
-		self.command.add_argument("enabled", type=normal_bool)
-		self.command.add_argument("--message", nargs="+")
-
-	def run(self, args, sender):
-		with server.multi:
-			server.db.config["auth_enabled"] = args.enabled
-			server.chat.sys_msg_sender("Auth is now %s" % args.enabled)
-			if args.message is not None:
-				server.db.config["auth_disabled_message"] = " ".join(args.message)
-
 class Ban(ChatCommand):
 	def __init__(self):
 		super().__init__("ban")

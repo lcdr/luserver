@@ -10,7 +10,6 @@ import toml
 import ZEO
 
 from pyraknet.transports.abc import ConnectionType
-from luserver.auth import AuthServer
 from luserver.world import WorldServer
 
 with open(os.path.normpath(os.path.join(__file__, "..", "instance.toml"))) as file:
@@ -31,7 +30,7 @@ else:
 
 
 if len(sys.argv) == 1:
-	instance_id = "auth"
+	instance_id = "char"
 else:
 	instance_id = sys.argv[1]+" "+sys.argv[2]
 
@@ -66,7 +65,7 @@ else:
 	context = None
 
 if len(sys.argv) == 1:
-	a = AuthServer(config["connection"]["internal_host"], max_connections=8, db_conn=conn, ssl=context)
+	WorldServer((config["connection"]["internal_host"], 9999), config["connection"]["external_host"], config["auth"]["verify_address"], world_id=(0, 0), max_connections=8, db_conn=conn, ssl=context)
 else:
 	world_id = int(sys.argv[1]), int(sys.argv[2])
 	if len(sys.argv) == 4:
@@ -86,7 +85,7 @@ else:
 				sys.exit()
 		else:
 			port = 0
-	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], world_id, max_connections=8, db_conn=conn, ssl=context)
+	WorldServer((config["connection"]["internal_host"], port), config["connection"]["external_host"], config["auth"]["verify_address"], world_id, max_connections=8, db_conn=conn, ssl=context)
 
 loop = asyncio.get_event_loop()
 loop.run_forever()

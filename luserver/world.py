@@ -71,6 +71,7 @@ import atexit
 import importlib.util
 import logging
 import os.path
+import urllib.request
 from contextlib import AbstractContextManager as ACM
 from ssl import SSLContext
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple
@@ -118,13 +119,14 @@ class MultiInstanceAccess(ACM):
 class WorldServer(Server):
 	_PEER_TYPE = MessageType.WorldServer.value
 
-	def __init__(self, address: Address, external_host: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection, ssl: Optional[SSLContext]):
+	def __init__(self, address: Address, external_host: str, verify_address: str, world_id: Tuple[int, int], max_connections: int, db_conn: Connection, ssl: Optional[SSLContext]):
 		excluded_packets = {"PositionUpdate", "GameMessage/DropClientLoot", "GameMessage/PickupItem", "GameMessage/ReadyForUpdates", "GameMessage/ScriptNetworkVarUpdate"}
 		super().__init__(address, max_connections, db_conn, ssl, excluded_packets)
 		self.replica_manager = ReplicaManager(self._dispatcher)
 		global _server
 		_server = self
 		self.external_host = external_host
+		self.verify_address = verify_address
 		self._dispatcher.add_listener(TransportEvent.NetworkInit, self._on_network_init)
 		self._dispatcher.add_listener(ConnectionEvent.Close, self._on_conn_close)
 		self.multi = MultiInstanceAccess()
@@ -149,7 +151,6 @@ class WorldServer(Server):
 		self.accounts: Dict[Connection, Account] = {}
 		atexit.register(self.shutdown)
 		asyncio.get_event_loop().call_later(60, self._autosave)
-		asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
 		self._dispatcher.add_listener(WorldServerMsg.SessionInfo, self._on_session_info)
 		self._load_plugins()
 		self.set_world_id(world_id)
@@ -185,7 +186,11 @@ class WorldServer(Server):
 
 	def set_world_id(self, world_id: Tuple[int, int]) -> None:
 		self.world_id = world_id[0], self.instance_id, world_id[1]
-		if self.world_id[0] != 0: # char
+		if self.world_id[0] == 0: # char
+			self.db.servers.clear()
+			self.conn.transaction_manager.commit()
+		else:
+			asyncio.get_event_loop().call_later(60 * 60, self._check_shutdown)
 			custom_script, world_control_lot = self.db.world_info[self.world_id[0]]
 			if world_control_lot is None:
 				world_control_lot = 2365
@@ -250,12 +255,15 @@ class WorldServer(Server):
 		username = session_info.read(str, allocated_length=33)
 		session_key = session_info.read(str, allocated_length=33)
 
-		if username not in self.db.accounts:
+		try:
+			key_valid = urllib.request.urlopen(self.verify_address+f"/verify/{username}/{session_key}").read() == b"1"
+		except Exception:
 			log.error("User %s not found in database", username)
 			conn.close()
 			return
-		if self.db.accounts[username].session_key != session_key:
-			log.error("Database session key %s does not match supplied session key %s", self.db.accounts[username].session_key, session_key)
+
+		if not key_valid:
+			log.error(f"Supplied session key {session_key} for user {username} is invalid")
 			self.close_connection(conn, reason=DisconnectReason.InvalidSessionKey)
 			return
 

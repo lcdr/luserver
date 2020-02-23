@@ -1,4 +1,3 @@
-passlib
 toml
 ZEO
 hg+https://bitbucket.org/lcdr/pyraknet/
