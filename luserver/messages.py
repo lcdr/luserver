@@ -2,7 +2,6 @@ from enum import Enum, IntEnum
 
 class MessageType(Enum):
 	General = 0
-	AuthServer = 1
 	Social = 2
 	WorldServer = 4
 	WorldClient = 5
@@ -14,9 +13,6 @@ class GeneralMsg(LUMessage):
 	Handshake = 0x00
 	DisconnectNotify = 0x01
 	GeneralNotify = 0x02
-
-class AuthServerMsg(LUMessage):
-	LoginRequest = 0x00
 
 class SocialMsg(LUMessage):
 	GeneralChatMessage = 0x01
@@ -66,7 +62,6 @@ class WorldClientMsg(LUMessage):
 # Sadly no better way to get a mapping from headers to enums
 MSG_TO_ENUM = {
 	MessageType.General.value: GeneralMsg,
-	MessageType.AuthServer.value: AuthServerMsg,
 	MessageType.Social.value: SocialMsg,
 	MessageType.WorldServer.value: WorldServerMsg,
 	MessageType.WorldClient.value: WorldClientMsg}

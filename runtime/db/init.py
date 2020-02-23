@@ -101,7 +101,6 @@ class Init:
 
 	def gen_config(self):
 		self.root.config = PersistentMapping()
-		self.root.config["auth_enabled"] = True
 		self.root.config["credits"] = "Created by lcdr"
 		for entry in self.config["defaults"]:
 			self.root.config[entry] = self.config["defaults"][entry]
